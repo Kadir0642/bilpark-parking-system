@@ -1,0 +1,8 @@
+**/target/
+**/.class
+**/.idea/
+**/*.iml
+**/build/
+**/.dart_tool/
+**/.pub/
+.DS_Store
