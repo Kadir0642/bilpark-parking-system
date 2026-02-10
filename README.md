@@ -73,7 +73,7 @@ bilpark-parking-system/
 1. Repoyu Klonlayın
 
 ```bash
-git clone [https://github.com/Kadir0642/Bilpark_parking-system.git](https://github.com/Kadir0642/Bilpark_parking-system.git)
+git clone [https://github.com/Kadir0642/bilpark-parking-system.git](https://github.com/Kadir0642/bilpark-parking-system.git)
 cd bilpark-parking-system
 ```
 2. Backend'i Başlatın 
