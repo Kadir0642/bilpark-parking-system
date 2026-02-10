@@ -33,6 +33,7 @@ Sistem, araç tiplerine göre dinamik tarife uygular:
 * **İlk 5 Dakika:** ÜCRETSİZ ⚡
 * **Küçük Araçlar:** 25.00 TL (İlk saat) + 15.00 TL/Saat
 * **Büyük Araçlar:** 50.00 TL (İlk saat) + 30.00 TL/Saat
+---
 
 ## 🚀 Kurulum (Nasıl Çalıştırılır?)
 
