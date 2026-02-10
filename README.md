@@ -1,51 +1,107 @@
-# 🚗 BilPark - Akıllı Otopark Yönetim Sistemi
+# 🅿️ BilPark - Yeni Nesil Otopark Yönetim Sistemi
 
-> "Sadece kod yazmıyoruz, şehir yaşamını optimize eden bir mimari kuruyoruz."
+![Java](https://img.shields.io/badge/Language-Java%2021-orange) ![Framework](https://img.shields.io/badge/Framework-Spring%20Boot%203-brightgreen) ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Status](https://img.shields.io/badge/status-Active%20Development-green.svg)
 
-* BilPark, geleneksel otopark sorunlarını (kağıt bilet, nakit ödeme, gişe sırası) ortadan kaldıran; **Kağıtsız (Paperless)** ve **Mobil Odaklı** yeni nesil bir otopark yönetim ekosistemidir.
+> **"Kağıt Yok, Donanım Yok, Sadece Kod"**: Şehir içi otopark yönetimini dijitalleştiren, pahalı donanım maliyetlerini (kiosk/bariyer) ortadan kaldıran, **Mobil Odaklı** ve **Bulut Tabanlı** belediye çözümüdür.
 
-## 🌟 Proje Vizyonu
+---
 
-Amaç sadece çalışan bir uygulama yapmak değil; **Java Spring Boot** ekosisteminde kurumsal standartlarda bir altyapı kurmaktır.
+## 🎯 Proje Vizyonu (Vision)
 
-## 🏗️ Mimari Yapı (Monorepo)
+**Problem:**
+Geleneksel sistemlerdeki el terminalleri ve kağıt fişler; yağmurda ıslanır, kaybolur ve maliyetlidir. Ayrıca nakit para akışında kaçaklar oluşur ve denetim zordur.
 
-Proje, tüm ekosistemi tek bir çatı altında toplayan **Monorepo** yapısındadır:
+**Çözüm:**
+**BilPark**, fiziksel bilet yerine **Plaka ve QR** teknolojisini kullanır.
+* **Backend (Beyin):** Java Spring Boot ile kurulan sağlam mimari, binlerce aracın giriş-çıkışını milisaniyeler içinde işler.
+* **Mobil (Saha):** Sürücüler ve görevliler, telefonlarındaki uygulama üzerinden plaka okutarak ödeme ve kontrol yapar.
+* **Maliyet Avantajı:** Pahalı ödeme otomatları yerine, her direkte bulunan basit bir QR kod ile ödeme alınır.
 
-* **`/backend`**: Sistemin beyni. Java 21 & Spring Boot 3.
-* **`/mobile`**: (Yakında) Flutter tabanlı sürücü uygulaması.
-* **`/docs`**: Mimari çizimler ve veritabanı şemaları.
+---
 
 ## 🛠️ Teknoloji Yığını (Tech Stack)
 
-| Alan | Teknoloji | Neden? |
+Proje, "Software Architect" bakış açısıyla; ölçeklenebilir ve modüler bir **Monorepo** olarak tasarlanmıştır.
+
+| Alan | Teknoloji | Açıklama |
 | :--- | :--- | :--- |
-| **Dil** | Java 21 (LTS) | Yüksek performans ve kurumsal standart. |
-| **Framework** | Spring Boot 3 | Hızlı geliştirme ve güçlü ekosistem. |
-| **Veritabanı** | H2 (Dev) / PostgreSQL (Prod) | Geliştirme kolaylığı ve ilişkisel veri gücü. |
-| **ORM** | Spring Data JPA (Hibernate) | Veritabanı bağımsız kodlama. |
-| **Araçlar** | Lombok, Maven, Git | Verimlilik ve sürüm kontrolü. |
-
-## 💰 Fiyatlandırma Politikası
-![img_2.png](img_2.png)
-
-Sistem, araç tiplerine göre dinamik tarife uygular:
-* **İlk 5 Dakika:** ÜCRETSİZ ⚡
-* **Küçük Araçlar:** 25.00 TL (İlk saat) + 15.00 TL/Saat
-* **Büyük Araçlar:** 50.00 TL (İlk saat) + 30.00 TL/Saat
----
-
-## 🚀 Kurulum (Nasıl Çalıştırılır?)
-
-1.  Repoyu klonlayın:
-    ```bash
-    git clone [https://github.com/Kadir0642/bilpark-parking-system.git](https://github.com/Kadir0642/bilpark-parking-system.git)
-    ```
-2.  Backend klasörüne gidin ve projeyi IntelliJ IDEA ile açın.
-3.  `BackendApplication.java` dosyasını çalıştırın.
-4.  H2 Veritabanı Konsolu için: `http://localhost:8080/h2-console`
-    * **User:** `a`
-    * **Pass:** `123`
+| **Backend** | ☕ **Java 21 & Spring Boot 3** | Kurumsal standartlarda, yüksek performanslı REST API. |
+| **Database** | 🗄️ **H2 (Dev) / PostgreSQL** | Geliştirme için bellek içi, üretim için ilişkisel veritabanı. |
+| **ORM** | 🍃 **Spring Data JPA** | SQL yazmadan veritabanı yönetimi (Hibernate). |
+| **Mobile** | 💙 **Flutter (Dart)** | iOS & Android için tek kod tabanlı mobil uygulama. (Planlanan) |
+| **Tools** | 🛠️ **Maven & Lombok** | Bağımlılık yönetimi ve temiz kod araçları. |
 
 ---
-*Geliştirici: Kadir [ Kadir0642 ] | 2026*
+
+## 📂 Proje Yapısı (Monorepo)
+
+```bash
+bilpark-parking-system/
+├── backend/                # Java Spring Boot API Sunucusu
+│   ├── src/main/java/      # Kaynak Kodlar
+│   │   ├── model/          # Veritabanı Tabloları (Entities)
+│   │   ├── repository/     # Veri Erişim Katmanı
+│   │   ├── service/        # İş Mantığı (Fiyat Hesaplama vb.)
+│   │   └── config/         # Başlangıç Ayarları
+│   └── pom.xml             # Maven Ayar Dosyası
+├── mobile/                 # Flutter Mobil Uygulama (Yakında)
+├── docs/                   # Mimari Çizimler ve Dokümanlar
+└── README.md               # Proje Dokümantasyonu
+```
+
+## ⚡ Temel Özellikler (Key Features)
+
+---
+### ⚙️ Backend (Java API)
+
+* Dinamik Tarife: Küçük ve Büyük araçlar için farklı fiyatlandırma (Örn: İlk 5 dk ücretsiz).
+
+* Data Seeding: Uygulama her başladığında test verilerini (Örn: A-1 Park Yeri) otomatik yükler.
+
+* Kağıtsız İşlem: Giriş ve Çıkışlar tamamen dijital loglanır.
+
+### 📱 Mobil & Ödeme (Planlanan)
+* QR ile Ödeme: Sürücü aracının başındaki QR kodu okutur, borcunu görür ve öder.
+
+* Plaka Tanıma: Görevli plaka fotoğrafını çeker, sistem aracı otomatik tanır.
+
+## ⚙️ Kurulum ve Çalıştırma
+
+---
+* Projeyi yerel ortamınızda test etmek için aşağıdaki adımları izleyin:
+
+1. Repoyu Klonlayın
+
+```bash
+git clone [https://github.com/Kadir0642/Bilpark_parking-system.git](https://github.com/Kadir0642/Bilpark_parking-system.git)
+cd bilpark-parking-system
+```
+2. Backend'i Başlatın 
+* Projeyi IntelliJ IDEA ile açın (Sadece backend klasörünü açtığınızdan emin olun).
+* pom.xml dosyasına sağ tıklayıp "Add as Maven Project" deyin.
+* BackendApplication.java dosyasını çalıştırın (Run)
+
+3. Veritabanını Kontrol Edin
+* Tarayıcınızdan H2 Konsoluna gidin:
+* URL: ``` http://localhost:8080/h2-console ```
+* JDBC URL: ``` jdbc:h2:mem:bilparkdb ```
+* User: ```admin```
+* Password: ```123```
+---
+## 🗺️ Yol Haritası (Roadmap)
+```bash
+[x] Faz 1: Monorepo Kurulumu & Spring Boot Başlangıcı ✅
+
+[x] Faz 2: Veritabanı Tasarımı (Entity & Enum Yapıları) ✅
+
+[x] Faz 3: Repository Katmanı ve Test Verisi (Data Seeding) ✅
+
+[ ] Faz 4: Service & Controller Katmanları (API yi Dışa Açmak) 🚧 ŞU AN BURADAYIZ
+
+[ ] Faz 5: İş Mantığı (Fiyat Hesaplama Algoritması)
+
+[ ] Faz 6: Mobil Uygulama Kurulumu (Flutter)
+
+[ ] Faz 7: Entegrasyon ve Demo
+```
+
