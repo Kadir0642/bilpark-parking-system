@@ -48,4 +48,4 @@ Sistem, araç tiplerine göre dinamik tarife uygular:
     * **Pass:** `123`
 
 ---
-*Geliştirici: [Kadir Kacır] | 2026*
+*Geliştirici: Kadir [ Kadir0642 ] | 2026*
