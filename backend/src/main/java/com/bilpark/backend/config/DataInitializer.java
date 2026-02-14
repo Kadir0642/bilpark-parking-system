@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
 public class DataInitializer
 {
     // CommandLineRunner: Uygulama başlar başlamaz çalışacak olan metod.
-    @Bean
+    @Bean 
     CommandLineRunner initDataBase(ParkSpotRepository repository) {
         return args -> {
             //Veritabanı zaten doluysa tekrar ekleme yapmayız(çakışmayı önlemek için)
@@ -19,11 +19,11 @@ public class DataInitializer
 
                 // TEST VERİSİ
                 //1.Park Yeri: A-1 (Küçük Araçlar için)
-                ParkSpot spot1 = new ParkSpot("A-1", VehicleType.SMALL, false);
+                ParkSpot spot1 = new ParkSpot("A-1", VehicleType.SMALL, false,"Bilecik","Atatürk Mah","Merkez");
                 repository.save(spot1); // Kaydet
 
                 //2.Park Yeri: B-1 (Büyük araçlar için)
-                ParkSpot spot2 = new ParkSpot("B-1", VehicleType.LARGE, false);
+                ParkSpot spot2 = new ParkSpot("B-1", VehicleType.LARGE, false,"Ankara","Çankaya","Merkez");
                 repository.save(spot2); //Kaydet;
 
                 System.out.println("TEST VERİLERİ VERİ TABANINA EKLENDİ");

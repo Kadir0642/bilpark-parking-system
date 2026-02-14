@@ -1,6 +1,7 @@
 package com.bilpark.backend.model;
 
 import jakarta.persistence.*;
+
     // @ işaretleri altındaki variable,method,class için bir emir anlamında ne olacağını söylüyor
     //@Data -> Lombok: Getter,Setter,ToString otomatik yazar(Kod kalabalığı azaltır.)
     @Entity // Bu sınıf bir veri tabanı tablosudur. Bu sınıfı al, veritabanı diline (SQL) çevir.
@@ -16,7 +17,16 @@ import jakarta.persistence.*;
         (long-0) Eğer 0 olsaydı, "Acaba 0 numaralı kayıt mı, yoksa yeni mi?" diye karışıklık olur.*/
 
         @Column(unique = true, nullable =false) // Park yeri numarası (A-5 gibi) eşşiz olmalı ve boş olamaz.
-        private String spotNumber;
+        private String spotName;
+
+        @Column(nullable=false)
+        private String region; //İlçe(Örn:Merkez)
+
+        @Column(nullable=false)
+        private String neighborhood; //Mahalle (Örn: Bahçelievler)
+
+        @Column(nullable=false)
+        private String street; // Cadde/Sokak (Örn: Atatürk Cad.)
 
         private boolean isOccupied =false; // Dolu mu ? (Varsayılan olarak boş başlasın)
 
@@ -27,15 +37,22 @@ import jakarta.persistence.*;
         public ParkSpot(){}
 
         //Nesne oluştururken kolaylık için parametreli constructer
-        public ParkSpot(String spotNumber,VehicleType suitableFor,boolean isOccupied)
+        public ParkSpot(String spotName,VehicleType suitableFor,boolean isOccupied,String region,String street,String neighborhood)
         {
-            this.spotNumber=spotNumber;
+            this.spotName=spotName;
+            this.region=region;
+            this.street=street;
+            this.neighborhood=neighborhood;
             this.suitableFor=suitableFor;
             this.isOccupied=isOccupied;
         }
         public boolean isOccupied() // Dolu mu değil mi ona bakmak için
         {
             return isOccupied;
+        }
+        public void setOccupied(boolean occupied)
+        {
+            this.isOccupied=occupied;
         }
 
         // GETTER & SETTER
@@ -47,18 +64,41 @@ import jakarta.persistence.*;
         {
             this.id=id;
         }
-        public String getSpotNumber()
+
+        public String getSpotName()
         {
-            return spotNumber;
+            return spotName;
         }
-        public void setSpotNumber(String spotNumber)
+        public void setSpotName(String spotName)
         {
-            this.spotNumber=spotNumber;
+            this.spotName=spotName;
         }
-        public VehicleType getSuitableFor()
+
+        public String getRegion() {return region;}
+        public void setRegion(String region)
         {
-            return suitableFor;
+            this.region=region;
         }
+
+        public String getNeighborhood()
+        {
+            return neighborhood;
+        }
+        public void setNeighborhood(String neighborhood)
+        {
+            this.neighborhood =neighborhood;
+        }
+
+        public String getStreet()
+        {
+            return street;
+        }
+        public void setStreet(String street)
+        {
+            this.street=street;
+        }
+
+        public VehicleType getSuitableFor() {return suitableFor;}
         public void setSuitableFor(VehicleType suitableFor)
         {
             this.suitableFor=suitableFor;
