@@ -48,4 +48,10 @@ public class ParkingController
         return parkingService.checkOutVehicle(spotId); // Arac cikisini ve ücret hesabini yapar. | Sonucta -> Fis/Fatura ücret bilgisi gösterilir.
     }
 
+    //3. CİRO GÖRÜNTÜLEME
+    //URL: http://localhost:8080/api/parking/income
+    @GetMapping("/income")
+    public Double getIncome(){
+        return parkingService.getTotalIncome();// Controller -> Service -> Repository -> Service ->Controller->Kullanıcıya gösterilecek
+    }
 }
