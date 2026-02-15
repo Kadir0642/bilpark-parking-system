@@ -16,6 +16,6 @@ public interface ParkingRecordRepository extends JpaRepository<ParkingRecord, Lo
     Optional<ParkingRecord> findBySpotNameAndExitTimeIsNull(String spotName);//Derived Query Methods (Türetilmiş Sorgular)
 
     //2. Toplam Ciro Hesaplama
-    @Query("SELECT SUM(r.fee) FROM ParkingRecord r") //Query ->Özel Sorgu (JPQL) | SELECT SUM(r.fee) ->Bütün kayıtların fee alanlarını toplar | FROM parkingRecord r ->ParkingRecord sınıfındaki ("r" onun takma adı) kayıtlara bakar.
+    @Query("SELECT SUM(r.fee) FROM ParkingRecord r") // @Query ->Özel Sorgu (JPQL) | SELECT SUM(r.fee) ->Bütün kayıtların "fee" alanlarını toplar | FROM ParkingRecord r ->ParkingRecord sınıfındaki ("r" onun takma adı) kayıtlara bakar.
     Double getTotalIncome();
 }
