@@ -22,7 +22,7 @@ public class ParkingService
     public ParkingService(ParkSpotRepository parkSpotRepository,ParkingRecordRepository parkingRecordRepository)
     {
         this.parkSpotRepository=parkSpotRepository; // İs yaparken kullanacagimiz repository elemanini aliyoruz
-        this.parkingRecordRepository=parkingRecordRepository;
+        this.parkingRecordRepository=parkingRecordRepository; // Fis keserken kayıtlara bakacak elemanı alıyoruz.
     }
 
     //Bize park yerlerini döndüren fonksiyon | Neon'a gider, sorgu atip sonucu getiricek.
@@ -94,6 +94,9 @@ public class ParkingService
         record.setFee(fee); // fişteki ücret kaydı
         parkingRecordRepository.save(record);
 
+        spot.setOccupied(false);// Cikistan sonra park yerini bosaltıyoruz.
+        parkSpotRepository.save(spot); // hemen kaydediyoruz.
+
         return record;
     }
 
@@ -136,8 +139,4 @@ public class ParkingService
             return baseFee + (extraHours*extraFee);
         }
     }
-
-
-
-
 }
