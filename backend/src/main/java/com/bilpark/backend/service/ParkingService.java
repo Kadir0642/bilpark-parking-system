@@ -139,4 +139,12 @@ public class ParkingService
             return baseFee + (extraHours*extraFee);
         }
     }
+
+    // --- CİRO HESAPLAMA (INCOME) ---
+    public double getTotalIncome()
+    {
+        // "Double" içi boş(Null) kalabilen bir Wrapper Class(Sarmalayıcı) ,methodları olan(.toString,.intValue)
+        Double total=parkingRecordRepository.getTotalIncome(); // Veri tabanındaki bütün kayıtların fee sütünları toplanıp, total nesnesine atılır.
+        return (total != null) ? total : 0.0; //Eğer hiç kayıt yoksa "null" gelir, biz 0.0 döndürürüz | veritabanından gelen belirsizliği (null), kullanıcıya gösterilecek net bir bilgiye (0.0) çeviren bir Converter
+    }
 }
