@@ -43,7 +43,7 @@ public class ParkingController
     //2. CHECK-OUT (Cikis Yap)
     //URL: http://localhost:8080/api/parking/check-out?spotId=1
     @PostMapping("/check-out")
-    public ParkingRecord checkOut(@RequestParam Long spotId) // Sadece ID bilgisini service
+    public ParkingRecord checkOut(@RequestParam Long spotId) // Sadece ID bilgisini kullanarak bulup ,service tarafına iletiriz.
     {
         return parkingService.checkOutVehicle(spotId); // Arac cikisini ve ücret hesabini yapar. | Sonucta -> Fis/Fatura ücret bilgisi gösterilir.
     }
