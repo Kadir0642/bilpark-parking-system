@@ -51,8 +51,8 @@ public class ParkingRecord
     }
     public void setLicensePlate(String licensePlate)
     {
-        this.licensePlate=this.licensePlate;
-    }
+        this.licensePlate=licensePlate;
+    } // set methodu düzeltildi.
 
     public String getRegion()
     {
