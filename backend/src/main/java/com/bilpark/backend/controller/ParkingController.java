@@ -54,4 +54,11 @@ public class ParkingController
     public Double getIncome(){
         return parkingService.getTotalIncome();// Controller -> Service -> Repository -> Service ->Controller->Kullanıcıya gösterilecek
     }
+
+    //4. GÜNLÜK CİRO GÖRÜNTÜLEME
+    //URL: http://localhost:8080/api/parking/income/daily
+    @GetMapping("/income/daily")
+    public Double getDailyIncome(){
+        return parkingService.getDailyIncome();
+    }
 }
