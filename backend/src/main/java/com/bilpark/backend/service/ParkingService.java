@@ -148,15 +148,45 @@ public class ParkingService
         return (total != null) ? total : 0.0; //Eğer hiç kayıt yoksa "null" gelir, biz 0.0 döndürürüz | veritabanından gelen belirsizliği (null), kullanıcıya gösterilecek net bir bilgiye (0.0) çeviren bir Converter
     }
 
-    // Daily Income (Günlük Ciro)
+    // --- Daily Income ---
     public Double getDailyIncome(){
         // Gün başlangıcı (00:00)
-        LocalDateTime startOfDay=LocalDateTime.now().toLocalDate().atStartOfDay();
+        LocalDateTime startOfDay=LocalDateTime.now().toLocalDate().atStartOfDay();//.now ->Şu an zamanı alır | .toLocalDate ->Saati atar,günü alır | .atStartOfDay -> gün başı 00:00 yapar.
         // Gün bitişi (1 gün eklendi) yarın 00:00 a kadar (00:00 dahil değil).
-        LocalDateTime endOfDay=startOfDay.plusDays(1);
+        LocalDateTime endOfDay=startOfDay.plusDays(1); // plusDays -> parametre kadar gün ekler.
 
         Double dailyTotal= parkingRecordRepository.getIncomeByDateRange(startOfDay,endOfDay); // Belirtilen zaman dilimindeki fişlerin fee sütünlarını toplar
 
         return (dailyTotal !=null) ? dailyTotal : 0.0; // Veritabanı null dönerse 0.0 yapıp programın patlamasını engelleriz.
     }
+
+    // --- Weekly Income ---
+    public Double getWeeklyIncome(){
+        LocalDateTime end=LocalDateTime.now(); // Şu an (bitiş çizgisi)
+        LocalDateTime start= end.minusDays(7); // 7 gün öncesi (Başlangıç)
+
+        Double total=parkingRecordRepository.getIncomeByDateRange(start,end);
+        return (total != null) ? total : 0.0;
+    }
+
+    // --- Monthly Income (Ayın 1'inden itibaren)---
+    public Double getMonthlyIncome(){
+        LocalDateTime end=LocalDateTime.now();// Şu an (bitiş çizgisi)
+        //Ayın ilk gününü bul
+        LocalDateTime start=java.time.LocalDate.now().withDayOfMonth(1).atStartOfDay(); // withDayOfMonth ->gün kısmını 1 yapıp | saati 00:00 yapar.
+
+        Double total=parkingRecordRepository.getIncomeByDateRange(start,end);
+        return (total != null) ? total :0.0;
+    }
+
+    // --- Yearly Income (Yılın başından itibaren) ---
+    public Double getYearlyIncome(){
+        LocalDateTime end =LocalDateTime.now();
+        //Yılın ilk gününü bul
+        LocalDateTime start=java.time.LocalDate.now().withDayOfYear(1).atStartOfDay();
+
+        Double total=parkingRecordRepository.getIncomeByDateRange(start,end);
+        return (total != null) ? total : 0.0;
+    }
+
 }
