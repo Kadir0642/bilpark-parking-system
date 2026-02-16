@@ -23,9 +23,9 @@ public class ParkingController
         this.parkingService=parkingService; // istekleri iletebilmemiz için
     }
 
-    //"GET" (Getir/Oku) isteği: URL: http://localhost:8080/api/parking/spots
+    //"GET" (Getir/Oku) isteği: URL: http://localhost:8080/api/parking/spots <- Tetikleyici adres
     //Tüm park yerlerini(spots) JSON listesi olarak döner  |  controller -> service -> repository -> service -> controller ->Müşteri(JSON olarak)
-    @GetMapping("/spots")
+    @GetMapping("/spots")// <-- ENDPOINT (Tuş dış günyaya açar)
     public List<ParkSpot> getAllSpots()
     {
         return parkingService.getAllSpots();
@@ -41,24 +41,44 @@ public class ParkingController
     }
 
     //2. CHECK-OUT (Cikis Yap)
-    //URL: http://localhost:8080/api/parking/check-out?spotId=1
+    //URL: http://localhost:8080/api/parking/check-out?spotId=1 <- Tetikleyici adres
     @PostMapping("/check-out")
     public ParkingRecord checkOut(@RequestParam Long spotId) // Sadece ID bilgisini kullanarak bulup ,service tarafına iletiriz.
     {
         return parkingService.checkOutVehicle(spotId); // Arac cikisini ve ücret hesabini yapar. | Sonucta -> Fis/Fatura ücret bilgisi gösterilir.
     }
 
-    //3. CİRO GÖRÜNTÜLEME
-    //URL: http://localhost:8080/api/parking/income
-    @GetMapping("/income")
+    //3. CİRO GÖRÜNTÜLEME (Bütün zamanlar)
+    //URL: http://localhost:8080/api/parking/income <- Tetikleyici adres
+    @GetMapping("/income")// <-- ENDPOINT (Tuş dış dünyaya açar)
     public Double getIncome(){
         return parkingService.getTotalIncome();// Controller -> Service -> Repository -> Service ->Controller->Kullanıcıya gösterilecek
     }
 
-    //4. GÜNLÜK CİRO GÖRÜNTÜLEME
-    //URL: http://localhost:8080/api/parking/income/daily
-    @GetMapping("/income/daily")
+    //3.1. GÜNLÜK CİRO GÖRÜNTÜLEME
+    //URL: http://localhost:8080/api/parking/income/daily <- Tetikleyici adres
+    @GetMapping("/income/daily") // <-- ENDPOINT (Tuş dış dünyaya açar)
     public Double getDailyIncome(){
         return parkingService.getDailyIncome();
     }
+
+    //3.2 HAFTALIK CİRO GÖRÜNTÜLEME
+    @GetMapping("/income/weekly")
+    public Double getWeeklyIncome(){
+        return parkingService.getWeeklyIncome();
+    }
+
+    //3.3 AYLIK CİRO GÖRÜNTÜLEME
+    @GetMapping("income/monthly")
+    public Double getMonthlyIncome(){
+        return parkingService.getMonthlyIncome();
+    }
+
+    //3.4 YILLIK CİRO GÖRÜNTÜLEME
+    @GetMapping("/income/yearly")
+    public Double getYearlyIncome(){
+        return parkingService.getYearlyIncome();
+    }
+
+
 }
