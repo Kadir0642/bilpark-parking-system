@@ -147,4 +147,16 @@ public class ParkingService
         Double total=parkingRecordRepository.getTotalIncome(); // Veri tabanındaki bütün kayıtların fee sütünları toplanıp, total nesnesine atılır.
         return (total != null) ? total : 0.0; //Eğer hiç kayıt yoksa "null" gelir, biz 0.0 döndürürüz | veritabanından gelen belirsizliği (null), kullanıcıya gösterilecek net bir bilgiye (0.0) çeviren bir Converter
     }
+
+    // Daily Income (Günlük Ciro)
+    public Double getDailyIncome(){
+        // Gün başlangıcı (00:00)
+        LocalDateTime startOfDay=LocalDateTime.now().toLocalDate().atStartOfDay();
+        // Gün bitişi (1 gün eklendi) yarın 00:00 a kadar (00:00 dahil değil).
+        LocalDateTime endOfDay=startOfDay.plusDays(1);
+
+        Double dailyTotal= parkingRecordRepository.getIncomeByDateRange(startOfDay,endOfDay); // Belirtilen zaman dilimindeki fişlerin fee sütünlarını toplar
+
+        return (dailyTotal !=null) ? dailyTotal : 0.0; // Veritabanı null dönerse 0.0 yapıp programın patlamasını engelleriz.
+    }
 }
