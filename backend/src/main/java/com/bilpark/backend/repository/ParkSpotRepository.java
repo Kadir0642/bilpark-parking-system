@@ -19,5 +19,11 @@ public interface ParkSpotRepository extends JpaRepository<ParkSpot, Long>
     //SELECT * FROM park_spots WHERE street = 'Atatürk Caddesi';
     List<ParkSpot> findByStreet(String street); // Parametre de gelen sokak adını veritabanında arayıp park yerlerini liste olarak bana ver.
     List<ParkSpot> findByNeighborhood(String neighborhood); // Mahalle ye göre filtre yaparak park alanlarını verir
-    List<ParkSpot> findByRegion(String region,String neighborhood); // Hem mahalle hem ilçe filtresi
+    List<ParkSpot> findByRegion(String neighborhood); //İlçe filtresi
+
+    List<ParkSpot> findByRegionAndNeigborhoodAndStreet(String region,String neighborhood,String street); // İlçe,Mahalle,sokak filtresi (İnce ayar)
+    List<ParkSpot> findByRegionAndNeighborhood(String region,String neighborhood);// İlçe,mahalle filtresi (Daha geniş arama)
+
+    List<ParkSpot> findByOccupiedTrue(); // Dolu park yerleri filtresi  BURAYI ZATEN IZGARA İLE GÖSTERECEĞİZ
+
 }
