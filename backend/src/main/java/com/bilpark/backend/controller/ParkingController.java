@@ -3,6 +3,7 @@ package com.bilpark.backend.controller;
 // Adres Tarifleri
 import com.bilpark.backend.model.ParkSpot;
 import com.bilpark.backend.model.ParkingRecord;
+import com.bilpark.backend.repository.ParkSpotRepository;
 import com.bilpark.backend.service.ParkingService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -80,5 +81,9 @@ public class ParkingController
         return parkingService.getYearlyIncome();
     }
 
-
+    //4. ÇALIŞMA ALANI FİLTRELEME
+    @GetMapping("/filter") //@RequestParam zorunlu parametreler | Cadde/sokak opsiyonel (required=false)
+    public List<ParkSpot>filterSpots(@RequestParam String region,@RequestParam String neighborhood,@RequestParam(required=false) String street){
+        return parkingService.getSpotsByLocation(region,neighborhood,street);
+    }
 }
