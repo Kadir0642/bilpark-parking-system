@@ -15,7 +15,7 @@ public class DataInitializer
     CommandLineRunner initDataBase(ParkSpotRepository repository) {
         return args -> {
             //Veritabanı zaten doluysa tekrar ekleme yapmayız(çakışmayı önlemek için)
-            if (repository.count() == 0) {
+            if (repository.count() == 0){
 
                 // TEST VERİSİ
                 //1.Park Yeri: A-1 (Küçük Araçlar için)
