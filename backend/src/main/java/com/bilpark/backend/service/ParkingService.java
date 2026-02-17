@@ -189,4 +189,21 @@ public class ParkingService
         return (total != null) ? total : 0.0;
     }
 
+    // --- FİLTRELEME SERVİSİ ---
+    public List<ParkSpot> getSpotsByLocation(String region,String neighborhood,String street){
+        // TAM ADRES KONTROLÜ -> Bütün adres alanları doluysa tam adrese gider
+        if(region!=null && neighborhood!=null && street != null){
+            return parkSpotRepository.findByRegionAndNeighborhoodAndStreet(region,neighborhood,street);
+        }
+
+        //İlçe ve Mahalle varsa
+        if(region!=null && neighborhood!=null){
+            return parkSpotRepository.findByRegionAndNeighborhood(region,neighborhood);
+        }
+
+        //Hiç biri yoksa veya eksikse boş liste döneriz, (Performance Issue) HEPSİNİ ÇEKMEK sistemi yorabilir
+        return List.of();
+    }
+
+
 }
