@@ -64,25 +64,26 @@ public class ParkingController
     }
 
     //3.2 HAFTALIK CİRO GÖRÜNTÜLEME
-    @GetMapping("/income/weekly")
+    @GetMapping("/income/weekly") // <-- ENDPOINT
     public Double getWeeklyIncome(){
         return parkingService.getWeeklyIncome();
     }
 
     //3.3 AYLIK CİRO GÖRÜNTÜLEME
-    @GetMapping("income/monthly")
+    @GetMapping("income/monthly") //<-- ENDPOINT
     public Double getMonthlyIncome(){
         return parkingService.getMonthlyIncome();
     }
 
     //3.4 YILLIK CİRO GÖRÜNTÜLEME
-    @GetMapping("/income/yearly")
+    @GetMapping("/income/yearly") // <-- ENDPOINT
     public Double getYearlyIncome(){
         return parkingService.getYearlyIncome();
     }
 
     //4. ÇALIŞMA ALANI FİLTRELEME
-    @GetMapping("/filter") //@RequestParam zorunlu parametreler | Cadde/sokak opsiyonel (required=false)
+    // http://localhost:8080/api/parking/filter <- Tetikleyici adres
+    @GetMapping("/filter") // <-- ENDPOINT | @RequestParam zorunlu parametreler | Cadde/sokak opsiyonel (required=false)
     public List<ParkSpot>filterSpots(@RequestParam String region,@RequestParam String neighborhood,@RequestParam(required=false) String street){
         return parkingService.getSpotsByLocation(region,neighborhood,street);
     }
