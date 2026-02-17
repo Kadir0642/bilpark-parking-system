@@ -22,9 +22,13 @@ public class DataInitializer
                 ParkSpot spot1 = new ParkSpot("A-1", VehicleType.SMALL, false,"Bilecik","Atatürk Mah","Merkez");
                 repository.save(spot1); // Kaydet
 
-                //2.Park Yeri: B-1 (Büyük araçlar için)
-                ParkSpot spot2 = new ParkSpot("B-1", VehicleType.LARGE, false,"Ankara","Çankaya","Merkez");
-                repository.save(spot2); //Kaydet;
+                //2.Park Yeri: A-2(Küçük Araç)
+                ParkSpot spot2 = new ParkSpot("A-2", VehicleType.SMALL, false,"Konya","Hürriyet Mah","Merkez");
+                repository.save(spot2); // Kaydet
+
+                //3.Park Yeri: B-1 (Büyük araçlar için)
+                ParkSpot spot3 = new ParkSpot("B-1", VehicleType.LARGE, false,"Ankara","Çankaya","Merkez");
+                repository.save(spot3); //Kaydet;
 
                 System.out.println("TEST VERİLERİ VERİ TABANINA EKLENDİ");
             }
