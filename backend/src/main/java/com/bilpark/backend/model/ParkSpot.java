@@ -29,6 +29,7 @@ import jakarta.persistence.*;
         private String street; // Cadde/Sokak (Örn: Atatürk Cad.)
 
         private boolean isOccupied =false; // Dolu mu ? (Varsayılan olarak boş başlasın)
+        private String currentPlate; // Mobil uygulamada kayıt alınan plakaları tuttuğumuz alan bu sayede kayıtlı park kartında plaka kalıcı şekilde yazılabiliyor.
 
         @Enumerated(EnumType.STRING) // Aşağıdaki değişkeni veritabanına sayı olarak değil, YAZI olarak kaydet.
         private VehicleType suitableFor; // Bu park yeri hangi araç tipine uygun (SMALL || LARGE)
@@ -54,6 +55,9 @@ import jakarta.persistence.*;
         {
             this.isOccupied=occupied;
         }
+
+        public String getCurrentPlate(){return currentPlate;}
+        public void setCurrentPlate(String currentPlate){this.currentPlate=currentPlate;}
 
         // GETTER & SETTER
         public Long getId()
