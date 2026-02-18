@@ -16,21 +16,20 @@ public class DataInitializer
         return args -> {
             //Veritabanı zaten doluysa tekrar ekleme yapmayız(çakışmayı önlemek için)
             if (repository.count() == 0){
+                System.out.println("--- KROKİ VERİLERİ YÜKLENİYOR ---");
 
-                // TEST VERİSİ
-                //1.Park Yeri: A-1 (Küçük Araçlar için)
-                ParkSpot spot1 = new ParkSpot("A-1", VehicleType.SMALL, false,"Bilecik","Atatürk Mah","Merkez");
-                repository.save(spot1); // Kaydet
+                //SOL KALDIRIM (A Blok - Öncü Dürüm Tarafı ) -20 Adet park yeri
+                for(int i=1;i<=20;i++){
+                    ParkSpot spot =new ParkSpot("A-"+i,VehicleType.SMALL,false,"Bilecik","Atatürk Mah","Merkez");
+                repository.save(spot); // Kaydet
+                }
 
-                //2.Park Yeri: A-2(Küçük Araç)
-                ParkSpot spot2 = new ParkSpot("A-2", VehicleType.SMALL, false,"Konya","Hürriyet Mah","Merkez");
-                repository.save(spot2); // Kaydet
-
-                //3.Park Yeri: B-1 (Büyük araçlar için)
-                ParkSpot spot3 = new ParkSpot("B-1", VehicleType.LARGE, false,"Ankara","Çankaya","Merkez");
-                repository.save(spot3); //Kaydet;
-
-                System.out.println("TEST VERİLERİ VERİ TABANINA EKLENDİ");
+                // SAĞ KALDIRIM (B Blok)
+                for(int i=1;i<=20;i++){
+                    ParkSpot spot = new ParkSpot("B-"+i, VehicleType.SMALL, false,"Bilecik","Atatürk Mah","Merkez");
+                    repository.save(spot); // Kaydet
+                }
+                System.out.println("--- KROKİ HAZIR ---");
             }
         };
     }
