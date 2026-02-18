@@ -24,7 +24,7 @@ public class DataInitializer
                 repository.save(spot); // Kaydet
                 }
 
-                // SAĞ KALDIRIM (B Blok)
+                // SAĞ KALDIRIM (B Blok )
                 for(int i=1;i<=20;i++){
                     ParkSpot spot = new ParkSpot("B-"+i, VehicleType.SMALL, false,"Bilecik","Atatürk Mah","Merkez");
                     repository.save(spot); // Kaydet
