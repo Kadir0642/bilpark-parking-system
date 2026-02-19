@@ -48,6 +48,7 @@ public class ParkingService
         spot.setOccupied(true); // park yerini dolu yapıp
 
         spot.setCurrentPlate(licensePlate); // 1. Plakayı kutunun içine yaz (Kalıcılık için)
+        spot.setEntryTime(LocalDateTime.now()); //Şu anki saati kaydet | Giriş saati kaydediliyor -> App için.
 
         //Gelen String tipi (SMALL/LARGE) Enum'a çevirip kaydediyoruz.
         //Eğer boş gelirse default SMALL olur.
@@ -99,8 +100,8 @@ public class ParkingService
         //D.1. Cikis Zamani Ayari
         record.setExitTime(LocalDateTime.now());
 
-        //D.2. Süre Hesabi (Dakika cinsinden)
-        long totalMinutes=Duration.between(record.getEntryTime(),record.getExitTime()).toMinutes();
+        //D.2. Süre Hesabi (Dakika cinsinden) | Zaman formatının orijinali long
+        long totalMinutes=Duration.between(record.getEntryTime(),record.getExitTime()).toMinutes();// Java'da zaman hesaplamaları (Milisaniye, saniye, dakika) endüstri standardı olarak her zaman long ile yapılır
 
         //D.3. Ücret Hesabi
         double fee=calculateFee(spot.getSuitableFor(),totalMinutes);
@@ -110,6 +111,7 @@ public class ParkingService
 
         spot.setOccupied(false);// Cikistan sonra park yerini bosaltıyoruz.
         spot.setCurrentPlate(null); // Cikistan sonra plakayı siler (null yapar)
+        spot.setEntryTime(null); // Cikistan sonra saati sifirlar.
 
         parkSpotRepository.save(spot); // hemen kaydediyoruz.
 
@@ -217,7 +219,7 @@ public class ParkingService
             return parkSpotRepository.findByRegionAndNeighborhood(region,neighborhood);
         }
 
-        //Hiç biri yoksa veya eksikse boş liste döneriz, (Performance Issue) HEPSİNİ ÇEKMEK sistemi yorabilir
+        //Hiç biri yoksa veya eksikse boş liste döneriz, (Performance Issue) HEPSINI CEKMEK SISTEMI YORABILIR.
         return List.of();
     }
 }
