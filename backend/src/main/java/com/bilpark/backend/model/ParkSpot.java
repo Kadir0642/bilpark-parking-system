@@ -31,6 +31,8 @@ import jakarta.persistence.*;
         private boolean isOccupied =false; // Dolu mu ? (Varsayılan olarak boş başlasın)
         private String currentPlate; // Mobil uygulamada kayıt alınan plakaları tuttuğumuz alan bu sayede kayıtlı park kartında plaka kalıcı şekilde yazılabiliyor.
 
+        private java.time.LocalDateTime entryTime; // Giriş Saati --> Mobil uygulamada kayıtlı park yerinde ne kadar süre durduğunu göstermek için
+
         @Enumerated(EnumType.STRING) // Aşağıdaki değişkeni veritabanına sayı olarak değil, YAZI olarak kaydet.
         private VehicleType suitableFor; // Bu park yeri hangi araç tipine uygun (SMALL || LARGE)
 
@@ -51,6 +53,9 @@ import jakarta.persistence.*;
         {
             return isOccupied;
         }
+
+        //  --- GETTER & SETTER ---
+
         public void setOccupied(boolean occupied)
         {
             this.isOccupied=occupied;
@@ -59,7 +64,13 @@ import jakarta.persistence.*;
         public String getCurrentPlate(){return currentPlate;}
         public void setCurrentPlate(String currentPlate){this.currentPlate=currentPlate;}
 
-        // GETTER & SETTER
+        public java.time.LocalDateTime getEntryTime(){
+          return entryTime;
+        }
+        public void setEntryTime(java.time.LocalDateTime entryTime){
+            this.entryTime=entryTime;
+        }
+
         public Long getId()
         {
             return id;
