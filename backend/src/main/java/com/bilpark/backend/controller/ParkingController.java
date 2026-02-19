@@ -26,7 +26,7 @@ public class ParkingController
 
     //"GET" (Getir/Oku) isteği: URL: http://localhost:8080/api/parking/spots <- Tetikleyici adres
     //Tüm park yerlerini(spots) JSON listesi olarak döner  |  controller -> service -> repository -> service -> controller ->Müşteri(JSON olarak)
-    @GetMapping("/spots")// <-- ENDPOINT (Tuş dış günyaya açar)
+    @GetMapping("/spots")// <-- ENDPOINT (Tuş dış günyaya açar) | Tüm Park yerlerini service aracılığıyla getirir.
     public List<ParkSpot> getAllSpots()
     {
         return parkingService.getAllSpots();
@@ -36,9 +36,9 @@ public class ParkingController
     // URL: http://localhost:8080/api/parking/check-in?spotId=1&licensePlate=34ABC123
     //@RequestParam: URL'in sonundaki soru işaretinden sonraki verileri okur.
     @PostMapping("/check-in") // GİRİŞ İŞLEMLERİ | PostMapping (Postala/Gönder) "Yeni park yeri eklerken" Sunucuda değişiklik, oluşturma, silme gibi işleri vardır(CRUD)
-    public ParkSpot checkIn(@RequestParam Long spotId,@RequestParam String licensePlate)
+    public ParkSpot checkIn(@RequestParam Long spotId,@RequestParam String licensePlate,@RequestParam(defaultValue= "SMALL") String vehicleType)
     {
-        return parkingService.checkInVehicle(spotId,licensePlate); // Controller, gelen verileri servise verir. | Sonucta -> Araci iceri alir ve park yerinin son halini basar.
+        return parkingService.checkInVehicle(spotId,licensePlate,vehicleType); // Controller, gelen verileri servise verir. | Sonucta -> Araci iceri alir ve park yerinin son halini basar.
     }
 
     //2. CHECK-OUT (Cikis Yap)
