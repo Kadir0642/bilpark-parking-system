@@ -32,8 +32,8 @@ public class ParkingService
     }
 
     // --- CHECK-IN (Giris islemi ) ---
-    // Otoparka giris olmadan önce calisir.
-    public ParkSpot checkInVehicle(Long spotId,String licensePlate)
+    // Otoparka giris olmadan önce calisir. | UPDATE: Artık araç tipinide alıyoruz
+    public ParkSpot checkInVehicle(Long spotId,String licensePlate,String vehicleType)
     {
         // A. Yer Kontrolü (Validation)
         ParkSpot spot=parkSpotRepository.findById(spotId) // "spotId" adinda park yerine bakıyor
@@ -46,7 +46,21 @@ public class ParkingService
 
         // C. Durum Degisikligi (State Change)
         spot.setOccupied(true); // park yerini dolu yapıp
-        parkSpotRepository.save(spot); // hemen veritabanina kaydederiz.
+
+        spot.setCurrentPlate(licensePlate); // 1. Plakayı kutunun içine yaz (Kalıcılık için)
+
+        //Gelen String tipi (SMALL/LARGE) Enum'a çevirip kaydediyoruz.
+        //Eğer boş gelirse default SMALL olur.
+        if(vehicleType !=null && !vehicleType.isEmpty()){
+            try{
+                spot.setSuitableFor(VehicleType.valueOf(vehicleType));
+            }catch(IllegalArgumentException e){
+                spot.setSuitableFor(VehicleType.SMALL); // Hatalı gelirse küçük say
+            }
+        }else{
+            spot.setSuitableFor(VehicleType.SMALL); // DEFAULT durumunda --> SMALL
+        }
+        parkSpotRepository.save(spot); // Veritabanina kaydederiz.
 
         // D. Fis Kesme (History Logging)
         ParkingRecord record= new ParkingRecord(); // record adında yepyeni fis kagidi olusturuyoruz.
@@ -95,6 +109,8 @@ public class ParkingService
         parkingRecordRepository.save(record);
 
         spot.setOccupied(false);// Cikistan sonra park yerini bosaltıyoruz.
+        spot.setCurrentPlate(null); // Cikistan sonra plakayı siler (null yapar)
+
         parkSpotRepository.save(spot); // hemen kaydediyoruz.
 
         return record;
@@ -204,6 +220,4 @@ public class ParkingService
         //Hiç biri yoksa veya eksikse boş liste döneriz, (Performance Issue) HEPSİNİ ÇEKMEK sistemi yorabilir
         return List.of();
     }
-
-
 }
