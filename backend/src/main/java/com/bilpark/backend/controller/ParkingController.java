@@ -90,7 +90,7 @@ public class ParkingController
 
     //5. --- GEÇMİŞ KAYITLAR --- | http://localhost:8080/api/parking/history
     @GetMapping("/history") // API UCU  <- ENDPOINT | Verileri getiricek/Okuma (GetMapping)
-    public List<ParkingRecord>getHistory(
+    public List<ParkingRecord>getHistory( //Controller URL'deki bu 3 bilgiyi alır, doğrudan Service kısmına verir | Service, Repositorye gidip en yeni 50 fişi alır | En son da JSON (metin) formatında sunar.
             @RequestParam String region,
             @RequestParam String neighborhood,
             @RequestParam String street){
