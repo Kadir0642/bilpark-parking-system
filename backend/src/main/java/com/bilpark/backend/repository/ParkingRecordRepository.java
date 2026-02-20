@@ -28,7 +28,8 @@ public interface ParkingRecordRepository extends JpaRepository<ParkingRecord, Lo
     @Query("SELECT SUM(r.fee) FROM ParkingRecord r WHERE r.exitTime BETWEEN :start AND :end") // ParkingRecord(r) sınıfındaki kayıtlarda start-end arasını seçip, fee sütünlarını toplayıp bize vericek.
     Double getIncomeByDateRange(LocalDateTime start, LocalDateTime end); //Veritabanı null dönerse hata olmasın diye "Double" yazdık
 
-    // 4. Seçilen caddedeki en son 50 kaydı,İlçe/mahalle/caddesi bizim parametrelerle birebir eşleşen, En yeni en üstte olacak şekilde getirir.
+    //4. Seçilen caddedeki en son 50 kaydı,İlçe/mahalle/caddesi bizim parametrelerle birebir eşleşen, En yeni en üstte olacak şekilde getirir.
+    // Geçmiş kayıt sorgusu
     List<ParkingRecord> findTop50ByRegionAndNeighborhoodAndStreetOrderByEntryTimeDesc(String region,String neighborhood,String street); // byregionAndNeighborhoodAndStreet -> WHERE | OrderByEntryTime ->EntryTime göre sıralar | Desc (Descending) ->En son giren araç en tepede ,Aşağı doğru giderek büyüyen [ Yeniden eskiye doğru]
 
 }
