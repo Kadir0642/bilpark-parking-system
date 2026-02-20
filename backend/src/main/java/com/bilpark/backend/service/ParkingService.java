@@ -222,4 +222,10 @@ public class ParkingService
         //Hiç biri yoksa veya eksikse boş liste döneriz, (Performance Issue) HEPSINI CEKMEK SISTEMI YORABILIR.
         return List.of();
     }
+
+    // --- GEÇMİŞ KAYITLARI GETİR ---
+    // Delegation (Görev devri)
+    public List<ParkingRecord> getHistoryByLocation(String region,String neighborhood,String street){ // Şu an için tek görevi köprü olmak , repository'i çağırıyor mimari için ilerideki özellik eklemeleri için bu yapı tercih ediliyor.
+        return parkingRecordRepository.findTop50ByRegionAndNeighborhoodAndStreetOrderByEntryTimeDesc(region,neighborhood,street);
+    }
 }
