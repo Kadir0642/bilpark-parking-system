@@ -98,4 +98,5 @@ dosyasına kendi veritabanı bilgilerinizi girmelisiniz.
 ```
 
 Developed by Kadir Kacır
+
 Copyright (c) 2026 Kadir Kacır. All Rights Reserved.
