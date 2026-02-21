@@ -49,6 +49,7 @@ public class ParkingService
 
         spot.setCurrentPlate(licensePlate); // 1. Plakayı kutunun içine yaz (Kalıcılık için)
         spot.setEntryTime(LocalDateTime.now()); //Şu anki saati kaydet | Giriş saati kaydediliyor -> App için.
+        spot.setCurrentType(vehicleType); // Araç tipini veritabanına kalıcı olarak kaydediyoruz.
 
         //Gelen String tipi (SMALL/LARGE) Enum'a çevirip kaydediyoruz.
         //Eğer boş gelirse default SMALL olur.
