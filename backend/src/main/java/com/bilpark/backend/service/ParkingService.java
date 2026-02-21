@@ -113,7 +113,7 @@ public class ParkingService
         spot.setOccupied(false);// Cikistan sonra park yerini bosaltıyoruz.
         spot.setCurrentPlate(null); // Cikistan sonra plakayı siler (null yapar)
         spot.setEntryTime(null); // Cikistan sonra saati sifirlar.
-
+        spot.setCurrentType(null);// Cikistan sonra araç tipini siler
         parkSpotRepository.save(spot); // hemen kaydediyoruz.
 
         return record;
