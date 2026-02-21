@@ -206,8 +206,15 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
     }
   }
 
+// --- API: PARK ET (GÜVENLİ URL İLE) ---
   Future<void> checkInVehicle(int spotId, String plate, String type) async {
-    final url = Uri.parse('$globalBaseUrl/check-in?spotId=$spotId&licensePlate=$plate&type=$type');
+    // 🪄 ÇÖZÜM: Boşlukların URL'yi bozmaması için queryParameters kullanıyoruz!
+    final url = Uri.parse('$globalBaseUrl/check-in').replace(queryParameters: {
+      'spotId': spotId.toString(),
+      'licensePlate': plate,
+      'type': type, // Artık LARGE bilgisi backend'e kesin ulaşacak!
+    });
+
     try {
       await http.post(url);
       if (!mounted) return;
@@ -225,6 +232,7 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
     } catch (e) { debugPrint(e.toString()); }
   }
 
+  // --- API: ÇIKIŞ YAP (GÜVENLİ URL İLE) ---
   Future<void> checkOutVehicle(int spotId, String? currentPlate) async {
     bool? confirm = await showDialog(
       context: context,
@@ -243,7 +251,11 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
     );
 
     if (confirm == true) {
-      final url = Uri.parse('$globalBaseUrl/check-out?spotId=$spotId');
+      // 🪄 ÇÖZÜM: Güvenli URL
+      final url = Uri.parse('$globalBaseUrl/check-out').replace(queryParameters: {
+        'spotId': spotId.toString(),
+      });
+
       try {
         final response = await http.post(url);
         if (response.statusCode == 200) {
