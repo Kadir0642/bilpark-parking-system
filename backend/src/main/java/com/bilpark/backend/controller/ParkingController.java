@@ -36,7 +36,7 @@ public class ParkingController
     // URL: http://localhost:8080/api/parking/check-in?spotId=1&licensePlate=34ABC123
     //@RequestParam: URL'in sonundaki soru işaretinden sonraki verileri okur.
     @PostMapping("/check-in") // GİRİŞ İŞLEMLERİ | PostMapping (Postala/Gönder) "Yeni park yeri eklerken" Sunucuda değişiklik, oluşturma, silme gibi işleri vardır(CRUD)
-    public ParkSpot checkIn(@RequestParam Long spotId,@RequestParam String licensePlate,@RequestParam(defaultValue= "SMALL") String vehicleType)
+    public ParkSpot checkIn(@RequestParam Long spotId,@RequestParam String licensePlate,@RequestParam(value= "type",defaultValue= "SMALL") String vehicleType)
     {
         return parkingService.checkInVehicle(spotId,licensePlate,vehicleType); // Controller, gelen verileri servise verir. | Sonucta -> Araci iceri alir ve park yerinin son halini basar.
     }
