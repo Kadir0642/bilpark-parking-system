@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController //Bu sınıf artık REST API (sistemlere JSON cevap verir)
+@CrossOrigin("*") //Dünyadaki tüm cihazlar ve uygulamalar bana sorunsuz bağlanabili
 @RequestMapping("/api/parking") // Bu sınıfa ulaşmak için adresimiz: localhost:8080/api/parking | /api konulmasi web sayfasi ile veri servisi yollari karısmasin diye konulur
 public class ParkingController
 {
