@@ -22,13 +22,13 @@ public class DataInitializer
                 System.out.println("--- KROKİ VERİLERİ YÜKLENİYOR ---");
 
                 //SOL KALDIRIM (A Blok - Öncü Dürüm Tarafı ) -20 Adet park yeri
-                for(int i=1;i<=20;i++){ // <-- DÖNGÜ BAŞLADI
+                for(int i=1;i<=25;i++){ // <-- DÖNGÜ BAŞLADI
                     ParkSpot spot =new ParkSpot("A-"+i,VehicleType.SMALL,false,"Bilecik","Atatürk Mah","Merkez");
                 repository.save(spot); // Kaydet
                 } // <-- DÖNGÜ BİTTİ (Spot öldü!)
 
                 // SAĞ KALDIRIM (B Blok )
-                for(int i=1;i<=20;i++){
+                for(int i=1;i<=25;i++){
                     ParkSpot spot = new ParkSpot("B-"+i, VehicleType.SMALL, false,"Bilecik","Atatürk Mah","Merkez");
                     repository.save(spot); // Kaydet
                 }
