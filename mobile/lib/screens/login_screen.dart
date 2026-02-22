@@ -17,7 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   // Sahte Veritabanı (İleride Backend'den çekilebilir)
   final Map<String, Map<String, List<String>>> locationData = {
     'Bilecik': {
-      'Atatürk Mah': ['Merkez', 'Cumhuriyet Myd', 'İstasyon Cad'] // parametrelerin sırası düzeltildi
+      'Merkez': ['Atatürk Mah', 'Cumhuriyet Myd', 'İstasyon Cad'] // parametrelerin sırası düzeltildi
     },
     'Ankara': {
       'Çankaya': ['Kızılay', 'Bahçelievler'],
