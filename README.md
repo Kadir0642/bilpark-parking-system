@@ -1,8 +1,8 @@
 # 🅿️ BilPark - Yeni Nesil Otopark Yönetim Sistemi
 
-![Language](https://img.shields.io/badge/Language-Java%2021-orange) ![Framework](https://img.shields.io/badge/Framework-Spring%20Boot%203-brightgreen) ![Database](https://img.shields.io/badge/Database-PostgreSQL%20(Neon)-blue) ![Mobile](https://img.shields.io/badge/Mobile-Flutter-blue) ![Status](https://img.shields.io/badge/status-Active%20Development-green.svg) ![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Language](https://img.shields.io/badge/Language-Java%2021-orange) ![Framework](https://img.shields.io/badge/Framework-Spring%20Boot%203-brightgreen) ![Database](https://img.shields.io/badge/Database-PostgreSQL%20(Neon)-blue) ![Mobile](https://img.shields.io/badge/Mobile-Flutter-blue) ![Hosting](https://img.shields.io/badge/Hosting-Render-purple) ![Status](https://img.shields.io/badge/status-Active%20Development-green.svg) ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-> **"Kağıt Yok, Donanım Yok, Sadece Kod"**: Şehir içi otopark yönetimini dijitalleştiren, pahalı donanım maliyetlerini (kiosk/bariyer) ortadan kaldıran, **Mobil Odaklı** ve **Bulut Tabanlı** akıllı otopark çözümüdür.
+> **"Kağıt Yok, Donanım Yok, Sadece Kod"**: Şehir içi otopark yönetimini dijitalleştiren, pahalı donanım maliyetlerini (kiosk/bariyer) ortadan kaldıran, **Mobil Odaklı** ve **%100 Bulut Tabanlı** akıllı otopark çözümüdür.
 
 ---
 
@@ -13,14 +13,15 @@ Geleneksel sistemlerdeki el terminalleri ve kağıt fişler; yağmurda ıslanır
 
 **Çözüm:**
 **BilPark**, fiziksel bilet yerine **Plaka Tanıma (OCR) ve QR** teknolojisini kullanır.
-* **Backend (Beyin):** Java Spring Boot ile kurulan sağlam mimari, binlerce aracın giriş-çıkışını yönetir ve karmaşık fiyat hesaplamalarını yapar.
-* **Veritabanı (Hafıza):** Veriler **Neon.tech (PostgreSQL)** bulut sunucularında güvenle saklanır.
-* **Mobil (Saha):** Saha görevlileri, Flutter ile geliştirilmiş modern, sürükle-bırak destekli ve karanlık mod (Dark Mode) uyumlu mobil uygulama üzerinden operasyonu tek parmakla yönetir.
+* **Backend (Beyin):** Java Spring Boot ile kurulan sağlam mimari, binlerce aracın giriş-çıkışını yönetir ve karmaşık fiyat hesaplamalarını yapar. Şu an aktif olarak Almanya lokasyonlu **Render** bulut sunucularında 7/24 hizmet vermektedir.
+* **Veritabanı (Hafıza):** Veriler **Neon.tech (PostgreSQL)** serverless bulut mimarisinde güvenle saklanır.
+* **Mobil (Saha):** Saha görevlileri, Flutter ile geliştirilmiş modern, sürükle-bırak destekli ve karanlık mod (Dark Mode) uyumlu mobil uygulama üzerinden operasyonu tek parmakla yönetir. Cihaz bağımsızdır, internetin olduğu her yerden merkeze bağlanır.
 
 ---
 
 ## 🚀 Öne Çıkan Özellikler
 
+* **7/24 Kesintisiz Bulut Entegrasyonu:** Backend sunucusu Render üzerinde yayındadır ve *UptimeRobot* entegrasyonu ile uyku moduna geçmeden kesintisiz hizmet verir. Zaman dilimi (Timezone) otomatik olarak UTC+3 (Türkiye) standartlarına senkronize edilmiştir.
 * **Kamera ile Plaka Okuma (OCR):** Google ML Kit entegrasyonu ile araç plakaları kameradan anında metne çevrilir.
 * **Akıllı Saha Krokisi:** Araçlar sürükle-bırak (Drag & Drop) mantığıyla park yerlerine atanır. Boş yerler otomatik olarak üst sıralara taşınır (Dynamic Sorting).
 * **Dinamik Araç Tipi Algılama:** Kamyonet/Ticari araçlar ile Standart otomobiller haritada farklı ikon ve renklerle (Turuncu/Kırmızı) görselleştirilir.
@@ -28,6 +29,11 @@ Geleneksel sistemlerdeki el terminalleri ve kağıt fişler; yağmurda ıslanır
 * **SOLID Mimari:** Hem Backend (Java) hem de Mobil (Flutter) tarafı, bakımı kolay ve ölçeklenebilir bir mimariyle kodlanmıştır.
 
 ---
+
+
+
+[Image of cloud computing architecture]
+
 
 ## 🛠️ Teknoloji Yığını (Tech Stack)
 
@@ -37,6 +43,7 @@ Proje, "Software Architect" bakış açısıyla; ölçeklenebilir ve modüler bi
 | :--- | :--- | :--- |
 | **Backend** | ☕ **Java 21 & Spring Boot 3** | Kurumsal standartlarda, yüksek performanslı REST API. |
 | **Database** | 🐘 **PostgreSQL (Neon.tech)** | Serverless (Sunucusuz) Bulut Veritabanı Altyapısı. |
+| **Cloud/DevOps**| ☁️ **Render & UptimeRobot** | CI/CD süreçleri ile otomatik canlıya alma ve kesintisiz sunucu yönetimi. |
 | **ORM** | 🍃 **Spring Data JPA** | SQL yazmadan veritabanı yönetimi (Hibernate). |
 | **Mobile** | 💙 **Flutter (Dart)** | iOS & Android için State Management ve SOLID prensipleriyle kodlanmış mobil uygulama. |
 | **Tools** | 🛠️ **Google ML Kit, Maven, Lombok** | Görüntü işleme, bağımlılık yönetimi ve temiz kod araçları. |
@@ -57,75 +64,37 @@ Sistem, belediye tarifelerine uygun olarak ücreti **otomatik** hesaplar. Şu an
 
 ---
 
-## 📂 Proje Yapısı (Monorepo)
-
-```bash
-bilpark-parking-system/
-├── backend/                # Java Spring Boot API Sunucusu
-│   ├── src/main/java/      
-│   │   ├── model/          # Veritabanı Tabloları (ParkSpot, ParkingRecord vb.)
-│   │   ├── repository/     # Veri Erişim Katmanı (Data Access Layer)
-│   │   ├── service/        # İş Mantığı & Fiyat Hesaplama Motoru
-│   │   └── controller/     # API Uç Noktaları (REST Endpoints)
-├── mobile/                 # Flutter Mobil Uygulama
-│   ├── lib/
-│   │   ├── screens/        # SOLID'e uygun ayrılmış ekranlar (Auth, Dashboard, Map vb.)
-│   │   └── main.dart       # Uygulama motoru ve Theme Management
-└── README.md               # Proje Dokümantasyonu
-```
-
----
-
 ## ⚙️ Kurulum ve Çalıştırma
 
-Projeyi yerel ortamınızda test etmek için aşağıdaki adımları izleyin:
-1. Repoyu Klonlayın
+Proje canlı bulut sunucularına bağlandığı için mobil uygulamayı doğrudan telefonunuzda derleyip kullanabilirsiniz.
 
-```bash
-git clone [https://github.com/Kadir0642/bilpark-parking-system.git](https://github.com/Kadir0642/bilpark-parking-system.git)
-cd bilpark-parking-system
-```
+### Seçenek 1: Canlı Ortamı Test Etme (Sadece Mobil)
+Sadece mobil arayüzü test etmek ve doğrudan canlı sunucuya bağlanmak için:
+1. `mobile` klasörüne gidin.
+2. `flutter pub get` komutu ile bağımlılıkları yükleyin.
+3. Cihazınızı bağlayın ve `flutter run` komutu ile saha operasyonlarına anında başlayın. (Herhangi bir local sunucu çalıştırmanıza gerek yoktur).
 
-2. Backend'i Başlatın (Java)
-- Projeyi IntelliJ IDEA ile açın.
-
-- pom.xml dosyasına sağ tıklayıp "Add as Maven Project" deyin.
-
-- src/main/resources/application.properties dosyasına kendi Neon.tech PostgreSQL bilgilerinizi girin.
-
-- BackendApplication.java dosyasını çalıştırın.
-
-3. Mobil Uygulamayı Başlatın (Flutter)
-
-- ```mobile``` klasörüne gidin.
-
-- ```flutter pub get``` komutu ile bağımlılıkları yükleyin.
-
-- Kendi yerel IP adresinizi veya Ngrok tünel adresinizi ```globalBaseUrl``` olarak ayarlayın.
-
-- ```flutter run``` komutu ile uygulamayı başlatın.
+### Seçenek 2: Geliştirici Ortamı (Local Backend & Database)
+Sistemin beynine (Java) müdahale etmek ve geliştirmek isterseniz:
+1. Repoyu klonlayın ve backend klasörünü IntelliJ IDEA ile açın.
+2. `pom.xml` dosyasına sağ tıklayıp "Add as Maven Project" deyin.
+3. `src/main/resources/application.properties` dosyasına kendi Neon.tech PostgreSQL bilgilerinizi girin.
+4. `BackendApplication.java` dosyasını çalıştırın.
+5. Mobil uygulamadaki `globalBaseUrl` değişkenini kendi yerel IP adresinize yönlendirin.
 
 ---
 ## 🗺️ Yol Haritası (Roadmap)
-[x] Faz 1: Monorepo Kurulumu & Spring Boot Başlangıcı
 
-[x] Faz 2: Veritabanı Tasarımı (PostgreSQL Neon Geçişi)
-
-[x] Faz 3: Repository Katmanı ve Data Seeding
-
-[x] Faz 4: Service Katmanı (İş Mantığı & Akıllı Fiyat Hesaplama Motoru)
-
-[x] Faz 5: Controller Katmanı (REST API'nin Dışa Açılması)
-
-[x] Faz 6: Mobil Uygulama Geliştirme (Flutter, SOLID Mimarisi, UI/UX, Dark Mode)
-
-[x] Faz 7: Kamera ile Plaka Okuma (OCR) ve Sürükle-Bırak Entegrasyonu
-
-[ ] Faz 8: Backend Sunucusunun Buluta Taşınması (Cloud Deployment) 🚀 (ŞU AN BURADAYIZ)
-
-[ ] Faz 9: Vatandaşlar İçin QR Kod ile Kendi Kendine Ödeme Sistemi
-
-[ ] Faz 10: Canlı Saha Testler
+- [x] Faz 1: Monorepo Kurulumu & Spring Boot Başlangıcı
+- [x] Faz 2: Veritabanı Tasarımı (PostgreSQL Neon Geçişi)
+- [x] Faz 3: Repository Katmanı ve Data Seeding
+- [x] Faz 4: Service Katmanı (İş Mantığı & Akıllı Fiyat Hesaplama Motoru)
+- [x] Faz 5: Controller Katmanı (REST API'nin Dışa Açılması)
+- [x] Faz 6: Mobil Uygulama Geliştirme (Flutter, SOLID Mimarisi, UI/UX, Dark Mode)
+- [x] Faz 7: Kamera ile Plaka Okuma (OCR) ve Sürükle-Bırak Entegrasyonu
+- [x] Faz 8: Backend Sunucusunun Buluta Taşınması (Render & UptimeRobot Entegrasyonu)
+- [ ] Faz 9: Vatandaşlar İçin QR Kod ile Kendi Kendine Ödeme Sistemi 🚀 **(ŞU AN BURADAYIZ)**
+- [ ] Faz 10: Canlı Saha Testleri ve Performans Optimizasyonu
 
 ---
 
