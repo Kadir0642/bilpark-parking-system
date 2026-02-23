@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-// BURAYA KENDİ NGROK ADRESİNİ YAZ!
-final String globalBaseUrl = "https://oversufficiently-picturesque-eve.ngrok-free.dev/api/parking";
+final String globalBaseUrl = "https://bilpark-api-rtdl.onrender.com/api/parking";
 
 class HistoryScreen extends StatefulWidget {
   final String region;

@@ -4,8 +4,7 @@ import 'package:http/http.dart' as http;
 import 'settings_screen.dart'; // Ayarlar sayfasını bağladık
 import 'history_screen.dart'; // Geçmiş sayfasını bağladık
 
-// NGROK LİNKİNİ BURAYA DA EKLE (İleride bunu da tek bir config dosyasına alacağız)
-final String globalBaseUrl = "https://oversufficiently-picturesque-eve.ngrok-free.dev/api/parking";
+final String globalBaseUrl = "https://bilpark-api-rtdl.onrender.com/api/parking";
 
 class DashboardScreen extends StatefulWidget {
   final String region;
