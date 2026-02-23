@@ -46,32 +46,21 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
   }
 
   Future<void> fetchFilteredSpots() async {
-    // Şimdilik filtrelemeyi bypass edip, doğrudan tüm verileri çekmeyi test ediyoruz
-    final uri = Uri.parse('$globalBaseUrl/spots');
+    // 🪄 HİLEYİ KALDIRDIK, ORİJİNAL FİLTRELEMEYE DÖNDÜK
+    // Uri.replace kullanmak Türkçe karakterleri (ü, ş, ç) internet diline güvenli çevirir!
+    final uri = Uri.parse('$globalBaseUrl/filter').replace(queryParameters: {
+      'region': widget.region,
+      'neighborhood': widget.neighborhood,
+      'street': widget.street,
+    });
 
     try {
       final response = await http.get(uri);
-      if (!mounted) return;
-
+      if (!mounted) return; // Ekran hala hayatta mı ona bakar
       if (response.statusCode == 200) {
         setState(() => spots = json.decode(response.body));
-        // BAŞARILI OLURSA EKRANDA YEŞİL MESAJ ÇIKACAK
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("🎉 Veriler Başarıyla Çekildi: ${spots.length} Park Yeri!"), backgroundColor: Colors.green)
-        );
-      } else {
-        // SUNUCU CEVAP VERİR AMA HATA OLURSA
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("⚠️ Sunucu Hatası: ${response.statusCode}"), backgroundColor: Colors.orange)
-        );
       }
-    } catch (e) {
-      // UYGULAMA İNTERNETE ÇIKAMAZSA VEYA ENGELLENİRSE
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ BAĞLANTI HATASI: $e", style: const TextStyle(fontSize: 12)), backgroundColor: Colors.red, duration: const Duration(seconds: 10))
-      );
-      debugPrint("Kritik Hata: $e");
-    }
+    } catch (e) { debugPrint("Hata: $e"); }
   }
 
   Future<void> _showEntryForm(String detectedPlate) async {
@@ -199,6 +188,7 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
     }
   }
 
+  // PLAKA OKUMA OCR
   Future<void> scanPlate() async {
     final ImagePicker picker = ImagePicker();
     final XFile? photo = await picker.pickImage(source: ImageSource.camera);
