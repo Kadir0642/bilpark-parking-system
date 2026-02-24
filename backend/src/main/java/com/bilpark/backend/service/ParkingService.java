@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 @Service //İş mantigini yöneten sinif | Uygulama Beyni
 public class ParkingService
@@ -228,5 +230,37 @@ public class ParkingService
     // Delegation (Görev devri)
     public List<ParkingRecord> getHistoryByLocation(String region,String neighborhood,String street){ // Şu an için tek görevi köprü olmak , repository'i çağırıyor mimari için ilerideki özellik eklemeleri için bu yapı tercih ediliyor.
         return parkingRecordRepository.findTop50ByRegionAndNeighborhoodAndStreetOrderByEntryTimeDesc(region,neighborhood,street);
+    }
+
+    //  İçine isim (String tarafı), süre (Long), ücret (Double) gibi karışık türler koyacağımız için (Object tarafı) dedik.
+    public Map<String, Object> getDebtByPlate(String plate){ // DTO (Data Transfer Object), veri aktarımı için kullanılan bir tasarım desenidir | Nesnelerin verilerini bir yerden başka bir yere aktarmak için kullanılır. Genellikle bir veritabanından veri çekilirken veya bir web hizmetine veri gönderilirken DTO’lar kullanılır.
+        // 1. Aracı bul (bulamazsa hata fırlat)
+        ParkSpot spot = parkSpotRepository.findByCurrentPlateIgnoreCase(plate) // Fail-Fast (Erken Patla/Hızlı Hata Ver) prensibi
+                .orElseThrow(() -> new RuntimeException ("Bu plakaya ait otoparkta aktif araç bulunamadı: " + plate));
+
+        // 2. Süreyi hesapla
+        long minutes = Duration.between(spot.getEntryTime(),LocalDateTime.now()).toMinutes();
+        // 3. Ücret hesapla
+        double fee=calculateFee(spot.getSuitableFor(),minutes);
+
+        // 4. MÜŞTERİYE GÖSTERİLECEK FİŞİ (JSON) HAZIRLA | Snapshot (Anlık Görüntü)
+        Map<String, Object> response = new HashMap<>();
+        response.put("spotName",spot.getSpotName());
+        response.put("plate", spot.getCurrentPlate());
+        response.put("entryTime", spot.getEntryTime());
+        response.put("durationMinutes:",minutes);
+        response.put("fee",fee);
+
+        return response;
+    }
+
+    // 5. --- MÜŞTERİ İÇİN: ÖDEME YAP VE ÇIKIŞI ONAYLA ---
+    public ParkingRecord processPaymentAndCheckout(String plate){
+        // 1. Önce plakadan aracın hangi park yerinde (ID) olduğunu bul
+        ParkSpot spot = parkSpotRepository.findByCurrentPlateIgnoreCase(plate) // Müşteri borcunu sorguladıktan sonra ödeme yapana kadar yarım saat geçmiş olabilir. Ödeme anında aracın hala orada olup olmadığını teyit etmek zorundayız.
+                .orElseThrow(() -> new RuntimeException("Ödeme için araç bulunamadı: " + plate));
+
+        // 2. DRY | LOGIC REUSE (DAHA ÖNCE YAZDIĞIMIZ ÇIKIŞ METODUNU ÇAĞIRIRIZ)
+        return checkOutVehicle(spot.getId());
     }
 }
