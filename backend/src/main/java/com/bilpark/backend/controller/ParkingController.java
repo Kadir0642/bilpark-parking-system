@@ -90,7 +90,7 @@ public class ParkingController
 
     //4. ÇALIŞMA ALANI FİLTRELEME
     // http://localhost:8080/api/parking/filter <- Tetikleyici adres
-    @GetMapping("/filter") // <-- ENDPOINT | @RequestParam zorunlu parametreler | Cadde/sokak opsiyonel (required=false)
+    @GetMapping("/filter") // <-- ENDPOINT | @RequestParam metod çağrısında parametreninde gönderildiği notasyon | zorunlu parametreler | Cadde/sokak opsiyonel (required=false)
     public List<ParkSpot>filterSpots(@RequestParam String region,@RequestParam String neighborhood,@RequestParam(required=false) String street){
         return parkingService.getSpotsByLocation(region,neighborhood,street);
     }
@@ -114,6 +114,21 @@ public class ParkingController
         }catch(RuntimeException e){
             // Araç bulunamazsa 400 Bad Request döneriz.
             return ResponseEntity.badRequest().body(Map.of("error",e.getMessage()));
+        }
+    }
+
+    // 6.2 Ödeme ve Çıkış İşlemi (POST) -> URL: /api/parking/pay?plate=42EGA432
+    @PostMapping("/pay") // ENDPOINT
+    public ResponseEntity<?> payAndCheckOut(@RequestParam String plate){
+        try{
+            ParkingRecord record = parkingService.processPaymentAndCheckout(plate); // Sistemin durumu değişiyor,para alınıp park yeri boşalıyor (occupied=false), yeni bir arşiv fişi oluşuyor (ParkingRecord) BU sebeple POST Kullanıyoruz.
+            return ResponseEntity.ok(Map.of( // ResponseEntitye.ok -> 200 başarılı kodu atıp müşteriye cevap verir.
+                    "message","Ödeme Başarılı! Çıkış yapıldı.",
+                    "paidAmount", record.getFee(),
+                    "record",record // Fişin tüm detayları (Eğer PDF olarak indirmek veya detayını görmek isterse diye).
+            ));
+        }catch(RuntimeException e){
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 }
