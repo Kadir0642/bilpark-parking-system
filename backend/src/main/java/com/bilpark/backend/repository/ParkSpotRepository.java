@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 //Park yeri filtreleri/büyüklüğü ile ilgilenir.
 @Repository // Spring'e : ParkSpotRepository-> veritabanı işlerinden sorumlu der. (Dependency Injection) veritabanı hatalarını bizim dilimize çeviren bir Tercüman
@@ -24,6 +25,9 @@ public interface ParkSpotRepository extends JpaRepository<ParkSpot, Long>
 
     List<ParkSpot> findByRegionAndNeighborhoodAndStreet(String region,String neighborhood,String street); // İlçe,Mahalle,sokak filtresi (İnce ayar)
     List<ParkSpot> findByRegionAndNeighborhood(String region,String neighborhood);// İlçe,mahalle filtresi (Daha geniş arama)
+
+    //Plakaya göre dolu park yerlerini  bul (büyük/küçük fark etmeksizin) | Optional -> (Null kontrolleri daha güvenli ve okunabilir olsun diye)Bir değerin mevcut olup olmadığını belirtmek için kullanılır.
+    Optional<ParkSpot> findByCurrentPlateIgnoreCase(String currentPlate);
 
     List<ParkSpot> findByOccupiedTrue(); // Dolu park yerleri filtresi  BURAYI ZATEN IZGARA İLE GÖSTERECEĞİZ
 
