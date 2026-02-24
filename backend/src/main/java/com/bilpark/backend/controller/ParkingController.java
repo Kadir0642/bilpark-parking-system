@@ -9,8 +9,14 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+
+//işlemlerin başarılı veya başarısız olduğunu gösteren anlamlı HTTP durum kodları döndürmenizi sağlayarak
+// API'lerimizi daha güvenilir ve kullanıcı dostu hale getirir .
 
 import java.util.List;
+import java.util.Map;
+
 
 @RestController //Bu sınıf artık REST API (sistemlere JSON cevap verir)
 @CrossOrigin("*") //Dünyadaki tüm cihazlar ve uygulamalar bana sorunsuz bağlanabili
@@ -96,5 +102,18 @@ public class ParkingController
             @RequestParam String neighborhood,
             @RequestParam String street){
         return parkingService.getHistoryByLocation(region,neighborhood,street);
+    }
+
+    // 6. --- MÜŞTERİ ÖDEME SİSTEMİ API'LERİ ---
+
+    // 6.1 Borç Sorgulama (GET/SADECE OKUMA yapıyoruz) -> URL: /api/parking/debt?plate=42EGA123
+    @GetMapping("/debt") // API UCU <- ENDPOINT
+    public ResponseEntity<?> getDebt(@RequestParam String plate){ // ResponseEntity -> Hem veriyi hemde HTTP Status Code taşır. | <?> --> (Wildcard) İçinden her an her şey çıkabilir. İşlem başarılıysa "MAP" değilse "Hata Mesajı" içine koyarız. İki farklı tipi kabul etmesi için ? (Wildcard) joker var
+        try{
+            return ResponseEntity.ok(parkingService.getDebtByPlate(plate)); // ResponseEntitye.ok -> 200 başarılı kodu atıp müşteriye cevap verir.
+        }catch(RuntimeException e){
+            // Araç bulunamazsa 400 Bad Request döneriz.
+            return ResponseEntity.badRequest().body(Map.of("error",e.getMessage()));
+        }
     }
 }
