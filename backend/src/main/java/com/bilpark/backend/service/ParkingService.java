@@ -248,7 +248,7 @@ public class ParkingService
         response.put("spotName",spot.getSpotName());
         response.put("plate", spot.getCurrentPlate());
         response.put("entryTime", spot.getEntryTime());
-        response.put("durationMinutes:",minutes);
+        response.put("durationMinutes",minutes);
         response.put("fee",fee);
 
         return response;
