@@ -1,100 +1,96 @@
-# 🅿️ BilPark - Yeni Nesil Otopark Yönetim Sistemi
+# 🅿️ BilPark - Next-Generation Parking Management System
 
 ![Language](https://img.shields.io/badge/Language-Java%2021-orange) ![Framework](https://img.shields.io/badge/Framework-Spring%20Boot%203-brightgreen) ![Database](https://img.shields.io/badge/Database-PostgreSQL%20(Neon)-blue) ![Mobile](https://img.shields.io/badge/Mobile-Flutter-blue) ![Hosting](https://img.shields.io/badge/Hosting-Render-purple) ![Status](https://img.shields.io/badge/status-Active%20Development-green.svg) ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-> **"Kağıt Yok, Donanım Yok, Sadece Kod"**: Şehir içi otopark yönetimini dijitalleştiren, pahalı donanım maliyetlerini (kiosk/bariyer) ortadan kaldıran, **Mobil Odaklı** ve **%100 Bulut Tabanlı** akıllı otopark çözümüdür.
+> A cloud-based, mobile-first smart parking solution is digitizing urban parking management.
 
 ---
 
-## 🎯 Proje Vizyonu (Vision)
+## 🎯 Vision
 
-**Problem:**
-Geleneksel sistemlerdeki el terminalleri ve kağıt fişler; yağmurda ıslanır, kaybolur ve maliyetlidir. Ayrıca nakit para akışında kaçaklar oluşur ve denetim zordur. Saha personelinin operasyonel yükü fazladır.
+**The Problem:**
+Traditional parking systems based on paper tickets and handheld terminals increase operational workload and lead to revenue loss by making vehicle tracking and collection more difficult.
 
-**Çözüm:**
-**BilPark**, fiziksel bilet yerine **Plaka Tanıma (OCR) ve QR** teknolojisini kullanır.
-* **Backend (Beyin):** Java Spring Boot ile kurulan sağlam mimari, binlerce aracın giriş-çıkışını yönetir ve karmaşık fiyat hesaplamalarını yapar. Şu an aktif olarak Almanya lokasyonlu **Render** bulut sunucularında 7/24 hizmet vermektedir.
-* **Veritabanı (Hafıza):** Veriler **Neon.tech (PostgreSQL)** serverless bulut mimarisinde güvenle saklanır.
-* **Mobil (Saha):** Saha görevlileri, Flutter ile geliştirilmiş modern, sürükle-bırak destekli ve karanlık mod (Dark Mode) uyumlu mobil uygulama üzerinden operasyonu tek parmakla yönetir. Cihaz bağımsızdır, internetin olduğu her yerden merkeze bağlanır.
-
----
-
-## 🚀 Öne Çıkan Özellikler
-
-* **7/24 Kesintisiz Bulut Entegrasyonu:** Backend sunucusu Render üzerinde yayındadır ve *UptimeRobot* entegrasyonu ile uyku moduna geçmeden kesintisiz hizmet verir. Zaman dilimi (Timezone) otomatik olarak UTC+3 (Türkiye) standartlarına senkronize edilmiştir.
-* **Kamera ile Plaka Okuma (OCR):** Google ML Kit entegrasyonu ile araç plakaları kameradan anında metne çevrilir.
-* **Akıllı Saha Krokisi:** Araçlar sürükle-bırak (Drag & Drop) mantığıyla park yerlerine atanır. Boş yerler otomatik olarak üst sıralara taşınır (Dynamic Sorting).
-* **Dinamik Araç Tipi Algılama:** Kamyonet/Ticari araçlar ile Standart otomobiller haritada farklı ikon ve renklerle (Turuncu/Kırmızı) görselleştirilir.
-* **Vardiya ve Lokasyon Yönetimi:** Personel giriş ekranı (Auth) ve dinamik bölge seçimi ile her görevli sadece kendi bölgesini yönetir.
-* **SOLID Mimari:** Hem Backend (Java) hem de Mobil (Flutter) tarafı, bakımı kolay ve ölçeklenebilir bir mimariyle kodlanmıştır.
+**The Solution:**
+**BilPark** replaces physical tickets with **On-Device OCR and QR** technologies.
+* **Backend (The Brain):** A robust Java Spring Boot architecture handling concurrent vehicle tracking and complex pricing algorithms, hosted 24/7 on **Render**.
+* **Database (The Memory):** Secure, serverless data storage powered by **Neon.tech (PostgreSQL)**.
+* **Mobile (The Field):** A modern, device-agnostic Flutter application featuring an intuitive drag-and-drop interface and Dark Mode, enabling field officers to manage operations seamlessly from anywhere.
 
 ---
 
+## 🚀 Key Features
 
+* **24/7 Cloud Availability:** The backend operates continuously on Render, kept active via *UptimeRobot* with UTC+3 timezone synchronization.
+* **On-Device OCR:** Instant license plate recognition using Google ML Kit, processing data locally to ensure high performance even with low connectivity.
+* **Smart Grid & Drag-and-Drop:** An intuitive UI to assign vehicles to parking spots. Empty spots are dynamically sorted to the top for faster access.
+* **Dynamic Vehicle Classification:** Distinct UI elements and pricing models for standard vs. commercial vehicles.
+* **Location-Based Auth:** Field staff securely log in and exclusively manage their assigned zones/neighborhoods.
+* **SOLID Architecture:** Clean, maintainable, and scalable codebases utilizing N-Tier architecture on the backend and State Management on the frontend.
 
-[Image of cloud computing architecture]
+---
+![System_Architecture_Diagram.png](System_Architecture_Diagram.png)
+## 🛠️ Tech Stack
 
+Designed with a Software Architect's perspective, focusing on modularity and scalability.
 
-## 🛠️ Teknoloji Yığını (Tech Stack)
-
-Proje, "Software Architect" bakış açısıyla; ölçeklenebilir ve modüler bir yapı olarak tasarlanmıştır.
-
-| Alan | Teknoloji | Açıklama |
+| Layer | Technology | Description |
 | :--- | :--- | :--- |
-| **Backend** | ☕ **Java 21 & Spring Boot 3** | Kurumsal standartlarda, yüksek performanslı REST API. |
-| **Database** | 🐘 **PostgreSQL (Neon.tech)** | Serverless (Sunucusuz) Bulut Veritabanı Altyapısı. |
-| **Cloud/DevOps**| ☁️ **Render & UptimeRobot** | CI/CD süreçleri ile otomatik canlıya alma ve kesintisiz sunucu yönetimi. |
-| **ORM** | 🍃 **Spring Data JPA** | SQL yazmadan veritabanı yönetimi (Hibernate). |
-| **Mobile** | 💙 **Flutter (Dart)** | iOS & Android için State Management ve SOLID prensipleriyle kodlanmış mobil uygulama. |
-| **Tools** | 🛠️ **Google ML Kit, Maven, Lombok** | Görüntü işleme, bağımlılık yönetimi ve temiz kod araçları. |
+| **Backend** | ☕ **Java 21 & Spring Boot 3** | Enterprise-grade, high-performance REST API. |
+| **Database** | 🐘 **PostgreSQL (Neon.tech)** | Serverless Cloud Database infrastructure. |
+| **Cloud/DevOps**| ☁️ **Render & UptimeRobot** | Cloud hosting with automated keep-alive mechanisms. |
+| **ORM** | 🍃 **Spring Data JPA** | Hibernate-based data access layer. |
+| **Mobile** | 💙 **Flutter (Dart)** | Cross-platform mobile app built with SOLID principles. |
+| **Tools** | 🛠️ **Google ML Kit, Maven, Lombok** | On-device image processing and clean code utilities. |
 
 ---
 
-## 💰 Fiyatlandırma Algoritması (Business Logic)
+## 💰 Pricing Engine (Business Logic)
 
-Sistem, belediye tarifelerine uygun olarak ücreti **otomatik** hesaplar. Şu anki aktif algoritma:
+The system automatically calculates parking fees based on municipal tariffs. The current active algorithm:
 
-| Kural | Açıklama |
+| Rule | Description |
 | :--- | :--- |
-| **İlk 5 Dakika** | **ÜCRETSİZ** (Giriş-Çıkış yapanlardan ücret alınmaz) |
-| **Küçük Araç** | İlk 1 Saat: **25.00 TL** <br> Sonraki Her Saat: **+15.00 TL** |
-| **Büyük Araç** | İlk 1 Saat: **50.00 TL** <br> Sonraki Her Saat: **+30.00 TL** |
+| **Grace Period** | First 5 Minutes: **FREE** |
+| **Standard Vehicle** | 1st Hour: **25.00 TL** <br> Subsequent Hours: **+15.00 TL/hr** |
+| **Large/Commercial**| 1st Hour: **50.00 TL** <br> Subsequent Hours: **+30.00 TL/hr** |
 
-> *Not: Süre hesaplamasında 1 saati geçen her dakika, yukarı yuvarlanarak tam saat ücreti alınır.*
+> *Note: Time is calculated dynamically; any partial hour beyond the first 60 minutes is rounded up to a full hour.*
+
+---
+
+## ⚙️ Installation & Deployment
+
+Since the backend is deployed in the cloud, you can test the mobile app directly without running a local server.
+
+### Option 1: Live Cloud Testing (Mobile Only)
+To test the mobile interface connected to the live production server:
+1. Navigate to the `mobile` directory.
+2. Run `flutter pub get` to install dependencies.
+3. Connect your device/emulator and execute `flutter run`.
+
+### Option 2: Full Development Environment (Local)
+To modify the core backend business logic:
+1. Clone the repository and open the `backend` folder in IntelliJ IDEA.
+2. Right-click `pom.xml` -> "Add as Maven Project".
+3. Add your Neon.tech PostgreSQL credentials inside `src/main/resources/application.properties`.
+4. Run `BackendApplication.java`.
+5. Update the `globalBaseUrl` in the Flutter app to your local machine's IP address.
 
 ---
 
-## ⚙️ Kurulum ve Çalıştırma
+## 🗺️ Roadmap
 
-Proje canlı bulut sunucularına bağlandığı için mobil uygulamayı doğrudan telefonunuzda derleyip kullanabilirsiniz.
-
-### Seçenek 1: Canlı Ortamı Test Etme (Sadece Mobil)
-Sadece mobil arayüzü test etmek ve doğrudan canlı sunucuya bağlanmak için:
-1. `mobile` klasörüne gidin.
-2. `flutter pub get` komutu ile bağımlılıkları yükleyin.
-3. Cihazınızı bağlayın ve `flutter run` komutu ile saha operasyonlarına anında başlayın. (Herhangi bir local sunucu çalıştırmanıza gerek yoktur).
-
-### Seçenek 2: Geliştirici Ortamı (Local Backend & Database)
-Sistemin beynine (Java) müdahale etmek ve geliştirmek isterseniz:
-1. Repoyu klonlayın ve backend klasörünü IntelliJ IDEA ile açın.
-2. `pom.xml` dosyasına sağ tıklayıp "Add as Maven Project" deyin.
-3. `src/main/resources/application.properties` dosyasına kendi Neon.tech PostgreSQL bilgilerinizi girin.
-4. `BackendApplication.java` dosyasını çalıştırın.
-5. Mobil uygulamadaki `globalBaseUrl` değişkenini kendi yerel IP adresinize yönlendirin.
-
----
-## 🗺️ Yol Haritası (Roadmap)
-
-- [x] Faz 1: Monorepo Kurulumu & Spring Boot Başlangıcı
-- [x] Faz 2: Veritabanı Tasarımı (PostgreSQL Neon Geçişi)
-- [x] Faz 3: Repository Katmanı ve Data Seeding
-- [x] Faz 4: Service Katmanı (İş Mantığı & Akıllı Fiyat Hesaplama Motoru)
-- [x] Faz 5: Controller Katmanı (REST API'nin Dışa Açılması)
-- [x] Faz 6: Mobil Uygulama Geliştirme (Flutter, SOLID Mimarisi, UI/UX, Dark Mode)
-- [x] Faz 7: Kamera ile Plaka Okuma (OCR) ve Sürükle-Bırak Entegrasyonu
-- [x] Faz 8: Backend Sunucusunun Buluta Taşınması (Render & UptimeRobot Entegrasyonu)
-- [ ] Faz 9: Vatandaşlar İçin QR Kod ile Kendi Kendine Ödeme Sistemi 🚀 **(ŞU AN BURADAYIZ)**
-- [ ] Faz 10: Canlı Saha Testleri ve Performans Optimizasyonu
+- [x] Phase 1: Monorepo Setup & Spring Boot Initialization
+- [x] Phase 2: Database Design (PostgreSQL Neon Migration)
+- [x] Phase 3: Repository Layer & Data Seeding
+- [x] Phase 4: Service Layer (Business Logic & Pricing Engine)
+- [x] Phase 5: Controller Layer (REST API Exposing)
+- [x] Phase 6: Mobile App Development (Flutter, SOLID, UI/UX, Dark Mode)
+- [x] Phase 7: Camera OCR Integration & Drag-and-Drop UX
+- [x] Phase 8: Cloud Deployment (Render & UptimeRobot Integration)
+- [ ] Phase 9: Self-Service QR Code Payment Portal for Citizens 🚀 **(CURRENTLY HERE)**
+- [ ] Phase 10: Admin Web Dashboard for Real-Time Analytics
 
 ---
 
