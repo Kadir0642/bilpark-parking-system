@@ -22,7 +22,8 @@ Traditional parking systems based on paper tickets and handheld terminals increa
 ## ⚙️ Key Features
 
 * **24/7 Cloud Availability:** The backend operates continuously on Render, kept active via *UptimeRobot* with UTC+3 timezone synchronization.
-* **On-Device OCR:** Instant license plate recognition using Google ML Kit, processing data locally to ensure high performance even with low connectivity.
+* **On-Device OCR:** Instant license plate recognition using Google ML Kit, processing data locally to ensure high performance even with low connectivity. 
+* It complies with the European General Data Protection Regulation (GDPR)
 * **Smart Grid & Drag-and-Drop:** An intuitive UI to assign vehicles to parking spots. Empty spots are dynamically sorted to the top for faster access.
 * **Dynamic Vehicle Classification:** Distinct UI elements and pricing models for standard vs. commercial vehicles.
 * **Location-Based Auth:** Field staff securely log in and exclusively manage their assigned zones/neighborhoods.
