@@ -19,7 +19,7 @@ Traditional parking systems based on paper tickets and handheld terminals increa
 
 ---
 
-## 🚀 Key Features
+## ⚙️ Key Features
 
 * **24/7 Cloud Availability:** The backend operates continuously on Render, kept active via *UptimeRobot* with UTC+3 timezone synchronization.
 * **On-Device OCR:** Instant license plate recognition using Google ML Kit, processing data locally to ensure high performance even with low connectivity.
@@ -32,7 +32,7 @@ Traditional parking systems based on paper tickets and handheld terminals increa
 ![System_Architecture_Diagram.png](System_Architecture_Diagram.png)
 ## 🛠️ Tech Stack
 
-Designed with a Software Architect's perspective, focusing on modularity and scalability.
+The architectural design focuses on modularity and scalability.
 
 | Layer | Technology | Description |
 | :--- | :--- | :--- |
@@ -89,7 +89,7 @@ To modify the core backend business logic:
 - [x] Phase 6: Mobile App Development (Flutter, SOLID, UI/UX, Dark Mode)
 - [x] Phase 7: Camera OCR Integration & Drag-and-Drop UX
 - [x] Phase 8: Cloud Deployment (Render & UptimeRobot Integration)
-- [ ] Phase 9: Self-Service QR Code Payment Portal for Citizens 🚀 **(CURRENTLY HERE)**
+- [ ] Phase 9: Self-Service QR Code Payment Portal for Citizens ⚡ **(CURRENTLY HERE)**
 - [ ] Phase 10: Admin Web Dashboard for Real-Time Analytics
 
 ---
