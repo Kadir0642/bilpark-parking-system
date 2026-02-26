@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BilPark - Hızlı Ödeme</title>
+    <style>
+        :root { --primary: #3F51B5; --bg: #f5f7fa; --text: #333; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg); margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: var(--text); padding: 20px; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        .logo { font-size: 40px; color: var(--primary); margin-bottom: 10px; }
+        h2 { margin: 0 0 20px 0; color: var(--primary); }
+        input { width: 100%; padding: 15px; margin: 10px 0; border: 2px solid #ddd; border-radius: 10px; font-size: 18px; text-align: center; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; transition: 0.3s; }
+        input:focus { border-color: var(--primary); outline: none; }
+        button { width: 100%; padding: 15px; background-color: var(--primary); color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        button:hover { background-color: #303f9f; }
+        button:disabled { background-color: #9fa8da; cursor: not-allowed; }
+
+        /* Gizli Ekranlar İçin Sınıf */
+        .hidden { display: none; }
+
+        /* Borç Fişi Tasarımı */
+        .receipt { background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left; border-left: 5px solid var(--primary); }
+        .receipt p { margin: 5px 0; font-size: 16px; }
+        .total-price { font-size: 28px; font-weight: bold; color: #2e7d32; text-align: center; margin-top: 15px; }
+
+        /* Başarı Ekranı */
+        .success-icon { font-size: 60px; color: #4CAF50; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="logo">🅿️</div>
+    <h2>BilPark Hızlı Ödeme</h2>
+
+    <div id="searchScreen">
+        <p style="color: gray; margin-bottom: 20px;">Otoparktan çıkış yapmak için plakanızı giriniz.</p>
+        <input type="text" id="plateInput" placeholder="Örn: 34ABC123" autocomplete="off">
+        <button id="searchBtn" onclick="searchDebt()">Borcumu Sorgula</button>
+        <p id="errorMsg" style="color: red; display: none; margin-top: 15px; font-weight: bold;"></p>
+    </div>
+
+    <div id="paymentScreen" class="hidden">
+        <div class="receipt">
+            <p><strong>Araç Plakası:</strong> <span id="resPlate"></span></p>
+            <p><strong>Park Yeri:</strong> <span id="resSpot"></span></p>
+            <p><strong>Süre:</strong> <span id="resDuration"></span> dakika</p>
+            <div class="total-price" id="resFee">0.0 TL</div>
+        </div>
+
+        <p style="font-size: 14px; color: gray;">Güvenli Ödeme (Simülasyon)</p>
+        <input type="text" placeholder="Kart Numarası (Sahte)" value="4242 4242 4242 4242" readonly style="font-size: 14px; background: #eee;">
+        <button id="payBtn" onclick="payDebt()" style="background-color: #2e7d32;">ŞİMDİ ÖDE VE ÇIKIŞ YAP</button>
+    </div>
+
+    <div id="successScreen" class="hidden">
+        <div class="success-icon">✅</div>
+        <h3 style="color: #4CAF50;">Ödeme Başarılı!</h3>
+        <p>Bariyerler açıldı. Otoparktan güvenle çıkış yapabilirsiniz. İyi yolculuklar dileriz!</p>
+        <button onclick="location.reload()" style="background-color: gray;">Yeni Sorgulama</button>
+    </div>
+</div>
+
+<script>
+    // SUNUCU ADRESİMİZ (Render)
+    const BASE_URL = "https://bilpark-api-rtdl.onrender.com/api/parking";
+    let currentPlate = "";
+
+    // 1. ADIM: Plakadan Borç Sorgulama
+    async function searchDebt() {
+        const plate = document.getElementById("plateInput").value.trim().toUpperCase();
+        const errorMsg = document.getElementById("errorMsg");
+        const searchBtn = document.getElementById("searchBtn");
+
+        if (!plate) { errorMsg.innerText = "Lütfen plaka giriniz!"; errorMsg.style.display = "block"; return; }
+
+        searchBtn.innerText = "Sorgulanıyor...";
+        searchBtn.disabled = true;
+        errorMsg.style.display = "none";
+
+        try {
+            // Java Backend'e istek atıyoruz
+            const response = await fetch(`${BASE_URL}/debt?plate=${plate}`);
+            const data = await response.json();
+
+            if (response.ok) {
+                // Araç bulunduysa ekrana verileri yaz ve 2. ekrana geç
+                currentPlate = data.plate;
+                document.getElementById("resPlate").innerText = data.plate;
+                document.getElementById("resSpot").innerText = data.spotName;
+                document.getElementById("resDuration").innerText = data.durationMinutes;
+                document.getElementById("resFee").innerText = data.fee + " TL";
+
+                document.getElementById("searchScreen").classList.add("hidden");
+                document.getElementById("paymentScreen").classList.remove("hidden");
+            } else {
+                // Araç bulunamadıysa (veya başka hata)
+                errorMsg.innerText = data.error || "Araç bulunamadı.";
+                errorMsg.style.display = "block";
+            }
+        } catch (error) {
+            errorMsg.innerText = "Sunucuya bağlanılamadı!";
+            errorMsg.style.display = "block";
+        } finally {
+            searchBtn.innerText = "Borcumu Sorgula";
+            searchBtn.disabled = false;
+        }
+    }
+
+    // 2. ADIM: Ödemeyi Tamamla ve Çıkış Yap
+    async function payDebt() {
+        const payBtn = document.getElementById("payBtn");
+        payBtn.innerText = "Ödeme Alınıyor...";
+        payBtn.disabled = true;
+
+        try {
+            // POST isteği ile çıkışı onaylıyoruz
+            const response = await fetch(`${BASE_URL}/pay?plate=${currentPlate}`, {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                // Ödeme başarılı! 3. Ekrana geç.
+                document.getElementById("paymentScreen").classList.add("hidden");
+                document.getElementById("successScreen").classList.remove("hidden");
+            } else {
+                alert("Ödeme sırasında bir hata oluştu.");
+                payBtn.innerText = "ŞİMDİ ÖDE VE ÇIKIŞ YAP";
+                payBtn.disabled = false;
+            }
+        } catch (error) {
+            alert("Bağlantı hatası!");
+            payBtn.innerText = "ŞİMDİ ÖDE VE ÇIKIŞ YAP";
+            payBtn.disabled = false;
+        }
+    }
+</script>
+</body>
+</html>
