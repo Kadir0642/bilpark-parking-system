@@ -1,11 +1,12 @@
 package com.bilpark.backend.model;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
     // @ işaretleri altındaki variable,method,class için bir emir anlamında ne olacağını söylüyor
     //@Data -> Lombok: Getter,Setter,ToString otomatik yazar(Kod kalabalığı azaltır.)
     @Entity // Bu sınıf bir veri tabanı tablosudur. Bu sınıfı al, veritabanı diline (SQL) çevir.
-    @Table(name="park_spots") // Veri tabanındaki tablo adı
+    @Table(name="active_park_spots") // Veri tabanındaki tablo adı
     public class ParkSpot
     {
         @Id // tablonun "Primary Key", veritabanı sıra numarası
@@ -16,64 +17,41 @@ import jakarta.persistence.*;
         Eğer ID null ise "Bu yeni bir kayıt, kaydedeyim" der.
         (long-0) Eğer 0 olsaydı, "Acaba 0 numaralı kayıt mı, yoksa yeni mi?" diye karışıklık olur.*/
 
-        @Column(unique = true, nullable =false) // Park yeri numarası (A-5 gibi) eşşiz olmalı ve boş olamaz.
-        private String spotName;
-
-        @Column(nullable=false)
-        private String region; //İlçe(Örn:Merkez)
-
-        @Column(nullable=false)
-        private String neighborhood; //Mahalle (Örn: Bahçelievler)
-
-        @Column(nullable=false)
-        private String street; // Cadde/Sokak (Örn: Atatürk Cad.)
-
-        private boolean isOccupied =false; // Dolu mu ? (Varsayılan olarak boş başlasın)
+        @Column(unique=true, nullable=false)
         private String currentPlate; // Mobil uygulamada kayıt alınan plakaları tuttuğumuz alan bu sayede kayıtlı park kartında plaka kalıcı şekilde yazılabiliyor.
-        private String currentType; // App üzerinde giren aracın tipinin tutulması için
 
-        private java.time.LocalDateTime entryTime; // Giriş Saati --> Mobil uygulamada kayıtlı park yerinde ne kadar süre durduğunu göstermek için
+        @Enumerated(EnumType.STRING)// Aşağıdaki değişkeni veritabanına sayı olarak değil, YAZI olarak kaydet.
+        @Column(nullable=false)
+        private StreetLocation street; // Artık sadece bizim belirlediğimiz 3 cadde seçilebilir. (Tevfik| Ali Rıza | Cumhuriyet)
 
-        @Enumerated(EnumType.STRING) // Aşağıdaki değişkeni veritabanına sayı olarak değil, YAZI olarak kaydet.
-        private VehicleType suitableFor; // Bu park yeri hangi araç tipine uygun (SMALL || LARGE)
+        private String region= "Merkez"; // İlçe
+        private String neighborhood; // Mahalle
+
+        private LocalDateTime entryTime; // Giriş Saati --> Mobil uygulamada kayıtlı park yerinde ne kadar süre durduğunu göstermek için
+
+        @Enumerated(EnumType.STRING)
+        private VehicleType currentType; // App üzerinde giren aracın tipinin tutulması için
+
+        @Enumerated(EnumType.STRING)
+        private ParkingStatus status= ParkingStatus.ACTIVE; // Sisteme giren araç varsayılan olarak AKTİF'tir
 
         //parametresiz constructer
         public ParkSpot(){}
 
         //Nesne oluştururken kolaylık için parametreli constructer
-        public ParkSpot(String spotName,VehicleType suitableFor,boolean isOccupied,String region,String street,String neighborhood)
+        public ParkSpot(String currentPlate,StreetLocation street ,VehicleType currentType,String region,String neighborhood)
         {
-            this.spotName=spotName;
-            this.region=region;
+            this.currentPlate=currentPlate;
             this.street=street;
+            this.currentType=currentType;
+            this.region=region;
             this.neighborhood=neighborhood;
-            this.suitableFor=suitableFor;
-            this.isOccupied=isOccupied;
+            this.entryTime=LocalDateTime.now();
+            this.status=ParkingStatus.ACTIVE;
         }
-        public boolean isOccupied() // Dolu mu değil mi ona bakmak için
-        {
-            return isOccupied;
-        }
+
 
         //  --- GETTER & SETTER ---
-
-        public void setOccupied(boolean occupied)
-        {
-            this.isOccupied=occupied;
-        }
-
-        public String getCurrentPlate(){return currentPlate;}
-        public void setCurrentPlate(String currentPlate){this.currentPlate=currentPlate;}
-
-        public java.time.LocalDateTime getEntryTime(){
-          return entryTime;
-        }
-        public void setEntryTime(java.time.LocalDateTime entryTime){
-            this.entryTime=entryTime;
-        }
-
-        public String getCurrentType(){return currentType;}
-        public void setCurrentType(String currentType){this.currentType=currentType;}
 
         public Long getId()
         {
@@ -84,13 +62,16 @@ import jakarta.persistence.*;
             this.id=id;
         }
 
-        public String getSpotName()
+        public String getCurrentPlate(){return currentPlate;}
+        public void setCurrentPlate(String currentPlate){this.currentPlate=currentPlate;}
+
+        public StreetLocation getStreet()
         {
-            return spotName;
+            return street;
         }
-        public void setSpotName(String spotName)
+        public void setStreet(StreetLocation street)
         {
-            this.spotName=spotName;
+            this.street=street;
         }
 
         public String getRegion() {return region;}
@@ -108,19 +89,17 @@ import jakarta.persistence.*;
             this.neighborhood =neighborhood;
         }
 
-        public String getStreet()
-        {
-            return street;
+        public java.time.LocalDateTime getEntryTime(){
+          return entryTime;
         }
-        public void setStreet(String street)
-        {
-            this.street=street;
+        public void setEntryTime(java.time.LocalDateTime entryTime){
+            this.entryTime=entryTime;
         }
 
-        public VehicleType getSuitableFor() {return suitableFor;}
-        public void setSuitableFor(VehicleType suitableFor)
-        {
-            this.suitableFor=suitableFor;
-        }
+        public VehicleType getCurrentType(){return currentType;}
+        public void setCurrentType(VehicleType currentType){this.currentType=currentType;}
+
+        public ParkingStatus getStatus(){return status;}
+        public void setStatus(ParkingStatus status){this.status=status;}
     }
 

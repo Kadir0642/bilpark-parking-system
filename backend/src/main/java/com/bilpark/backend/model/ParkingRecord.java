@@ -13,11 +13,12 @@ public class ParkingRecord
 
     private String licensePlate; // Arac plakası
 
+    @Enumerated(EnumType.STRING)
+    private StreetLocation street; // Hangi caddede işlem yapıldı ?
+
     // Konum bilgileri (Snapshotting Pattern) Raporlama için buraya da kaydediyoruz )
     private String region;         // İlçe
     private String neighborhood;   // Mahalle
-    private String street;        // Cadde/Sokak
-    private String spotName;      // Park yeri | Örn: A-1 (Hangi kutuya park etti?)
 
     // Zamanlama
     private LocalDateTime entryTime; //Giriş (araç girdiği an sistem saatini basar)
@@ -26,16 +27,19 @@ public class ParkingRecord
     //Ücret
     private Double fee; // Ödenen ücret
 
+    @Enumerated(EnumType.STRING)
+    private ParkingStatus status; // PAID (Ödedi) veya RUNAWAY (Kaçtı) olarak fişlenecek!
+
     // --- Constructers ---
     public ParkingRecord(){}   //Veri tabanından veriyi çekerken boş nesne oluşturulup , sonra içi doldurulur.
 
-    //Bizim kullanacağımız
-    public ParkingRecord(String licensePlate,String region, String neigborhood,String street, LocalDateTime entryTime)
+    // Bizim kullanacağımız
+    public ParkingRecord(String licensePlate,StreetLocation street,String region, String neigborhood,LocalDateTime entryTime)
     {
             this.licensePlate=licensePlate;
-            this.region=region;
-            this.neighborhood=neighborhood;
             this.street=street;
+            this.region=region;
+            this.neighborhood = neighborhood;
             this.entryTime=entryTime;
     }
 
@@ -72,24 +76,6 @@ public class ParkingRecord
         this.neighborhood=neighborhood;
     }
 
-    public String getStreet()
-    {
-        return street;
-    }
-    public void setStreet(String street)
-    {
-        this.street=street;
-    }
-
-    public String getSpotName()
-    {
-        return spotName;
-    }
-    public void setSpotName(String spotName)
-    {
-        this.spotName=spotName;
-    }
-
     public LocalDateTime getEntryTime()
     {
         return entryTime;
@@ -115,4 +101,8 @@ public class ParkingRecord
     {
         this.fee=fee;
     }
+
+    public ParkingStatus getStatus(){return status;}
+    public void setStatus(ParkingStatus status){this.status=status;}
+
 }
