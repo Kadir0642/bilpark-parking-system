@@ -1,14 +1,14 @@
 package com.bilpark.backend.config;
 
 import com.bilpark.backend.model.ParkSpot;
+import com.bilpark.backend.model.StreetLocation;
 import com.bilpark.backend.model.VehicleType;
 import com.bilpark.backend.repository.ParkSpotRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-// ÖNEMLİ: Normalde veritabanları bomboş doğar. Sen uygulamayı her çalıştırdığında gidip elle 40 tane park yeri eklemek zorunda kalma diye, bu sınıf uygulama ayağa kalktığı ilk saniye devreye girer ve otoparkın çizgilerini (verilerini) çizer.
-// BUNUN YERİNE BİZ EKLEDİKÇE PARK YERİ GELSE NASIL OLUR - SİSTEM AÇILIR AÇILMAZ PARK YERİ OLUŞTURMASIN -ZATEN PARK YERİ KAPASİTESİ BELLİ
+//BİZ EKLEDİKÇE PARK YERİ GELSE NASIL OLUR - SİSTEM AÇILIR AÇILMAZ PARK YERİ OLUŞTURMASIN -ZATEN PARK YERİ KAPASİTESİ BELLİ
 
 @Configuration // Ayar sınıfı olduğunu söyler | "Seed Data" (Tohum Verisi) yüklemek
 public class DataInitializer
@@ -17,22 +17,18 @@ public class DataInitializer
     @Bean 
     CommandLineRunner initDataBase(ParkSpotRepository repository) {
         return args -> {
-            //Veritabanı zaten doluysa tekrar ekleme yapmayız(çakışmayı önlemek için)
-            if (repository.count() == 0){ //"Idempotency" (Tekrarlanabilirlik)
-                System.out.println("--- KROKİ VERİLERİ YÜKLENİYOR ---");
+            // Eğer veritabanu tamamen boşsa (0 araç varsa), test için 3 araç ekleriz.
+            if(repository.count()==0){
+                // Tevfik Bey caddesine küçük bir araç
+                repository.save(new ParkSpot("34TEST01",StreetLocation.TEVFIK_BEY, VehicleType.SMALL, "Merkez", "Bilecik"));
 
-                //SOL KALDIRIM (A Blok - Öncü Dürüm Tarafı ) -20 Adet park yeri
-                for(int i=1;i<=25;i++){ // <-- DÖNGÜ BAŞLADI
-                    ParkSpot spot =new ParkSpot("A-"+i,VehicleType.SMALL,false,"Bilecik","Atatürk Mah","Merkez");
-                repository.save(spot); // Kaydet
-                } // <-- DÖNGÜ BİTTİ (Spot öldü!)
+                // Cumhuriyet caddesine büyük bir ticari araç
+                repository.save(new ParkSpot("06BASKAN99", StreetLocation.CUMHURIYET, VehicleType.LARGE, "Merkez", "Bilecik"));
 
-                // SAĞ KALDIRIM (B Blok )
-                for(int i=1;i<=25;i++){
-                    ParkSpot spot = new ParkSpot("B-"+i, VehicleType.SMALL, false,"Bilecik","Atatürk Mah","Merkez");
-                    repository.save(spot); // Kaydet
-                }
-                System.out.println("--- KROKİ HAZIR ---");
+                // Ali Rıza Özkay caddesine senin adınla bir araç :)
+                repository.save(new ParkSpot("11KADIR01", StreetLocation.ALI_RIZA_OZKAY, VehicleType.SMALL, "Merkez", "Bilecik"));
+
+                System.out.println("✅ BİLGİ: BilPark 2.0 Dinamik Test Araçları sokağa park edildi!");
             }
         };
     }
