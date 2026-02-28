@@ -163,7 +163,7 @@ public class ParkingController
             return ResponseEntity.ok(Map.of( // ResponseEntitye.ok -> 200 başarılı kodu atıp müşteriye cevap verir.
                     "message","Ödeme Başarılı! Çıkış yapıldı.",
                     "paidAmount", record.getFee(),
-                    "record",record // Fişin Tüm Detayları (Eğer PDF olarak indirmek veya detayını görmek isterse diye).
+                    "record",record // Fişin Tüm Detayları (Eğer PDF olarak indirmek veya detayını görmek isterse).
             ));
         }catch(RuntimeException e){
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
