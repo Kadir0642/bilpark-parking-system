@@ -33,7 +33,7 @@ public interface ParkingRecordRepository extends JpaRepository<ParkingRecord, Lo
 
     // 4. Plakaya ve Duruma Göre (Örn: Sadece KAÇANLARI) getir.
     // Bu sayede bir araç caddeye girdiğinde "Geçmişten kaçak borcu var mı? " diye sorabileceğiz.!
-    List<ParkingRecord> findByLicencePlateIgnoreCaseAndStatus(String licensePLate,ParkingStatus status);
+    List<ParkingRecord> findByLicensePlateIgnoreCaseAndStatus(String licensePLate,ParkingStatus status);
 
     // 5. Plakaya göre geçmiş fişleri getir. (Arama çubuğu için)
     List<ParkingRecord> findByLicensePlateIgnoreCase(String licensePlate);
