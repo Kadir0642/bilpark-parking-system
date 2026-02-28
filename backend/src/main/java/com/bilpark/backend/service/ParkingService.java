@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Optional;
 
-@Service //İş mantigini yöneten sinif | Uygulama Beyni
+@Service // İş mantigini yöneten sinif | Uygulama Beyni
 public class ParkingService
 {
     //yardımcı depo nesnesi olusturuluyor,baska sıniflar kullanmasin ve Degiştirilemez olsun | Güvenlik ve saglamlik
