@@ -3,15 +3,19 @@ package com.bilpark.backend.service;
 import com.bilpark.backend.model.ParkSpot;
 import com.bilpark.backend.model.ParkingRecord;
 import com.bilpark.backend.model.VehicleType;
+import com.bilpark.backend.model.StreetLocation;
+import com.bilpark.backend.model.ParkingStatus;
 import com.bilpark.backend.repository.ParkSpotRepository;
 import com.bilpark.backend.repository.ParkingRecordRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Optional;
 
 @Service //İş mantigini yöneten sinif | Uygulama Beyni
 public class ParkingService
@@ -34,89 +38,89 @@ public class ParkingService
     }
 
     // --- CHECK-IN (Giris islemi ) ---
-    // Otoparka giris olmadan önce calisir. | UPDATE: Artık araç tipinide alıyoruz
-    public ParkSpot checkInVehicle(Long spotId,String licensePlate,String vehicleType)
+    // Otoparka giris olmadan önce calisir. | UPDATE: Artık araç tipinide alıyoruz | spotId yok ve Araç geldikçe yeni kayıt doğar.
+    public ParkSpot checkInVehicle(String licensePlate,String vehicleType,StreetLocation street)
     {
-        // A. Yer Kontrolü (Validation)
-        ParkSpot spot=parkSpotRepository.findById(spotId) // "spotId" adinda park yerine bakıyor
-                .orElseThrow(()->new RuntimeException("Park yeri bulunamadı!")); // yoksa hata firlatiriz.
-
-        // B. Durum Kontrolü
-        if(spot.isOccupied()){
-            throw new RuntimeException("Hata: Burası zaten dolu!"); // doluysa hata firlatiriz
+        // A. Güvenlik Duvarı: Çifte Kayıt Engelleme (Fail-Fast)
+        Optional<ParkSpot> existingVehicle= parkSpotRepository.findByCurrentPlateIgnoreCase(licensePlate);
+        if(existingVehicle.isPresent()){ // nesnenin mevcut olup olmadığına bakılıyor.
+            throw new RuntimeException("DİKKAT: "+licensePlate.toUpperCase()+ " plakalı araç zaten otoparkta kayıtlı!");
         }
 
-        // C. Durum Degisikligi (State Change)
-        spot.setOccupied(true); // park yerini dolu yapıp
-
-        spot.setCurrentPlate(licensePlate); // 1. Plakayı kutunun içine yaz (Kalıcılık için)
-        spot.setEntryTime(LocalDateTime.now()); //Şu anki saati kaydet | Giriş saati kaydediliyor -> App için.
-        spot.setCurrentType(vehicleType); // Araç tipini veritabanına kalıcı olarak kaydediyoruz.
-
+        // B. Araç Tipi Belirleme (Enum Dönüşümü)
         //Gelen String tipi (SMALL/LARGE) Enum'a çevirip kaydediyoruz.
         //Eğer boş gelirse default SMALL olur.
-        if(vehicleType !=null && !vehicleType.isEmpty()){
-            try{
-                spot.setSuitableFor(VehicleType.valueOf(vehicleType));
-            }catch(IllegalArgumentException e){
-                spot.setSuitableFor(VehicleType.SMALL); // Hatalı gelirse küçük say
+        VehicleType type= VehicleType.SMALL; // Default
+        if(vehicleType !=null && !vehicleType.isEmpty()) {
+            try {
+                type = VehicleType.valueOf(vehicleType.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                type = VehicleType.SMALL; // Hatalı gelirse küçük say
             }
-        }else{
-            spot.setSuitableFor(VehicleType.SMALL); // DEFAULT durumunda --> SMALL
         }
-        parkSpotRepository.save(spot); // Veritabanina kaydederiz.
 
-        // D. Fis Kesme (History Logging)
-        ParkingRecord record= new ParkingRecord(); // record adında yepyeni fis kagidi olusturuyoruz.
-        record.setLicensePlate(licensePlate); // plakayi set ediyoruz.
-        record.setEntryTime(LocalDateTime.now()); // giris saatini o anki saniye olarak basiyoruz.
+        // C.Yeni araç Oluşturma (Sınırsız Kapasite Mantığı)
+        // Araç sokağa girdiği an ParkSpot (AKTİF) tablosunu bir satıra eklenir.
+        ParkSpot newSpot = new ParkSpot(licensePlate.toUpperCase(),street,type, "Merkez", "Bilecik");
 
-        // E. Adres Kopyalama (Snapshot-Pattern)
-        record.setRegion(spot.getRegion());
-        record.setNeighborhood(spot.getNeighborhood());
-        record.setStreet(spot.getStreet());
-        record.setSpotName(spot.getSpotName());
-
-        parkingRecordRepository.save(record); // Kaydı veritabanina yollariz.
-
-        return spot; // Sonucta --> Veritabaninda park yeri "DOLU" ve bir adet "Giris Saati" olan ama "Cikis Saati" bos olan bir fisimiz var.
+        // Fişi ŞİMDİ KESMİYORUZ! Fiş sadece araç çıkarken kesilir.
+        return parkSpotRepository.save(newSpot);
     }
 
+
+
     // --- CHECK-OUT (Cikis İslemi (GERCEK TARİFE ÜZERİNDEN)) ---
-    // Burasi paranin kazanildigi ve hesabin kapatildigi yerdir. | sadece Parkyeri ID'si ile kim oldugunu bulucaz.
-    public ParkingRecord checkOutVehicle(Long spotId)
-    {
-        // A. Yer Kontrolü (Validation)
-        ParkSpot spot = parkSpotRepository.findById(spotId) // "spotId" adinda park yerine bakiyor.
-                .orElseThrow(()-> new RuntimeException("Park yeri bulunamadi!")); // yoksa hata firlatiyoruz.
+    // Burasi paranin kazanildigi ve hesabin kapatildigi yerdir. | Sadece plaka ile çıkış yapılır.
+    public ParkingRecord checkOutVehicle(String plate) {
+        // A. Araç Kontrolü (Validation)
+        ParkSpot spot = parkSpotRepository.findByCurrentPlateIgnoreCase(plate) // "plate" adina bakiyor.
+                .orElseThrow(() -> new RuntimeException("Hata: " + plate + "plakalı araç aktif otoparkta bulunamadı!")); // yoksa hata firlatiyoruz.
 
-        // B. Durum Kontrolü
-        if(!spot.isOccupied()) // Yer zaten bos ise, bos yerden cikis olmaz | hata firlatiriz.
-        {
-            throw new RuntimeException("Hata: Burasi zaten bos");
-        }
+        // B. Ücret Hesabi && Süre Hesabi (Dakika cinsinden) | Zaman formatının orijinali long
+        long totalMinutes = Duration.between(spot.getEntryTime(), LocalDateTime.now()).toMinutes();// Java'da zaman hesaplamaları (Milisaniye, saniye, dakika) endüstri standardı olarak her zaman long ile yapılır
+        double fee = calculateFee(spot.getCurrentType(), totalMinutes);
 
-        // C. Acık Fisi Bulmak (Henüz cikis yapilmamis olani)
-        ParkingRecord record=parkingRecordRepository.findBySpotNameAndExitTimeIsNull(spot.getSpotName()) //park yeri "spotName" olup | ExitTime IS NULL olan
-                .orElseThrow(()->new RuntimeException("Hata: Arac görünüyor ama giris kaydi bulunamadi!")); // bulamazsak kacak giris uyarisi firlatiriz.
-
-        //D.1. Cikis Zamani Ayari
+        // C. Arşive Aktarma (Muhasebe Fişini Şimdi Kesiyoruz)
+        ParkingRecord record = new ParkingRecord(
+                spot.getCurrentPlate(), spot.getStreet(), spot.getRegion(), spot.getNeighborhood(), spot.getEntryTime()
+        );
         record.setExitTime(LocalDateTime.now());
+        record.setFee(fee);
+        record.setStatus(ParkingStatus.PAID); // NORMAL ÇIKIŞ
 
-        //D.2. Süre Hesabi (Dakika cinsinden) | Zaman formatının orijinali long
-        long totalMinutes=Duration.between(record.getEntryTime(),record.getExitTime()).toMinutes();// Java'da zaman hesaplamaları (Milisaniye, saniye, dakika) endüstri standardı olarak her zaman long ile yapılır
-
-        //D.3. Ücret Hesabi
-        double fee=calculateFee(spot.getSuitableFor(),totalMinutes);
-
-        record.setFee(fee); // fişteki ücret kaydı
         parkingRecordRepository.save(record);
 
-        spot.setOccupied(false);// Cikistan sonra park yerini bosaltıyoruz.
-        spot.setCurrentPlate(null); // Cikistan sonra plakayı siler (null yapar)
-        spot.setEntryTime(null); // Cikistan sonra saati sifirlar.
-        spot.setCurrentType(null);// Cikistan sonra araç tipini siler
-        parkSpotRepository.save(spot); // hemen kaydediyoruz.
+        // D. SOKAKTAN SİL (Kapasite açılıyor)
+        parkSpotRepository.delete(spot);
+
+        return record;
+    }
+
+    //  ---YENİ: KAÇAK ARAÇ BİLDİRİMİ (Runaway) ---
+    // Görevli "Kaçtı" butonuna bastığında çalışır.
+    @Transactional // birden fazla veritabanı işlemi gerçekleştiren ve bunların hepsinin birlikte başarılı veya başarısız olması gereken yöntemler için
+    public ParkingRecord markAsRunaway(String plate){
+        // A. Aracı bul
+
+        ParkSpot spot = parkSpotRepository.findByCurrentPlateIgnoreCase(plate)
+                .orElseThrow(()->new RuntimeException("Hata: Araç Bulunamadı!"));
+
+        // B. Mevcut borcunu hesapla (Belki ileride ceza çarpanı ekleriz.)
+        long totalMinutes = Duration.between(spot.getEntryTime(),LocalDateTime.now()).toMinutes();
+        double debt = calculateFee(spot.getCurrentType(),totalMinutes);
+
+        // C: Kara Listeye (Arşive) Ekle
+        ParkingRecord record = new ParkingRecord(
+                spot.getCurrentPlate(),spot.getStreet(),spot.getRegion(), spot.getNeighborhood(), spot.getEntryTime()
+        );
+        record.setExitTime(LocalDateTime.now());
+        record.setFee(debt); // Ödenmemiş borç
+        record.setStatus(ParkingStatus.RUNAWAY); // KAÇAK DAMGASI VURULDU!
+
+        parkingRecordRepository.save(record);
+
+        // D. Sokaktan Sil (Kapasite işgal etmesin)
+        parkSpotRepository.delete(spot);
 
         return record;
     }
@@ -210,57 +214,45 @@ public class ParkingService
         return (total != null) ? total : 0.0;
     }
 
-    // --- FİLTRELEME SERVİSİ ---
-    public List<ParkSpot> getSpotsByLocation(String region,String neighborhood,String street){
-        // TAM ADRES KONTROLÜ -> Bütün adres alanları doluysa tam adrese gider
-        if(region!=null && neighborhood!=null && street != null){
-            return parkSpotRepository.findByRegionAndNeighborhoodAndStreet(region,neighborhood,street);
-        }
+    // --- FİLTRELEME SERVİSLERİ ---
 
-        //İlçe ve Mahalle varsa
-        if(region!=null && neighborhood!=null){
-            return parkSpotRepository.findByRegionAndNeighborhood(region,neighborhood);
-        }
-
-        //Hiç biri yoksa veya eksikse boş liste döneriz, (Performance Issue) HEPSINI CEKMEK SISTEMI YORABILIR.
-        return List.of();
+    // Sadece seçilen caddedeki aktif araçları getirir
+    public List<ParkSpot> getSpotsByStreet(StreetLocation street){
+        return parkSpotRepository.findByStreet(street);
     }
 
-    // --- GEÇMİŞ KAYITLARI GETİR ---
+    // --- GEÇMİŞ KAYITLARI GETİR (Enum Filtreli)---
     // Delegation (Görev devri)
-    public List<ParkingRecord> getHistoryByLocation(String region,String neighborhood,String street){ // Şu an için tek görevi köprü olmak , repository'i çağırıyor mimari için ilerideki özellik eklemeleri için bu yapı tercih ediliyor.
+    public List<ParkingRecord> getHistoryByLocation(String region,String neighborhood,StreetLocation street){ // Şu an için tek görevi köprü olmak , repository'i çağırıyor mimari için ilerideki özellik eklemeleri için bu yapı tercih ediliyor.
         return parkingRecordRepository.findTop50ByRegionAndNeighborhoodAndStreetOrderByEntryTimeDesc(region,neighborhood,street);
     }
 
-    //  İçine isim (String tarafı), süre (Long), ücret (Double) gibi karışık türler koyacağımız için (Object tarafı) dedik.
-    public Map<String, Object> getDebtByPlate(String plate){ // DTO (Data Transfer Object), veri aktarımı için kullanılan bir tasarım desenidir | Nesnelerin verilerini bir yerden başka bir yere aktarmak için kullanılır. Genellikle bir veritabanından veri çekilirken veya bir web hizmetine veri gönderilirken DTO’lar kullanılır.
-        // 1. Aracı bul (bulamazsa hata fırlat)
-        ParkSpot spot = parkSpotRepository.findByCurrentPlateIgnoreCase(plate) // Fail-Fast (Erken Patla/Hızlı Hata Ver) prensibi
-                .orElseThrow(() -> new RuntimeException ("Bu plakaya ait otoparkta aktif araç bulunamadı: " + plate));
+    // Araç Geçmişi Arama filtresi
+    public List<ParkingRecord> searchHistoryByPlate(String plate){
+        return parkingRecordRepository.findByLicensePlateIgnoreCase(plate);
+    }
 
-        // 2. Süreyi hesapla
-        long minutes = Duration.between(spot.getEntryTime(),LocalDateTime.now()).toMinutes();
-        // 3. Ücret hesapla
-        double fee=calculateFee(spot.getSuitableFor(),minutes);
+    // --- YENİ: BORÇ SORGULAMA ---
+    public Map<String, Object> getDebtByPlate(String plate){
+        ParkSpot spot= parkSpotRepository.findByCurrentPlateIgnoreCase(plate)
+                .orElseThrow(()->new RuntimeException("Bu plakaya ait otoparkta aktif araç bulunamadı: "+plate));
 
-        // 4. MÜŞTERİYE GÖSTERİLECEK FİŞİ (JSON) HAZIRLA | Snapshot (Anlık Görüntü)
+        long minutes=Duration.between(spot.getEntryTime(),LocalDateTime.now()).toMinutes();
+        double fee=calculateFee(spot.getCurrentType(),minutes);
+
         Map<String, Object> response = new HashMap<>();
-        response.put("spotName",spot.getSpotName());
-        response.put("plate", spot.getCurrentPlate());
-        response.put("entryTime", spot.getEntryTime());
+        response.put("streetName",spot.getStreet().getDisplayName()); //Artık A-6 değil, "Atatürk Caddesi" yazacak
+        response.put("plate",spot.getCurrentPlate());
+        response.put("entryTime",spot.getEntryTime());
         response.put("durationMinutes",minutes);
         response.put("fee",fee);
 
         return response;
     }
 
-    // 5. --- MÜŞTERİ İÇİN: ÖDEME YAP VE ÇIKIŞI ONAYLA ---
+    // --- MÜŞTERİ İÇİN: ÖDEME YAP VE ÇIKIŞI ONAYLA ---
     public ParkingRecord processPaymentAndCheckout(String plate){
-        // 1. Önce plakadan aracın hangi park yerinde (ID) olduğunu bul
-        ParkSpot spot = parkSpotRepository.findByCurrentPlateIgnoreCase(plate) // Müşteri borcunu sorguladıktan sonra ödeme yapana kadar yarım saat geçmiş olabilir. Ödeme anında aracın hala orada olup olmadığını teyit etmek zorundayız.
-                .orElseThrow(() -> new RuntimeException("Ödeme için araç bulunamadı: " + plate));
-
-        // 2. DRY | LOGIC REUSE (DAHA ÖNCE YAZDIĞIMIZ ÇIKIŞ METODUNU ÇAĞIRIRIZ)
-        return checkOutVehicle(spot.getId());
+        // DRY | LOGIC REUSE (DAHA ÖNCE YAZDIĞIMIZ ÇIKIŞ METODUNU ÇAĞIRIRIZ)
+        return checkOutVehicle(plate);
     }
 }
