@@ -39,7 +39,7 @@ public class ParkingService
 
     // --- CHECK-IN (Giris islemi ) ---
     // Otoparka giris olmadan önce calisir. | UPDATE: Artık araç tipinide alıyoruz | spotId yok ve Araç geldikçe yeni kayıt doğar.
-    public ParkSpot checkInVehicle(String licensePlate,String vehicleType,StreetLocation street)
+    public ParkSpot checkInVehicle(String licensePlate,String vehicleType,StreetLocation street,String side)
     {
         // A. Güvenlik Duvarı: Çifte Kayıt Engelleme (Fail-Fast)
         Optional<ParkSpot> existingVehicle= parkSpotRepository.findByCurrentPlateIgnoreCase(licensePlate);
@@ -61,7 +61,7 @@ public class ParkingService
 
         // C.Yeni araç Oluşturma (Sınırsız Kapasite Mantığı)
         // Araç sokağa girdiği an ParkSpot (AKTİF) tablosunu bir satıra eklenir.
-        ParkSpot newSpot = new ParkSpot(licensePlate.toUpperCase(),street,type, "Merkez", "Bilecik");
+        ParkSpot newSpot = new ParkSpot(licensePlate.toUpperCase(),street,type, "Merkez", "Bilecik",side);
 
         // Fişi ŞİMDİ KESMİYORUZ! Fiş sadece araç çıkarken kesilir.
         return parkSpotRepository.save(newSpot);

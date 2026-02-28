@@ -25,7 +25,9 @@ import java.time.LocalDateTime;
         private StreetLocation street; // Artık sadece bizim belirlediğimiz 3 cadde seçilebilir. (Tevfik| Ali Rıza | Cumhuriyet)
 
         private String region= "Merkez"; // İlçe
-        private String neighborhood; // Mahalle
+        private String neighborhood;   // Mahalle
+
+        private String side; // ARAÇ sağ-sol kaldırım konum bilgisi
 
         private LocalDateTime entryTime; // Giriş Saati --> Mobil uygulamada kayıtlı park yerinde ne kadar süre durduğunu göstermek için
 
@@ -39,13 +41,14 @@ import java.time.LocalDateTime;
         public ParkSpot(){}
 
         //Nesne oluştururken kolaylık için parametreli constructer
-        public ParkSpot(String currentPlate,StreetLocation street ,VehicleType currentType,String region,String neighborhood)
+        public ParkSpot(String currentPlate,StreetLocation street ,VehicleType currentType,String region,String neighborhood,String side)
         {
             this.currentPlate=currentPlate;
             this.street=street;
             this.currentType=currentType;
             this.region=region;
             this.neighborhood=neighborhood;
+            this.side=side;
             this.entryTime=LocalDateTime.now();
             this.status=ParkingStatus.ACTIVE;
         }
@@ -88,6 +91,9 @@ import java.time.LocalDateTime;
         {
             this.neighborhood =neighborhood;
         }
+
+        public String getSide(){return side;}
+        public void setSide(String side){this.side=side;}
 
         public java.time.LocalDateTime getEntryTime(){
           return entryTime;

@@ -46,10 +46,11 @@ public class ParkingController
     public ResponseEntity<?>checkIn(
             @RequestParam String plate,
             @RequestParam StreetLocation street,
-            @RequestParam(value="type",defaultValue="SMALL") String vehicleType)
+            @RequestParam(value="type",defaultValue="SMALL") String vehicleType,
+            @RequestParam(value="side", defaultValue="LEFT") String side) // Yön parametresi
     {
         try{
-            return ResponseEntity.ok(parkingService.checkInVehicle(plate,vehicleType, street));
+            return ResponseEntity.ok(parkingService.checkInVehicle(plate,vehicleType, street,side));
         }catch (RuntimeException e){
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
