@@ -3,7 +3,7 @@ package com.bilpark.backend.controller;
 // Adres Tarifleri
 import com.bilpark.backend.model.ParkSpot;
 import com.bilpark.backend.model.ParkingRecord;
-import com.bilpark.backend.repository.ParkSpotRepository;
+import com.bilpark.backend.model.StreetLocation;
 import com.bilpark.backend.service.ParkingService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,21 +39,48 @@ public class ParkingController
         return parkingService.getAllSpots();
     }
 
-    //1. CHECK-IN (Giris Yap) | Eylem varsa POST kullanılır.
-    // URL: http://localhost:8080/api/parking/check-in?spotId=1&licensePlate=34ABC123
+    // --- 1. CHECK-IN (Dinamik Kapasite | Giris Yap) | Eylem varsa POST kullanılır. ---
+    // URL: /api/parking/check-in?plate=34ABC123&street=TEVFIK_BEY&type=SMALL
     //@RequestParam: URL'in sonundaki soru işaretinden sonraki verileri okur.
     @PostMapping("/check-in") // GİRİŞ İŞLEMLERİ | PostMapping (Postala/Gönder) "Yeni park yeri eklerken" Sunucuda değişiklik, oluşturma, silme gibi işleri vardır(CRUD)
-    public ParkSpot checkIn(@RequestParam Long spotId,@RequestParam String licensePlate,@RequestParam(value= "type",defaultValue= "SMALL") String vehicleType)
+    public ResponseEntity<?>checkIn(
+            @RequestParam String plate,
+            @RequestParam StreetLocation street,
+            @RequestParam(value="type",defaultValue="SMALL") String vehicleType)
     {
-        return parkingService.checkInVehicle(spotId,licensePlate,vehicleType); // Controller, gelen verileri servise verir. | Sonucta -> Araci iceri alir ve park yerinin son halini basar.
+        try{
+            return ResponseEntity.ok(parkingService.checkInVehicle(plate,vehicleType, street));
+        }catch (RuntimeException e){
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
-    //2. CHECK-OUT (Cikis Yap)
-    //URL: http://localhost:8080/api/parking/check-out?spotId=1 <- Tetikleyici adres
+    // --- 2. CHECK-OUT (Cikis Yap) (Normal Çıkış - Sadece Plaka Yeterli) ---
+    //URL: /api/parking/check-out?plate=34ABC123 <- Tetikleyici adres
     @PostMapping("/check-out")// <-- ENDPOINT (Tuş dış dünyaya açar)
-    public ParkingRecord checkOut(@RequestParam Long spotId) // Sadece ID bilgisini kullanarak bulup ,service tarafına iletiriz.
+    public ResponseEntity<?> checkOut(@RequestParam String plate) // Sadece Plaka bilgisini kullanarak bulup ,service tarafına iletiriz.
     {
-        return parkingService.checkOutVehicle(spotId); // Arac cikisini ve ücret hesabini yapar. | Sonucta -> Fis/Fatura ücret bilgisi gösterilir.
+        try{
+            return ResponseEntity.ok(parkingService.checkOutVehicle(plate));// Arac cikisini ve ücret hesabini yapar. | Sonucta -> Fis/Fatura ücret bilgisi gösterilir.
+        }catch(RuntimeException e){
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // --- 4. YENİ KAÇAK BİLDİRİMİ (Runaway) ---
+    // URL: /api/parking/runaway?plate=34ABC123
+    @PostMapping("/runaway")
+    public ResponseEntity<?> markAsRunaway(@RequestParam String plate){
+        try{
+            ParkingRecord record= parkingService.markAsRunaway(plate);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Araç kaçak olarak işaretlendi ve kara listeye alındı!",
+                    "debt", record.getFee(),
+                    "record",record
+            ));
+        }catch(RuntimeException e){
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     //3. CİRO GÖRÜNTÜLEME (Bütün zamanlar)
@@ -88,20 +115,31 @@ public class ParkingController
         return parkingService.getYearlyIncome();
     }
 
-    //4. ÇALIŞMA ALANI FİLTRELEME
+    // --- 4. ÇALIŞMA ALANI (CADDE) FİLTRESİ ---
     // http://localhost:8080/api/parking/filter <- Tetikleyici adres
     @GetMapping("/filter") // <-- ENDPOINT | @RequestParam metod çağrısında parametreninde gönderildiği notasyon | zorunlu parametreler | Cadde/sokak opsiyonel (required=false)
-    public List<ParkSpot>filterSpots(@RequestParam String region,@RequestParam String neighborhood,@RequestParam(required=false) String street){
-        return parkingService.getSpotsByLocation(region,neighborhood,street);
+    public List<ParkSpot>filterSpots(@RequestParam StreetLocation street){
+        return parkingService.getSpotsByStreet(street);
     }
 
-    //5. --- GEÇMİŞ KAYITLAR --- | http://localhost:8080/api/parking/history
+    // 5.1. --- GEÇMİŞ KAYITLAR && YENİ ARAMA--- | http://localhost:8080/api/parking/history
     @GetMapping("/history") // API UCU  <- ENDPOINT | Verileri getiricek/Okuma (GetMapping)
     public List<ParkingRecord>getHistory( //Controller URL'deki bu 3 bilgiyi alır, doğrudan Service kısmına verir | Service, Repositorye gidip en yeni 50 fişi alır | En son da JSON (metin) formatında sunar.
             @RequestParam String region,
             @RequestParam String neighborhood,
-            @RequestParam String street){
+            @RequestParam StreetLocation street){
         return parkingService.getHistoryByLocation(region,neighborhood,street);
+    }
+
+    // 5.2. Plakadan Geçmiş Bulma
+    // URL: /api/parking/history/search?plate=34ABC
+    @GetMapping("history/search")
+    public ResponseEntity<?> searchHistory(@RequestParam String plate){
+        List<ParkingRecord> results = parkingService.searchHistoryByPlate(plate);
+        if(results.isEmpty()){
+            return ResponseEntity.status(404).body(Map.of("message","Bu plakaya ait geçmiş bulunamadı."));
+        }
+        return ResponseEntity.ok(results);
     }
 
     // 6. --- MÜŞTERİ ÖDEME SİSTEMİ API'LERİ ---
