@@ -27,9 +27,9 @@ public interface ParkingRecordRepository extends JpaRepository<ParkingRecord, Lo
     @Query("SELECT SUM(r.fee) FROM ParkingRecord r WHERE r.exitTime BETWEEN :start AND :end") // ParkingRecord(r) sınıfındaki kayıtlarda start-end arasını seçip, fee sütünlarını toplayıp bize vericek.
     Double getIncomeByDateRange(LocalDateTime start, LocalDateTime end); //Veritabanı null dönerse hata olmasın diye "Double" yazdık
 
-    //3. Seçilen caddedeki en son 50 kaydı,İlçe/mahalle/caddesi bizim parametrelerle birebir eşleşen, En yeni en üstte olacak şekilde getirir.
+    //3. Sadece seçilen cadde filtresi ile en son 50 kaydı, bizim parametreyle birebir eşleşen, En yeni en üstte olacak şekilde getirir.
     // Geçmiş kayıt sorgusu | Sistemi yormamak için sadece son 50 olayı getirdik
-    List<ParkingRecord> findTop50ByRegionAndNeighborhoodAndStreetOrderByEntryTimeDesc(String region,String neighborhood,StreetLocation street); // byregionAndNeighborhoodAndStreet -> WHERE | OrderByEntryTime ->EntryTime göre sıralar | Desc (Descending) ->En son giren araç en tepede ,Aşağı doğru giderek büyüyen [ Yeniden eskiye doğru]
+    List<ParkingRecord> findTop50ByStreetOrderByEntryTimeDesc(StreetLocation street); // byregionAndNeighborhoodAndStreet -> WHERE | OrderByEntryTime ->EntryTime göre sıralar | Desc (Descending) ->En son giren araç en tepede ,Aşağı doğru giderek büyüyen [ Yeniden eskiye doğru]
 
     // 4. Plakaya ve Duruma Göre (Örn: Sadece KAÇANLARI) getir.
     // Bu sayede bir araç caddeye girdiğinde "Geçmişten kaçak borcu var mı? " diye sorabileceğiz.!
