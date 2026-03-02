@@ -223,8 +223,8 @@ public class ParkingService
 
     // --- GEÇMİŞ KAYITLARI GETİR (Enum Filtreli)---
     // Delegation (Görev devri)
-    public List<ParkingRecord> getHistoryByLocation(String region,String neighborhood,StreetLocation street){ // Şu an için tek görevi köprü olmak , repository'i çağırıyor mimari için ilerideki özellik eklemeleri için bu yapı tercih ediliyor.
-        return parkingRecordRepository.findTop50ByRegionAndNeighborhoodAndStreetOrderByEntryTimeDesc(region,neighborhood,street);
+    public List<ParkingRecord> getHistoryByLocation(StreetLocation street){ // Şu an için tek görevi köprü olmak , repository'i çağırıyor mimari için ilerideki özellik eklemeleri için bu yapı tercih ediliyor.
+        return parkingRecordRepository.findTop50ByStreetOrderByEntryTimeDesc(street); // Sadece cadde adıyla veri kayıtları alıyor.
     }
 
     // Araç Geçmişi Arama filtresi
