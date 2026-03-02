@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'settings_screen.dart'; // Ayarlar sayfasını bağladık
-import 'history_screen.dart'; // Geçmiş sayfasını bağladık
+import 'settings_screen.dart';
+import 'history_screen.dart';
 
 final String globalBaseUrl = "https://bilpark-api-rtdl.onrender.com/api/parking";
 
@@ -11,7 +11,6 @@ class DashboardScreen extends StatefulWidget {
   final String neighborhood;
   final String street;
 
-  // Constructor: Artık bu sayfa açılırken lokasyon bilgisi isteyecek
   const DashboardScreen({
     super.key,
     required this.region,
@@ -24,9 +23,14 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  int totalSpots = 0;
-  int occupiedSpots = 0;
-  int occupancyRate = 0;
+  int activeVehicleCount = 0;
+
+  String get _backendStreetEnum {
+    if (widget.street.contains("Tevfik")) return "TEVFIK_BEY";
+    if (widget.street.contains("Ali Rıza")) return "ALI_RIZA_OZKAY";
+    if (widget.street.contains("Cumhuriyet")) return "CUMHURIYET";
+    return "TEVFIK_BEY";
+  }
 
   @override
   void initState() {
@@ -36,9 +40,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> fetchStats() async {
     final uri = Uri.parse('$globalBaseUrl/filter').replace(queryParameters: {
-      'region': widget.region,
-      'neighborhood': widget.neighborhood,
-      'street': widget.street,
+      'street': _backendStreetEnum,
     });
 
     try {
@@ -47,9 +49,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (response.statusCode == 200) {
         List<dynamic> spots = json.decode(response.body);
         setState(() {
-          totalSpots = spots.length;
-          occupiedSpots = spots.where((s) => s['occupied'] == true).length;
-          occupancyRate = totalSpots > 0 ? ((occupiedSpots / totalSpots) * 100).toInt() : 0;
+          activeVehicleCount = spots.length;
         });
       }
     } catch (e) {
@@ -71,7 +71,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: Column(
         children: [
-          // MAVİ İSTATİSTİK VE LOKASYON KARTI (Senin Fikrin 💡)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -81,7 +80,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             child: Column(
               children: [
-                // LOKASYON BİLGİSİ EKLENDİ
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
@@ -94,29 +92,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 15),
-                const Text("Anlık Doluluk", style: TextStyle(color: Colors.white70, fontSize: 16)),
+                const SizedBox(height: 25),
+                const Text("Caddedeki Aktif Araç Sayısı", style: TextStyle(color: Colors.white70, fontSize: 16)),
                 const SizedBox(height: 5),
-                Text("%$occupancyRate", style: const TextStyle(color: Colors.white, fontSize: 60, fontWeight: FontWeight.bold)),
-                Text("$occupiedSpots / $totalSpots Araç", style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                const SizedBox(height: 20),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: LinearProgressIndicator(
-                    value: totalSpots > 0 ? occupiedSpots / totalSpots : 0,
-                    minHeight: 10,
-                    backgroundColor: Colors.white24,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                ),
-                const SizedBox(height: 20),
+                Text("$activeVehicleCount", style: const TextStyle(color: Colors.white, fontSize: 70, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
                 const Text("Saha Görünümü İçin Kaydırın 👉", style: TextStyle(color: Colors.white38, fontSize: 12)),
               ],
             ),
           ),
           const SizedBox(height: 20),
 
-          // SADELEŞTİRİLMİŞ MENÜ BUTONLARI
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -125,14 +111,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 crossAxisSpacing: 15,
                 mainAxisSpacing: 15,
                 children: [
-                  _buildMenuCard(Icons.history, "Geçmiş", Colors.orange, () {
-                    // DÜZELTİLEN KISIM BURASI 👇 (const kelimesi silindi ve lokasyon bilgileri eklendi)
+                  // 1. BUTON: NORMAL GEÇMİŞ
+                  _buildMenuCard(Icons.history, "Geçmiş", Colors.blue, () {
                     Navigator.push(context, MaterialPageRoute(builder: (context) => HistoryScreen(
                       region: widget.region,
                       neighborhood: widget.neighborhood,
                       street: widget.street,
+                      showOnlyRunaways: false, // Normal Mod
                     )));
                   }),
+                  // 2. BUTON: SADECE KAÇAKLAR (Senin Fikrin 🚨)
+                  _buildMenuCard(Icons.warning_rounded, "Kaçak Araçlar", Colors.red, () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => HistoryScreen(
+                      region: widget.region,
+                      neighborhood: widget.neighborhood,
+                      street: widget.street,
+                      showOnlyRunaways: true, // Sadece Kaçaklar Modu!
+                    )));
+                  }),
+                  // 3. BUTON: AYARLAR
                   _buildMenuCard(Icons.settings, "Ayarlar", Colors.grey, () {
                     Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
                   }),
@@ -161,7 +158,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Icon(icon, size: 40, color: color),
             ),
             const SizedBox(height: 15),
-            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87), textAlign: TextAlign.center,),
           ],
         ),
       ),
