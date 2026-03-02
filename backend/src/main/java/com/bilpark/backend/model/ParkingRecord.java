@@ -38,7 +38,7 @@ public class ParkingRecord
     public ParkingRecord(){}   //Veri tabanından veriyi çekerken boş nesne oluşturulup , sonra içi doldurulur.
 
     // Bizim kullanacağımız
-    public ParkingRecord(String licensePlate,StreetLocation street,String region, String neigborhood,LocalDateTime entryTime)
+    public ParkingRecord(String licensePlate,StreetLocation street,String region, String neighborhood,LocalDateTime entryTime)
     {
             this.licensePlate=licensePlate;
             this.street=street;
