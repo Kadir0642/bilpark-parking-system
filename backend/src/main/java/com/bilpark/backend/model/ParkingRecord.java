@@ -24,6 +24,10 @@ public class ParkingRecord
     private LocalDateTime entryTime; //Giriş (araç girdiği an sistem saatini basar)
     private LocalDateTime exitTime;  //Cikis (icerideyken "null") cikarken o anki saati yazariz
 
+    //Araç tipi
+    @Enumerated(EnumType.STRING)
+    private VehicleType vehicleType;
+
     //Ücret
     private Double fee; // Ödenen ücret
 
@@ -92,6 +96,9 @@ public class ParkingRecord
     public void setExitTime(LocalDateTime exitTime){
         this.exitTime=exitTime;
     }
+
+    public VehicleType getVehicleType(){return vehicleType;}
+    public void setVehicleType(VehicleType vehicleType){this.vehicleType=vehicleType;}
 
     public Double getFee()
     {
