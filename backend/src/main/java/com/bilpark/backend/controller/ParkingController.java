@@ -168,4 +168,20 @@ public class ParkingController
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+
+    // --- 7. Admin Paneli için API'ler ---
+    @GetMapping("bi/income-by-type")
+    public Map<String, Double> getIncomeByType(){
+        return parkingService.calculateIncomeByVehicleType();
+    }
+
+    @GetMapping("bi/status-count")
+    public Map<String, Long> getStatusCount(){
+        return parkingService.getParkingStatusCounts();
+    }
+
+    @GetMapping("bi/last-records")
+    public List<ParkingRecord> getLastRecordsBI(){
+        return parkingService.getLast100Records();
+    }
 }
