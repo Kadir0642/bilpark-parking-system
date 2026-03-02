@@ -87,6 +87,7 @@ public class ParkingService
         record.setExitTime(LocalDateTime.now());
         record.setFee(fee);
         record.setStatus(ParkingStatus.PAID); // NORMAL ÇIKIŞ
+        record.setVehicleType(spot.getCurrentType()); // Aktif araçtaki tipi arşive kaydederiz
 
         parkingRecordRepository.save(record);
 
@@ -116,7 +117,7 @@ public class ParkingService
         record.setExitTime(LocalDateTime.now());
         record.setFee(debt); // Ödenmemiş borç
         record.setStatus(ParkingStatus.RUNAWAY); // KAÇAK DAMGASI VURULDU!
-
+        record.setVehicleType(spot.getCurrentType()); // Kaçak araçtaki tipi, arşive kaydeder.
         parkingRecordRepository.save(record);
 
         // D. Sokaktan Sil (Kapasite işgal etmesin)
@@ -255,4 +256,45 @@ public class ParkingService
         // DRY | LOGIC REUSE (DAHA ÖNCE YAZDIĞIMIZ ÇIKIŞ METODUNU ÇAĞIRIRIZ)
         return checkOutVehicle(plate);
     }
+
+    // --- 9. ADMIN PANELİ GRAFİKLERİ VE ANALİZ ---
+
+    //9.1 .Ciro Dağılımı
+    public Map<String, Double> calculateIncomeByVehicle(){
+        List<ParkingRecord> allRecords = parkingRecordRepository.findAll();
+        double smallIncome=0;
+        double largeIncome=0;
+
+        for(ParkingRecord record : allRecords){
+            if(record.getStatus() == ParkingStatus.PAID && record.getFee() != null){
+
+                if(record.getVehicleType() == VehicleType.LARGE){
+                    largeIncome+=record.getFee();
+                    }else {
+                        smallIncome+=record.getFee();
+                    }
+                }
+            }
+        return Map.of("Otomobil", smallIncome,"Kamyonet",largeIncome);
+    }
+
+    // 9.2. Operasyonel Başarı (Kaçan/Ödeyen Grafiği)
+    public Map<String, Long> getParkingStatusCounts(){
+        List<ParkingRecord> allRecord= parkingRecordRepository.findAll();
+        long paidCount=0;
+        long runawayCount=0;
+
+        for (ParkingRecord record : allRecord) {
+            if(record.getStatus()==ParkingStatus.PAID) paidCount++;
+            if(record.getStatus()== ParkingStatus.RUNAWAY) runawayCount++;
+        }
+        return Map.of("Ödenen", paidCount,"Kaçan",runawayCount);
+    }
+
+    // 9.3 Son Arşiv Kayıtları (Excel Tablosu İçin Sınırsız Cadde)
+    public List<ParkingRecord> getLast100Records(){
+        //Sadece tek bir caddeyi değil tüm caddelerdeki son 100 işlemi getiriyor
+        return parkingRecordRepository.findTop100ByOrderByEntryTimeDesc();
+    }
+
 }
