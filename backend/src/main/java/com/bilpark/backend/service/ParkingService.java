@@ -260,7 +260,7 @@ public class ParkingService
     // --- 9. ADMIN PANELİ GRAFİKLERİ VE ANALİZ ---
 
     //9.1 .Ciro Dağılımı
-    public Map<String, Double> calculateIncomeByVehicle(){
+    public Map<String, Double> calculateIncomeByVehicleType(){
         List<ParkingRecord> allRecords = parkingRecordRepository.findAll();
         double smallIncome=0;
         double largeIncome=0;
