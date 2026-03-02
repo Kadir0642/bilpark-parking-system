@@ -31,6 +31,9 @@ public interface ParkingRecordRepository extends JpaRepository<ParkingRecord, Lo
     // Geçmiş kayıt sorgusu | Sistemi yormamak için sadece son 50 olayı getirdik
     List<ParkingRecord> findTop50ByStreetOrderByEntryTimeDesc(StreetLocation street); // byregionAndNeighborhoodAndStreet -> WHERE | OrderByEntryTime ->EntryTime göre sıralar | Desc (Descending) ->En son giren araç en tepede ,Aşağı doğru giderek büyüyen [ Yeniden eskiye doğru]
 
+    // 3.1. Tüm caddelerdeki son 100 kaydı getir.
+    List<ParkingRecord> findTop100ByOrderByEntryTimeDesc();
+
     // 4. Plakaya ve Duruma Göre (Örn: Sadece KAÇANLARI) getir.
     // Bu sayede bir araç caddeye girdiğinde "Geçmişten kaçak borcu var mı? " diye sorabileceğiz.!
     List<ParkingRecord> findByLicensePlateIgnoreCaseAndStatus(String licensePLate,ParkingStatus status);
