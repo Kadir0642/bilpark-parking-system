@@ -200,16 +200,21 @@
         }
     }
 
-    // --- YENİ: LİNK YAKALAYICI (AUTO-FILL) ---
-    window.onload = () => {
+// --- YENİ VE GARANTİLİ: LİNK YAKALAYICI (AUTO-FILL & AUTO-RUN) ---
+    document.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
         const plateFromUrl = urlParams.get('plate');
 
         if(plateFromUrl) {
+            // 1. Plakayı kutuya yaz (Kullanıcı görsün)
             document.getElementById('plateInput').value = plateFromUrl.toUpperCase();
-            queryDebt(); // Vatandaşı hiç yormadan otomatik sorgula!
+
+            // 2. Sayfa UI'ının oturması için saliselik bir pay verip direkt borcu sorgula!
+            setTimeout(() => {
+                queryDebt();
+            }, 300); // 300 milisaniye (Vatandaşın gözünü yormadan yumuşak geçiş yapar)
         }
-    };
+    });
 </script>
 
 </body>
