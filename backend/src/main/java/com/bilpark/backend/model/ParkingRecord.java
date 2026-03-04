@@ -62,6 +62,11 @@ public class ParkingRecord
         this.licensePlate=licensePlate;
     } // set methodu düzeltildi.
 
+    public StreetLocation getStreet(){
+        return street;
+    } // Web panelinin caddeyi görebilmesi için
+    public void setStreet(StreetLocation street){this.street=street;}
+
     public String getRegion()
     {
         return region;
