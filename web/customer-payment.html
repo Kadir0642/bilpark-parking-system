@@ -199,6 +199,17 @@
             document.getElementById('ldrPay').style.display = 'none';
         }
     }
+
+    // --- YENİ: LİNK YAKALAYICI (AUTO-FILL) ---
+    window.onload = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const plateFromUrl = urlParams.get('plate');
+
+        if(plateFromUrl) {
+            document.getElementById('plateInput').value = plateFromUrl.toUpperCase();
+            queryDebt(); // Vatandaşı hiç yormadan otomatik sorgula!
+        }
+    };
 </script>
 
 </body>

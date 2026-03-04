@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 final String globalBaseUrl = "https://bilpark-api-rtdl.onrender.com/api/parking";
 
@@ -244,6 +245,34 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
               ),
               actionsAlignment: MainAxisAlignment.center,
               actions: [
+
+                // YENİ: QR KOD ÜRETME BUTONU
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12)),
+                  onPressed: () {
+                    // Kendi sitenin tam linkini ve plaka parametresini buraya yazıyoruz!
+                    String paymentUrl = "https://kadir0642.github.io/bilpark-parking-system/web/customer-payment.html?plate=$plate";
+
+                    showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          title: Text("$plate Hızlı Ödeme", textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          content: SizedBox(
+                            width: 250, height: 250,
+                            child: QrImageView(
+                              data: paymentUrl, // Sihirli linkimiz QR'a dönüştü!
+                              version: QrVersions.auto,
+                              size: 250.0,
+                            ),
+                          ),
+                          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Kapat"))],
+                        )
+                    );
+                  },
+                  icon: const Icon(Icons.qr_code),
+                  label: const Text("QR"),
+                ),
                 // YENİ BİLPARK 2.0 BUTONLARI
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12)),
