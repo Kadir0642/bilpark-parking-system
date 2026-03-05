@@ -35,6 +35,7 @@
         .btn-primary { background: var(--primary); color: white; box-shadow: 0 8px 15px rgba(63, 81, 181, 0.25); }
         .btn-primary:active { transform: scale(0.98); }
         .btn-secondary { background: #f3f4f6; color: #4b5563; margin-top: 10px; }
+        .btn:disabled { opacity: 0.7; cursor: not-allowed; }
 
         /* Fiş/Borç Detay Kartı */
         .receipt-card { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 16px; padding: 25px; margin-bottom: 30px; }
@@ -114,19 +115,23 @@
 </div>
 
 <script>
-    // 🚀 BURAYA RENDER SUNUCU LİNKİNİ YAZ (API Yolunu Unutma!)
     const BASE_URL = "https://bilpark-api-rtdl.onrender.com/api/parking";
 
-    // Sayfa geçiş animasyon fonksiyonu
+    // Güvenlik Duvarı: Spam Tıklama Engelleyici (State Management)
+    let isProcessing = false;
+
     function switchView(viewId) {
         document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
         document.getElementById(viewId).classList.add('active');
     }
 
-    // 1. Borç Sorgulama (GET İsteği)
     async function queryDebt() {
+        // Güvenlik: Eğer işlem zaten sürüyorsa, yeni isteği durdur (Anti-Spam)
+        if (isProcessing) return;
+
         const plate = document.getElementById('plateInput').value.replace(/\s+/g, '').toUpperCase();
         const errorMsg = document.getElementById('errorMsg');
+        const btnQuery = document.getElementById('btnQuery');
 
         if(plate.length < 5) {
             errorMsg.innerText = "Lütfen geçerli bir plaka giriniz.";
@@ -134,21 +139,30 @@
             return;
         }
 
-        // Butonu Yükleniyor Moduna Al
+        // Kilitleri Kapat
+        isProcessing = true;
+        btnQuery.disabled = true;
         document.getElementById('txtQuery').style.display = 'none';
         document.getElementById('ldrQuery').style.display = 'block';
         errorMsg.style.display = 'none';
 
         try {
             const response = await fetch(`${BASE_URL}/debt?plate=${plate}`);
-            const data = await response.json();
+
+            // Güvenli Yanıt Çözücü: Eğer sunucu JSON vermediyse çökmesini engelleriz
+            let data = {};
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                data = await response.json();
+            } else {
+                // Sunucu HTML/Text hatası döndüyse kendi JSON hatamızı oluştururuz
+                data = { error: "Beklenmeyen bir sunucu yanıtı alındı." };
+            }
 
             if(response.ok) {
-                // Ekrana Verileri Bas
                 document.getElementById('resPlate').innerText = data.plate;
                 document.getElementById('resStreet').innerText = data.streetName || "Bilecik Merkez";
 
-                // Dakikayı Saat ve Dakikaya Çevir (Örn: 125 dk -> 2 Saat 5 Dk)
                 let mins = data.durationMinutes;
                 let durationText = mins < 60 ? `${mins} Dakika` : `${Math.floor(mins/60)} Saat ${mins%60} Dk`;
                 document.getElementById('resDuration').innerText = durationText;
@@ -157,62 +171,71 @@
 
                 switchView('view-payment');
             } else {
-                errorMsg.innerText = data.error || "Araç bulunamadı. Lütfen plakayı kontrol edin.";
+                // ARAÇ BULUNAMADIYSA BURAYA GÜVENLE DÜŞER
+                errorMsg.innerText = data.error || "Otoparkta bu plakaya ait aktif araç bulunamadı.";
                 errorMsg.style.display = 'block';
             }
         } catch (error) {
-            errorMsg.innerText = "Sunucuya ulaşılamıyor. Lütfen internetinizi kontrol edin.";
+            // BURAYA SADECE VE SADECE İNTERNET GİDERSE DÜŞER
+            errorMsg.innerText = "Bağlantı koptu. Lütfen internetinizi kontrol edin.";
             errorMsg.style.display = 'block';
         } finally {
+            // İşlem bitti, Kilitleri Aç
+            isProcessing = false;
+            btnQuery.disabled = false;
             document.getElementById('txtQuery').style.display = 'block';
             document.getElementById('ldrQuery').style.display = 'none';
         }
     }
 
-    // 2. Ödeme ve Çıkış Yapma (POST İsteği)
     async function payDebt() {
-        const plate = document.getElementById('resPlate').innerText;
+        if (isProcessing) return;
 
-        // Butonu Yükleniyor Moduna Al
+        const plate = document.getElementById('resPlate').innerText;
+        const btnPay = document.getElementById('btnPay');
+
+        isProcessing = true;
+        btnPay.disabled = true;
         document.getElementById('txtPay').style.display = 'none';
         document.getElementById('ldrPay').style.display = 'block';
 
         try {
-            // POST isteği atıyoruz
             const response = await fetch(`${BASE_URL}/pay?plate=${plate}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
-            const data = await response.json();
+
+            let data = {};
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                data = await response.json();
+            }
 
             if(response.ok) {
-                // SİHİR GERÇEKLEŞTİ: Araç sokaktan silindi, fişi kesildi!
                 switchView('view-success');
             } else {
                 alert("Ödeme alınamadı: " + (data.error || "Bilinmeyen Hata"));
                 switchView('view-search');
             }
         } catch (error) {
-            alert("Bağlantı hatası oluştu. Lütfen tekrar deneyin.");
+            alert("Bağlantı hatası oluştu. Lütfen internetinizi kontrol edin.");
         } finally {
+            isProcessing = false;
+            btnPay.disabled = false;
             document.getElementById('txtPay').style.display = 'block';
             document.getElementById('ldrPay').style.display = 'none';
         }
     }
 
-// --- YENİ VE GARANTİLİ: LİNK YAKALAYICI (AUTO-FILL & AUTO-RUN) ---
     document.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
         const plateFromUrl = urlParams.get('plate');
 
         if(plateFromUrl) {
-            // 1. Plakayı kutuya yaz (Kullanıcı görsün)
             document.getElementById('plateInput').value = plateFromUrl.toUpperCase();
-
-            // 2. Sayfa UI'ının oturması için saliselik bir pay verip direkt borcu sorgula!
             setTimeout(() => {
                 queryDebt();
-            }, 300); // 300 milisaniye (Vatandaşın gözünü yormadan yumuşak geçiş yapar)
+            }, 300);
         }
     });
 </script>
