@@ -244,55 +244,86 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
                 ],
               ),
               actionsAlignment: MainAxisAlignment.center,
+              // --- YENİ PROFESYONEL BUTON DİZİLİMİ ---
+              actionsPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
               actions: [
-
-                // YENİ: QR KOD ÜRETME BUTONU
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12)),
-                  onPressed: () {
-                    // Kendi sitenin tam linkini ve plaka parametresini buraya yazıyoruz!
-                    String paymentUrl = "https://kadir0642.github.io/bilpark-parking-system/web/customer-payment.html?plate=$plate";
-
-                    showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          title: Text("$plate Hızlı Ödeme", textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          content: SizedBox(
-                            width: 250, height: 250,
-                            child: QrImageView(
-                              data: paymentUrl, // Sihirli linkimiz QR'a dönüştü!
-                              version: QrVersions.auto,
-                              size: 250.0,
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ÜST SATIR: QR ve Kaçtı Butonları (Yan yana eşit)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blueAccent,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
+                            onPressed: () {
+                              // QR ÜRETME KODUN BURADA
+                              String paymentUrl = "https://kadir0642.github.io/bilpark-parking-system/web/customer-payment.html?plate=$plate";
+                              showDialog(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                    title: Text("$plate Hızlı Ödeme", textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    content: SizedBox(
+                                      width: 250, height: 250,
+                                      child: QrImageView(data: paymentUrl, version: QrVersions.auto, size: 250.0),
+                                    ),
+                                    actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Kapat"))],
+                                  )
+                              );
+                            },
+                            icon: const Icon(Icons.qr_code),
+                            label: const Text("QR"),
                           ),
-                          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Kapat"))],
-                        )
-                    );
-                  },
-                  icon: const Icon(Icons.qr_code),
-                  label: const Text("QR"),
-                ),
-                // YENİ BİLPARK 2.0 BUTONLARI
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12)),
-                  onPressed: () {
-                    dialogTimer?.cancel(); // Kart kapanırken saati durdur (Hafıza dostu)
-                    Navigator.pop(dialogContext);
-                    markAsRunaway(plate);
-                  },
-                  icon: const Icon(Icons.warning, color: Colors.redAccent),
-                  label: const Text("Kaçtı"),
-                ),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12)),
-                  onPressed: () {
-                    dialogTimer?.cancel(); // Kart kapanırken saati durdur
-                    Navigator.pop(dialogContext);
-                    checkOutVehicle(plate);
-                  },
-                  icon: const Icon(Icons.payment),
-                  label: const Text("Ödeme Al"),
+                        ),
+                        const SizedBox(width: 10), // İki buton arası boşluk
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.black,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            onPressed: () {
+                              dialogTimer?.cancel();
+                              Navigator.pop(dialogContext);
+                              markAsRunaway(plate);
+                            },
+                            icon: const Icon(Icons.warning, color: Colors.redAccent),
+                            label: const Text("Kaçtı"),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 10), // Üst satır ile alt satır arası boşluk
+
+                    // ALT SATIR: Ödeme Al Butonu (Boydan boya dev buton)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () {
+                          dialogTimer?.cancel();
+                          Navigator.pop(dialogContext);
+                          checkOutVehicle(plate);
+                        },
+                        icon: const Icon(Icons.payment, size: 24),
+                        label: const Text("Ödeme Al", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
                 )
               ],
             );
