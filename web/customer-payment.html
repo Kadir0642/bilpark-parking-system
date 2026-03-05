@@ -67,7 +67,8 @@
     <div id="view-search" class="view active">
         <div class="input-group">
             <label>Araç Plakası</label>
-            <input type="text" id="plateInput" class="plate-input" placeholder="34 ABC 123" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
+            <!-- GÜVENLİK GÜNCELLEMESİ: maxlength="11" ve Regex ile sadece Harf, Rakam ve Boşluk -->
+            <input type="text" id="plateInput" class="plate-input" placeholder="34 ABC 123" autocomplete="off" maxlength="11" oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9\s]/g, '')">
         </div>
         <button class="btn btn-primary" onclick="queryDebt()" id="btnQuery">
             <span id="txtQuery">Borcumu Sorgula</span>
@@ -117,7 +118,6 @@
 <script>
     const BASE_URL = "https://bilpark-api-rtdl.onrender.com/api/parking";
 
-    // Güvenlik Duvarı: Spam Tıklama Engelleyici (State Management)
     let isProcessing = false;
 
     function switchView(viewId) {
@@ -126,20 +126,20 @@
     }
 
     async function queryDebt() {
-        // Güvenlik: Eğer işlem zaten sürüyorsa, yeni isteği durdur (Anti-Spam)
         if (isProcessing) return;
 
+        // Boşlukları silip asıl plaka uzunluğunu buluyoruz
         const plate = document.getElementById('plateInput').value.replace(/\s+/g, '').toUpperCase();
         const errorMsg = document.getElementById('errorMsg');
         const btnQuery = document.getElementById('btnQuery');
 
-        if(plate.length < 5) {
-            errorMsg.innerText = "Lütfen geçerli bir plaka giriniz.";
+        // GÜVENLİK GÜNCELLEMESİ: Uzunluk 5'ten küçük veya 9'dan büyükse sunucuya ASLA gitme!
+        if(plate.length < 5 || plate.length > 9) {
+            errorMsg.innerText = "Lütfen 5 ile 9 karakter arası geçerli bir plaka giriniz.";
             errorMsg.style.display = 'block';
             return;
         }
 
-        // Kilitleri Kapat
         isProcessing = true;
         btnQuery.disabled = true;
         document.getElementById('txtQuery').style.display = 'none';
@@ -149,13 +149,11 @@
         try {
             const response = await fetch(`${BASE_URL}/debt?plate=${plate}`);
 
-            // Güvenli Yanıt Çözücü: Eğer sunucu JSON vermediyse çökmesini engelleriz
             let data = {};
             const contentType = response.headers.get("content-type");
             if (contentType && contentType.includes("application/json")) {
                 data = await response.json();
             } else {
-                // Sunucu HTML/Text hatası döndüyse kendi JSON hatamızı oluştururuz
                 data = { error: "Beklenmeyen bir sunucu yanıtı alındı." };
             }
 
@@ -171,16 +169,13 @@
 
                 switchView('view-payment');
             } else {
-                // ARAÇ BULUNAMADIYSA BURAYA GÜVENLE DÜŞER
                 errorMsg.innerText = data.error || "Otoparkta bu plakaya ait aktif araç bulunamadı.";
                 errorMsg.style.display = 'block';
             }
         } catch (error) {
-            // BURAYA SADECE VE SADECE İNTERNET GİDERSE DÜŞER
             errorMsg.innerText = "Bağlantı koptu. Lütfen internetinizi kontrol edin.";
             errorMsg.style.display = 'block';
         } finally {
-            // İşlem bitti, Kilitleri Aç
             isProcessing = false;
             btnQuery.disabled = false;
             document.getElementById('txtQuery').style.display = 'block';
