@@ -1,147 +1,214 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BilPark V3.0 - Business Intelligence Dashboard</title>
+    <title>BilPark Yönetim ve İş Zekası Paneli</title>
 
-    <!-- Kurumsal Font (Urbanist) ve İkonlar (FontAwesome) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Şov Malzemeleri: Chart.js ve SheetJS -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        /* YENİ KURUMSAL RENK PALETİ */
-        :root {
-            --bg-main: #0f172a;         /* Derin Gece Mavisi (Arka Plan) */
-            --bg-card: #1e293b;         /* Oxford Mavisi (Kartlar) */
-            --text-main: #f8fafc;       /* Kar Beyazı (Ana Metin) */
-            --text-muted: #94a3b8;      /* Gri Mavi (Alt Metinler) */
-            --accent-green: #10b981;    /* Zümrüt Yeşili (Başarı/Para) */
-            --accent-blue: #3b82f6;     /* Kurumsal Mavi (Veri) */
-            --accent-red: #ef4444;      /* Kırmızı (Hata/Kaçak) */
-            --border-color: rgba(248, 250, 252, 0.08);
-        }
+        body { font-family: 'Urbanist', sans-serif; background-color: #0f172a; color: #f8fafc; padding-bottom: 50px;}
+        .navbar { background-color: #1e293b !important; border-bottom: 1px solid rgba(255,255,255,0.1); }
 
-        * { box-sizing: border-box; font-family: 'Urbanist', sans-serif; margin: 0; padding: 0; }
-        body { background-color: var(--bg-main); color: var(--text-main); padding: 40px 50px; }
+        /* Kart Tasarımları */
+        .card { background-color: #1e293b; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 24px;}
+        .card-header { background-color: transparent; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: 700; font-size: 1.25rem; padding: 15px 20px;}
 
-        /* Üst Başlık (Header) */
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; }
-        .header-title h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; display: flex; align-items: center; gap: 12px; }
-        .header-title p { color: var(--text-muted); font-size: 15px; font-weight: 500; margin-top: 5px; }
+        /* Büyük KPI Yazıları (Hocanın istediği okunaklılık) */
+        .kpi-value { font-size: 3rem; font-weight: 800; line-height: 1; margin-bottom: 5px;}
+        .kpi-label { font-size: 1rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;}
 
-        .live-badge { background: rgba(16, 185, 129, 0.1); color: var(--accent-green); padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(16, 185, 129, 0.2); letter-spacing: 1px;}
-        .dot { height: 8px; width: 8px; background-color: var(--accent-green); border-radius: 50%; display: inline-block; animation: blink 1.5s infinite; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        /* Tablo Yazı Boyutları */
+        .table { font-size: 1.1rem; } /* Tablo yazılarını büyüttük */
+        .table th { color: #94a3b8; font-weight: 600; text-transform: uppercase; font-size: 0.95rem; letter-spacing: 0.5px;}
 
-        /* Metrik Kartları */
-        .dashboard-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 40px; }
-        .card { background-color: var(--bg-card); padding: 25px; border-radius: 16px; border: 1px solid var(--border-color); transition: transform 0.3s ease; }
-        .card:hover { transform: translateY(-3px); }
-        .card h3 { font-size: 14px; color: var(--text-muted); margin-bottom: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;}
-        .card .value { font-size: 42px; font-weight: 800; line-height: 1; }
+        /* Canlı İkonu */
+        .live-indicator { display: inline-block; width: 10px; height: 10px; background-color: #10b981; border-radius: 50%; margin-right: 8px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
 
-        /* Grafikler */
-        .charts-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 40px; }
-        .chart-container { background-color: var(--bg-card); padding: 30px; border-radius: 16px; border: 1px solid var(--border-color); display: flex; flex-direction: column; align-items: center; position: relative;}
-        .chart-container h2 { font-size: 18px; margin-bottom: 30px; color: var(--text-main); text-align: left; width: 100%; font-weight: 700; border-left: 4px solid var(--accent-blue); padding-left: 15px;}
-        canvas { max-height: 280px; }
-
-        /* Tablo Alanı */
-        .table-container { background-color: var(--bg-card); padding: 30px; border-radius: 16px; border: 1px solid var(--border-color); overflow-x: auto; }
-        .table-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-        .table-header-row h2 { font-size: 20px; font-weight: 700; border-left: 4px solid var(--accent-green); padding-left: 15px;}
-
-        .btn-excel { background-color: #059669; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-family: 'Urbanist', sans-serif;}
-        .btn-excel:hover { background-color: #047857; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3); transform: translateY(-1px);}
-
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th { padding: 16px; color: var(--text-muted); border-bottom: 1px solid var(--border-color); font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;}
-        td { padding: 16px; border-bottom: 1px solid var(--border-color); font-size: 15px; font-weight: 500; color: #e2e8f0;}
-        tr:last-child td { border-bottom: none; }
-        tr:hover { background-color: rgba(255,255,255,0.02); }
-
-        /* Kurumsal Badge Tasarımları */
-        .badge { padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; letter-spacing: 0.5px;}
-        .badge-paid { background: rgba(16, 185, 129, 0.1); color: var(--accent-green); border: 1px solid rgba(16, 185, 129, 0.2); }
-        .badge-runaway { background: rgba(239, 68, 68, 0.1); color: var(--accent-red); border: 1px solid rgba(239, 68, 68, 0.2); }
-        .plate-badge { background: var(--bg-main); color: var(--text-main); padding: 6px 12px; border-radius: 6px; font-weight: 800; border: 1px solid #334155; letter-spacing: 1px;}
+        /* Custom Sekme (Tabs) Renkleri */
+        .nav-pills .nav-link { color: #94a3b8; font-weight: 600; font-size: 1.1rem; margin-right: 10px; border-radius: 8px;}
+        .nav-pills .nav-link.active.bg-success { background-color: #10b981 !important; color: #fff;}
+        .nav-pills .nav-link.active.bg-danger { background-color: #ef4444 !important; color: #fff;}
     </style>
 </head>
 <body>
 
-<div class="header">
-    <div class="header-title">
-        <h1><i class="fa-solid fa-chart-line" style="color: var(--accent-blue);"></i> BilPark Panel</h1>
-        <p>Finansal Analiz ve Operasyonel İçgörü Merkezi - V3.0</p>
+<nav class="navbar navbar-expand-lg navbar-dark py-3 mb-4">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand fs-3 fw-bold" href="#"><i class="fa-solid fa-square-parking text-primary me-2"></i>BilPark Yönetim Paneli</a>
+        <div class="d-flex align-items-center">
+            <span class="badge bg-dark border border-success text-success fs-6 py-2 px-3 rounded-pill">
+                <span class="live-indicator"></span> SİSTEM AKTİF
+            </span>
+        </div>
     </div>
-    <div class="live-badge"><span class="dot"></span> SİSTEM AKTİF</div>
+</nav>
+
+<div class="container-fluid px-4">
+
+    <div class="row">
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-top border-4 border-success">
+                <div class="card-body text-center">
+                    <div class="kpi-label mb-2"><i class="fa-solid fa-car"></i> Sokaktaki Toplam Araç</div>
+                    <div class="kpi-value text-success" id="totalActive">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-top border-4 border-primary">
+                <div class="card-body text-center">
+                    <div class="kpi-label mb-2">Tevfik Bey Cad.</div>
+                    <div class="kpi-value text-primary" id="countTevfik">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-top border-4 border-info">
+                <div class="card-body text-center">
+                    <div class="kpi-label mb-2">Cumhuriyet Cad.</div>
+                    <div class="kpi-value text-info" id="countCumhuriyet">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-top border-4 border-warning">
+                <div class="card-body text-center">
+                    <div class="kpi-label mb-2">Ali Rıza Özkay Cad.</div>
+                    <div class="kpi-value text-warning" id="countAliRiza">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><i class="fa-solid fa-chart-column me-2 text-primary"></i>Araç Tipine Göre Ciro Dağılımı</div>
+                <div class="card-body">
+                    <canvas id="incomeBarChart" height="120"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><i class="fa-solid fa-users me-2 text-warning"></i>Aktif Vardiya Durumu (Personel)</div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-borderless mb-0 align-middle">
+                            <thead class="table-dark">
+                            <tr>
+                                <th>Personel</th>
+                                <th>Sorumlu Bölge</th>
+                                <th>Giriş Saati</th>
+                                <th>Çalışma Süresi</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td><i class="fa-solid fa-user-tie me-2 text-secondary"></i>Cengiz Yıldırım</td>
+                                <td><span class="badge bg-primary">Tevfik Bey Cad.</span></td>
+                                <td>08:30</td>
+                                <td class="text-success fw-bold">6 Saat 15 Dk</td>
+                            </tr>
+                            <tr>
+                                <td><i class="fa-solid fa-user-tie me-2 text-secondary"></i>Ahmet Yılmaz</td>
+                                <td><span class="badge bg-info">Cumhuriyet Cad.</span></td>
+                                <td>09:00</td>
+                                <td class="text-success fw-bold">5 Saat 45 Dk</td>
+                            </tr>
+                            <tr>
+                                <td><i class="fa-solid fa-user-tie me-2 text-secondary"></i>Mehmet Demir</td>
+                                <td><span class="badge bg-warning text-dark">Ali Rıza Özkay Cad.</span></td>
+                                <td>14:00</td>
+                                <td class="text-success fw-bold">0 Saat 45 Dk</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-2">
+        <div class="card-header d-flex justify-content-between align-items-center py-3">
+            <span><i class="fa-solid fa-folder-open me-2"></i>Arşiv ve Operasyon Dökümü</span>
+            <button class="btn btn-success fw-bold" onclick="downloadExcel()"><i class="fa-solid fa-file-excel me-2"></i>Excel'e Aktar</button>
+        </div>
+        <div class="card-body">
+
+            <ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active bg-success" id="pills-paid-tab" data-bs-toggle="pill" data-bs-target="#pills-paid" type="button" role="tab">
+                        <i class="fa-solid fa-check-circle me-1"></i> Başarılı Tahsilatlar (<span id="paidCountBadge">0</span>)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link bg-danger" id="pills-runaway-tab" data-bs-toggle="pill" data-bs-target="#pills-runaway" type="button" role="tab">
+                        <i class="fa-solid fa-triangle-exclamation me-1"></i> Kaçak İhbarları (<span id="runawayCountBadge">0</span>)
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="pills-tabContent">
+
+                <div class="tab-pane fade show active" id="pills-paid" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover align-middle">
+                            <thead class="table-dark">
+                            <tr>
+                                <th>Plaka</th>
+                                <th>Cadde</th>
+                                <th>Araç Tipi</th>
+                                <th>Giriş - Çıkış</th>
+                                <th class="text-end">Tahsil Edilen</th>
+                            </tr>
+                            </thead>
+                            <tbody id="paidTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="pills-runaway" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover align-middle">
+                            <thead class="table-dark">
+                            <tr>
+                                <th>Plaka</th>
+                                <th>Cadde</th>
+                                <th>Araç Tipi</th>
+                                <th>Giriş - Kaçış Zamanı</th>
+                                <th class="text-end">Kalan Borç</th>
+                            </tr>
+                            </thead>
+                            <tbody id="runawayTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
 </div>
 
-<div class="dashboard-cards">
-    <!-- Genel Durum -->
-    <div class="card" style="border-top: 4px solid var(--accent-green);">
-        <h3><i class="fa-solid fa-car"></i> Sokaktaki Aktif Araç</h3>
-        <div class="value" id="totalActive" style="color: var(--accent-green);">0</div>
-    </div>
-    <!-- Caddeler -->
-    <div class="card" style="border-top: 4px solid var(--accent-blue);">
-        <h3><i class="fa-solid fa-road"></i> Tevfik Bey Cad.</h3>
-        <div class="value" id="countTevfik" style="color: var(--text-main);">0</div>
-    </div>
-    <div class="card" style="border-top: 4px solid #0ea5e9;">
-        <h3><i class="fa-solid fa-road"></i> Cumhuriyet Cad.</h3>
-        <div class="value" id="countCumhuriyet" style="color: var(--text-main);">0</div>
-    </div>
-    <div class="card" style="border-top: 4px solid #6366f1;">
-        <h3><i class="fa-solid fa-road"></i> Ali Rıza Özkay Cad.</h3>
-        <div class="value" id="countAliRiza" style="color: var(--text-main);">0</div>
-    </div>
-</div>
-
-<div class="charts-section">
-    <div class="chart-container">
-        <h2>Araç Tipine Göre Ciro Dağılımı</h2>
-        <canvas id="incomeChart"></canvas>
-    </div>
-    <div class="chart-container">
-        <h2 style="border-left-color: var(--accent-green);">Operasyon Başarısı (Tahsilat / Kaçak)</h2>
-        <canvas id="statusChart"></canvas>
-    </div>
-</div>
-
-<div class="table-container">
-    <div class="table-header-row">
-        <h2>Son Arşiv Kayıtları (İşlem Dökümü)</h2>
-        <button class="btn-excel" onclick="downloadExcel()"><i class="fa-solid fa-file-excel"></i> Excel İndir</button>
-    </div>
-    <table>
-        <thead>
-        <tr>
-            <th>Plaka</th>
-            <th>Bölge / Cadde</th>
-            <th>Giriş - Çıkış Zamanı</th>
-            <th>Operasyon Durumu</th>
-            <th style="text-align: right;">Net Tutar</th>
-        </tr>
-        </thead>
-        <tbody id="historyTableBody">
-        <!-- JavaScript ile doldurulacak -->
-        </tbody>
-    </table>
-</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
     const BASE_URL = "https://bilpark-api-rtdl.onrender.com/api/parking";
 
-    let incomeChartInstance = null;
-    let statusChartInstance = null;
+    let incomeBarChartInstance = null;
     let globalHistoryData = [];
 
     const streetNames = {
@@ -150,7 +217,7 @@
         "CUMHURIYET": "Cumhuriyet Cad."
     };
 
-    // --- 1. CANLI SAHA VERİLERİNİ ÇEK ---
+    // 1. CANLI SAHA VERİLERİ
     async function fetchActiveSpots() {
         try {
             const response = await fetch(`${BASE_URL}/spots`);
@@ -172,106 +239,85 @@
         } catch (error) { console.error("Saha verisi hatası:", error); }
     }
 
-    // --- 2. İŞ ZEKASI GRAFİKLERİNİ ÇEK (KURUMSAL RENKLERLE) ---
+    // 2. GRAFİKLER (Pasta yerine okunabilir SÜTUN grafiği)
     async function fetchBICharts() {
         try {
-            // Global Chart.js Font Ayarı
             Chart.defaults.font.family = "'Urbanist', sans-serif";
             Chart.defaults.color = "#94a3b8";
 
-            // Ciro Verisi Çek (Doughnut Chart)
             const incomeRes = await fetch(`${BASE_URL}/bi/income-by-type`);
             const incomeData = await incomeRes.json();
 
-            const incomeCtx = document.getElementById('incomeChart').getContext('2d');
-            if(incomeChartInstance) incomeChartInstance.destroy();
-            incomeChartInstance = new Chart(incomeCtx, {
-                type: 'doughnut',
+            const incomeCtx = document.getElementById('incomeBarChart').getContext('2d');
+            if(incomeBarChartInstance) incomeBarChartInstance.destroy();
+
+            incomeBarChartInstance = new Chart(incomeCtx, {
+                type: 'bar',
                 data: {
                     labels: Object.keys(incomeData),
                     datasets: [{
+                        label: 'Elde Edilen Ciro (₺)',
                         data: Object.values(incomeData),
-                        // KURUMSAL RENKLER: Mavi ve Yeşil
                         backgroundColor: ['#3b82f6', '#10b981'],
-                        borderWidth: 2,
-                        borderColor: '#1e293b' // Arka planla aynı renk border (temiz kesim)
+                        borderRadius: 6
                     }]
                 },
                 options: {
-                    cutout: '70%', // Daha ince, modern halka
-                    plugins: {
-                        legend: { position: 'bottom', labels: { padding: 20, font: {size: 13, weight: 600} } }
-                    }
+                    scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { display: false } } },
+                    plugins: { legend: { display: false } }
                 }
             });
-
-            // Kaçan/Ödeyen Verisi Çek (Pie Chart)
-            const statusRes = await fetch(`${BASE_URL}/bi/status-count`);
-            const statusData = await statusRes.json();
-
-            const statusCtx = document.getElementById('statusChart').getContext('2d');
-            if(statusChartInstance) statusChartInstance.destroy();
-            statusChartInstance = new Chart(statusCtx, {
-                type: 'pie',
-                data: {
-                    labels: Object.keys(statusData),
-                    datasets: [{
-                        data: Object.values(statusData),
-                        // KURUMSAL RENKLER: Yeşil (Başarı) ve Kırmızı (Risk)
-                        backgroundColor: ['#10b981', '#ef4444'],
-                        borderWidth: 2,
-                        borderColor: '#1e293b'
-                    }]
-                },
-                options: {
-                    plugins: {
-                        legend: { position: 'bottom', labels: { padding: 20, font: {size: 13, weight: 600} } }
-                    }
-                }
-            });
-
         } catch (error) { console.error("Grafik verisi hatası:", error); }
     }
 
-    // --- 3. GEÇMİŞ TABLOSUNU ÇEK VE EXCEL İÇİN HAZIRLA ---
+    // 3. SEKMELİ TABLOLAR (Ödenenler ve Kaçaklar Ayrıldı)
     async function fetchHistoryTable() {
         try {
             const response = await fetch(`${BASE_URL}/bi/last-records`);
             const records = await response.json();
             globalHistoryData = records;
 
-            let tableHTML = "";
+            let paidHTML = "";
+            let runawayHTML = "";
+            let paidCount = 0;
+            let runawayCount = 0;
+
             records.forEach(r => {
                 let entryDate = new Date(r.entryTime).toLocaleString('tr-TR', { hour: '2-digit', minute:'2-digit', day:'2-digit', month:'short' });
-                let exitDate = r.exitTime ? new Date(r.exitTime).toLocaleString('tr-TR', { hour: '2-digit', minute:'2-digit' }) : "Bilinmiyor";
+                let exitDate = r.exitTime ? new Date(r.exitTime).toLocaleString('tr-TR', { hour: '2-digit', minute:'2-digit' }) : "-";
                 let displayStreet = streetNames[r.street] || r.street;
-
-                let badgeClass = r.status === 'PAID' ? 'badge-paid' : 'badge-runaway';
-                let badgeIcon = r.status === 'PAID' ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>';
-                let badgeText = r.status === 'PAID' ? 'Tahsil Edildi' : 'Kaçak İhbarı';
+                let vType = r.vehicleType === 'LARGE' ? 'Kamyonet 🚐' : 'Otomobil 🚗';
                 let feeText = r.fee ? "₺" + r.fee.toFixed(2) : "₺0.00";
 
-                tableHTML += `
+                let rowHTML = `
                     <tr>
-                        <td><span class="plate-badge">${r.licensePlate}</span></td>
-                        <td style="color: var(--accent-blue); font-weight:600;">${displayStreet}</td>
-                        <td style="font-size:13px; color: var(--text-muted);">${entryDate} <i class="fa-solid fa-arrow-right" style="margin:0 5px; font-size:10px;"></i> ${exitDate}</td>
-                        <td><span class="badge ${badgeClass}">${badgeIcon} ${badgeText}</span></td>
-                        <td style="font-weight:700; font-size:16px; text-align:right;">${feeText}</td>
+                        <td><span class="badge border border-secondary text-light fs-6 py-2 px-3">${r.licensePlate}</span></td>
+                        <td class="fw-bold">${displayStreet}</td>
+                        <td class="text-secondary">${vType}</td>
+                        <td class="text-secondary">${entryDate} <i class="fa-solid fa-arrow-right mx-2"></i> ${exitDate}</td>
+                        <td class="fw-bold fs-5 text-end ${r.status === 'PAID' ? 'text-success' : 'text-danger'}">${feeText}</td>
                     </tr>
                 `;
+
+                if(r.status === 'PAID') {
+                    paidHTML += rowHTML;
+                    paidCount++;
+                } else {
+                    runawayHTML += rowHTML;
+                    runawayCount++;
+                }
             });
 
-            if(records.length === 0) {
-                document.getElementById("historyTableBody").innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);"><i class="fa-solid fa-folder-open" style="font-size:24px; margin-bottom:10px; display:block;"></i> Henüz arşiv kaydı bulunmuyor.</td></tr>`;
-            } else {
-                document.getElementById("historyTableBody").innerHTML = tableHTML;
-            }
+            document.getElementById("paidTableBody").innerHTML = paidHTML || `<tr><td colspan="5" class="text-center py-4 text-secondary">Ödeme kaydı bulunamadı.</td></tr>`;
+            document.getElementById("runawayTableBody").innerHTML = runawayHTML || `<tr><td colspan="5" class="text-center py-4 text-secondary">Kaçak kaydı bulunamadı.</td></tr>`;
+
+            document.getElementById("paidCountBadge").innerText = paidCount;
+            document.getElementById("runawayCountBadge").innerText = runawayCount;
 
         } catch (error) { console.error("Tablo verisi hatası:", error); }
     }
 
-    // --- 4. EXCEL İNDİRME ---
+    // 4. EXCEL İNDİRME
     function downloadExcel() {
         if(globalHistoryData.length === 0) {
             alert("İndirilecek veri yok!");
@@ -279,28 +325,22 @@
         }
 
         const excelData = globalHistoryData.map(r => ({
-            "İşlem No": r.id || "-",
             "Plaka": r.licensePlate,
-            "Bölge": `${r.region} / ${r.neighborhood}`,
             "Cadde": streetNames[r.street] || r.street,
-            "Araç Tipi": r.vehicleType === 'LARGE' ? 'Kamyonet/Ticari' : 'Otomobil/Standart',
-            "Operasyon Durumu": r.status === 'PAID' ? 'TAHSİL EDİLDİ' : 'KAÇAK',
-            "Net Tutar (TL)": r.fee || 0,
+            "Araç Tipi": r.vehicleType === 'LARGE' ? 'Kamyonet' : 'Otomobil',
+            "Durum": r.status === 'PAID' ? 'ÖDENDİ' : 'KAÇTI',
+            "Tutar (TL)": r.fee || 0,
             "Giriş Zamanı": new Date(r.entryTime).toLocaleString('tr-TR'),
-            "Çıkış Zamanı": r.exitTime ? new Date(r.exitTime).toLocaleString('tr-TR') : "Sürüyor"
+            "Çıkış Zamanı": r.exitTime ? new Date(r.exitTime).toLocaleString('tr-TR') : "-"
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(excelData);
-
-        // Excel Sütun Genişlikleri Ayarı
-        worksheet['!cols'] = [ {wch:10}, {wch:15}, {wch:20}, {wch:20}, {wch:20}, {wch:20}, {wch:15}, {wch:20}, {wch:20} ];
-
+        worksheet['!cols'] = [ {wch:15}, {wch:20}, {wch:15}, {wch:15}, {wch:15}, {wch:20}, {wch:20} ];
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Finansal Rapor");
-        XLSX.writeFile(workbook, "BilPark_Kurumsal_Rapor.xlsx");
+        XLSX.utils.book_append_sheet(workbook, worksheet, "BilPark Verileri");
+        XLSX.writeFile(workbook, "BilPark_Rapor.xlsx");
     }
 
-    // --- SİSTEMİ BAŞLAT ---
     function updateDashboard() {
         fetchActiveSpots();
         fetchBICharts();
@@ -309,7 +349,6 @@
 
     updateDashboard();
     setInterval(updateDashboard, 10000);
-
 </script>
 </body>
 </html>
