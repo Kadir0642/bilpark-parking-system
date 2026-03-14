@@ -38,7 +38,7 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
   void initState() {
     super.initState();
     fetchActiveVehicles();
-    timer = Timer.periodic(const Duration(seconds: 3), (t) => fetchActiveVehicles());
+    timer = Timer.periodic(const Duration(seconds: 6), (t) => fetchActiveVehicles());
   }
 
   @override
