@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../core/constants.dart';
 import '../main.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -12,6 +15,26 @@ class _LoginScreenState extends State<LoginScreen> {
   String? selectedRegion;
   String? selectedNeighborhood;
   String? selectedStreet;
+
+  List<dynamic> availableZones = [];
+  dynamic selectedZone;
+  bool isLoadingZones = false;
+
+  Future<void> fetchZones(String streetName) async {
+    setState(() { isLoadingZones = true; selectedZone = null; availableZones = []; });
+    String backendEnum = AppConstants.toBackendEnum(streetName);
+    try {
+      final response = await http.get(Uri.parse('${AppConstants.apiBase}/zones/by-street?street=$backendEnum'));
+      if (response.statusCode == 200) {
+        setState(() {
+          availableZones = json.decode(response.body);
+        });
+      }
+    } catch (e) {
+      debugPrint('Zone fetch error: $e');
+    }
+    setState(() { isLoadingZones = false; });
+  }
 
   // 🚀 BİLPARK 2.0 GERÇEK VERİTABANI HARİTASI
   final Map<String, Map<String, List<String>>> locationData = {
@@ -71,7 +94,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       if (selectedNeighborhood != null)
                         _buildDropdown("Cadde/Sokak Seçiniz", selectedStreet, locationData[selectedRegion]![selectedNeighborhood]!, (val) {
-                          setState(() => selectedStreet = val);
+                          setState(() { selectedStreet = val; });
+                          if (val != null) fetchZones(val);
+                        }),
+                      if (selectedStreet != null) const SizedBox(height: 15),
+
+                      if (isLoadingZones)
+                         const Center(child: CircularProgressIndicator())
+                      else if (selectedStreet != null && availableZones.isNotEmpty)
+                        _buildZoneDropdown("Bölüm Seçiniz (Opsiyonel)", selectedZone, availableZones, (val) {
+                          setState(() => selectedZone = val);
                         }),
                       const SizedBox(height: 30),
 
@@ -90,6 +122,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   region: selectedRegion!,
                                   neighborhood: selectedNeighborhood!,
                                   street: selectedStreet!,
+                                  zoneId: selectedZone != null ? selectedZone['id'] : null,
+                                  zoneName: selectedZone != null ? selectedZone['zoneName'] : null,
                                 ))
                             );
                           } : null,
@@ -120,6 +154,25 @@ class _LoginScreenState extends State<LoginScreen> {
           value: value,
           icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF3F51B5)),
           items: items.map((String val) => DropdownMenuItem(value: val, child: Text(val, style: const TextStyle(fontWeight: FontWeight.bold)))).toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildZoneDropdown(String hint, dynamic value, List<dynamic> items, Function(dynamic) onChanged) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+      decoration: BoxDecoration(
+          color: Colors.grey[100], borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.grey[300]!)
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<dynamic>(
+          isExpanded: true,
+          hint: Text(hint, style: TextStyle(color: Colors.grey[600])),
+          value: value,
+          icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF3F51B5)),
+          items: items.map((dynamic val) => DropdownMenuItem(value: val, child: Text(val['zoneName'], style: const TextStyle(fontWeight: FontWeight.bold)))).toList(),
           onChanged: onChanged,
         ),
       ),

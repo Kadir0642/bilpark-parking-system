@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import '../main.dart'; // 🪄 YENİ: main.dart içindeki themeNotifier'ı içeri aktardık
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../core/constants.dart';
+import '../main.dart'; // YENİ: main.dart içindeki themeNotifier'ı içeri aktardık
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -9,9 +12,35 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  Future<void> endShift(BuildContext context) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      
+      if (token != null) {
+        await http.post(
+          Uri.parse('${AppConstants.baseUrl}/api/auth/logout'),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+      }
+      await prefs.remove('auth_token');
+      await prefs.remove('user_role');
+      await prefs.remove('username');
+      
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Çıkış yapılırken hata oluştu: $e')));
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // 🪄 Düğmenin durumunu haberciden anlık okuyoruz
+    // Düğmenin durumunu haberciden anlık okuyoruz
     bool isDarkMode = themeNotifier.value == ThemeMode.dark;
 
     return Scaffold(
@@ -27,7 +56,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Text("Görünüm", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.indigo)),
           const SizedBox(height: 10),
 
-          // 🌙 KARANLIK MOD DÜĞMESİ
+          // KARANLIK MOD DÜĞMESİ
           SwitchListTile(
             title: const Text("Karanlık Mod (Gece Vardiyası)"),
             subtitle: const Text("Göz yorgunluğunu azaltır"),
@@ -35,7 +64,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             value: isDarkMode,
             activeColor: Colors.indigoAccent,
             onChanged: (bool value) {
-              // 🪄 YENİ: Düğmeye basıldığında tüm uygulamaya haberi sal!
               themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
             },
           ),
@@ -45,12 +73,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Text("Operasyon", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.indigo)),
           const SizedBox(height: 10),
           ListTile(
-            leading: const Icon(Icons.security, color: Colors.green),
-            title: const Text("Güvenli Çıkış (PIN İste)"),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
-          ListTile(
             leading: const Icon(Icons.exit_to_app, color: Colors.red),
             title: const Text("Vardiyayı Sonlandır", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
             subtitle: const Text("Oturumu kapatır ve ana ekrana döner"),
@@ -59,13 +81,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   context: context,
                   builder: (context) => AlertDialog(
                     title: const Text("Vardiya Bitsin mi?"),
-                    content: const Text("Bugünkü toplam çalışma süreniz: 08:30 Saat.\nOnaylıyor musunuz?"),
+                    content: const Text("Bu işlem oturumunuzu kapatacak ve sizi sistemden çıkış yapmış olarak işaretleyecektir.\nOnaylıyor musunuz?"),
                     actions: [
                       TextButton(onPressed: () => Navigator.pop(context), child: const Text("İptal")),
                       ElevatedButton(
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
                           onPressed: () {
-                            Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
+                            Navigator.pop(context);
+                            endShift(context);
                           },
                           child: const Text("Sonlandır")
                       )

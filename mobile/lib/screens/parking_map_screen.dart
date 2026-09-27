@@ -1,20 +1,21 @@
 import 'dart:convert';
 import 'dart:async';
-import 'dart:math'; // Satır sayısı hesabı için eklendi
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-
-final String globalBaseUrl = "https://bilpark-api-rtdl.onrender.com/api/parking";
+import '../core/constants.dart';
 
 class ParkingMapScreen extends StatefulWidget {
   final String region;
   final String neighborhood;
   final String street;
+  final int? zoneId;
+  final String? zoneName;
 
-  const ParkingMapScreen({super.key, required this.region, required this.neighborhood, required this.street});
+  const ParkingMapScreen({super.key, required this.region, required this.neighborhood, required this.street, this.zoneId, this.zoneName});
 
   @override
   State<ParkingMapScreen> createState() => _ParkingMapScreenState();
@@ -24,12 +25,7 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
   List<dynamic> activeVehicles = [];
   Timer? timer;
 
-  String get _backendStreetEnum {
-    if (widget.street.contains("Tevfik")) return "TEVFIK_BEY";
-    if (widget.street.contains("Ali Rıza")) return "ALI_RIZA_OZKAY";
-    if (widget.street.contains("Cumhuriyet")) return "CUMHURIYET";
-    return "TEVFIK_BEY";
-  }
+  String get _backendStreetEnum => AppConstants.toBackendEnum(widget.street);
 
   @override
   bool get wantKeepAlive => true;
@@ -49,24 +45,46 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
 
   // --- API İŞLEMLERİ ---
   Future<void> fetchActiveVehicles() async {
-    final uri = Uri.parse('$globalBaseUrl/filter').replace(queryParameters: {'street': _backendStreetEnum});
+    final uri = Uri.parse('${AppConstants.baseUrl}/filter').replace(queryParameters: {'street': _backendStreetEnum});
     try {
-      final response = await http.get(uri);
+      final response = await http.get(
+        uri,
+        headers: {
+          if (AppConstants.authToken != null) 
+            'Authorization': 'Bearer ${AppConstants.authToken}'
+        }
+      );
       if (!mounted) return;
-      if (response.statusCode == 200) setState(() => activeVehicles = json.decode(response.body));
+      if (response.statusCode == 200) {
+        List<dynamic> data = json.decode(response.body);
+        if (widget.zoneId != null) {
+          data = data.where((spot) => spot['zone'] != null && spot['zone']['id'] == widget.zoneId).toList();
+        }
+        setState(() => activeVehicles = data);
+      }
     } catch (e) { debugPrint("Hata: $e"); }
   }
 
   // YENİ: CHECK-IN ARTIK "SIDE" (YÖN) İSTİYOR!
   Future<void> checkInVehicle(String plate, String type, String side) async {
-    final url = Uri.parse('$globalBaseUrl/check-in').replace(queryParameters: {
+    final Map<String, dynamic> params = {
       'plate': plate.toUpperCase().replaceAll(' ', ''),
       'street': _backendStreetEnum,
       'type': type,
       'side': side, // 'LEFT' veya 'RIGHT' olarak Backend'e gidiyor!
-    });
+    };
+    if (widget.zoneId != null) {
+      params['zoneId'] = widget.zoneId.toString();
+    }
+    final url = Uri.parse('${AppConstants.baseUrl}/check-in').replace(queryParameters: params);
     try {
-      final response = await http.post(url);
+      final response = await http.post(
+        url,
+        headers: {
+          if (AppConstants.authToken != null) 
+            'Authorization': 'Bearer ${AppConstants.authToken}'
+        }
+      );
       if (response.statusCode == 200 || response.statusCode == 201) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("✅ Araç Sokağa Eklendi!"), backgroundColor: Colors.green));
         fetchActiveVehicles();
@@ -77,9 +95,15 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
   }
 
   Future<void> checkOutVehicle(String plate) async {
-    final url = Uri.parse('$globalBaseUrl/check-out').replace(queryParameters: {'plate': plate});
+    final url = Uri.parse('${AppConstants.baseUrl}/check-out').replace(queryParameters: {'plate': plate});
     try {
-      final response = await http.post(url);
+      final response = await http.post(
+        url,
+        headers: {
+          if (AppConstants.authToken != null) 
+            'Authorization': 'Bearer ${AppConstants.authToken}'
+        }
+      );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("💸 Ödeme Alındı: ${data['fee']} TL"), backgroundColor: Colors.green));
@@ -89,9 +113,15 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
   }
 
   Future<void> markAsRunaway(String plate) async {
-    final url = Uri.parse('$globalBaseUrl/runaway').replace(queryParameters: {'plate': plate});
+    final url = Uri.parse('${AppConstants.baseUrl}/runaway').replace(queryParameters: {'plate': plate});
     try {
-      final response = await http.post(url);
+      final response = await http.post(
+        url,
+        headers: {
+          if (AppConstants.authToken != null) 
+            'Authorization': 'Bearer ${AppConstants.authToken}'
+        }
+      );
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("🚨 Araç Kaçak Olarak İşaretlendi!"), backgroundColor: Colors.red));
         fetchActiveVehicles();
@@ -101,12 +131,22 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
 
   double calculateLiveFee(String type, DateTime entryTime) {
     Duration diff = DateTime.now().difference(entryTime);
-    if (diff.inSeconds <= 300) return 0.0;
+    if (diff.inSeconds <= AppConstants.gracePeriodSeconds) return 0.0;
     int minutes = diff.inMinutes;
-    double baseFee = (type == "LARGE") ? 50.0 : 25.0;
-    double extraFee = (type == "LARGE") ? 30.0 : 15.0;
+    double baseFee = (type == "LARGE") ? AppConstants.largeBaseFee : AppConstants.smallBaseFee;
+    double extraFee = (type == "LARGE") ? AppConstants.largeExtraFee : AppConstants.smallExtraFee;
     if (minutes <= 60) return baseFee;
     return baseFee + (((minutes - 60) / 60).ceil() * extraFee);
+  }
+
+  bool _isForeignPlate(String plate) {
+    // 2 rakam, ardından MA-MZ arası 2 harf (M ve A-Z), ardından 3-4 rakam.
+    return RegExp(r'^\d{2}M[A-Z]\d{3,4}$').hasMatch(plate.toUpperCase().replaceAll(' ', ''));
+  }
+
+  String _getFlagEmoji(String plate) {
+    if (plate.isEmpty) return '🇹🇷'; // Default
+    return _isForeignPlate(plate) ? '🇪🇺' : '🇹🇷';
   }
 
   // --- YENİ UX MODALI (İki Yönlü Buton) ---
@@ -127,7 +167,19 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
                 children: [
                   const Text("Yönlü Araç Girişi 📸", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF3F51B5))),
                   const SizedBox(height: 20),
-                  TextField(controller: plateController, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2), decoration: InputDecoration(prefixIcon: const Icon(Icons.confirmation_number), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+                  TextField(
+                    controller: plateController, 
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2), 
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.confirmation_number), 
+                      suffixIcon: Padding(
+                         padding: const EdgeInsets.all(12.0),
+                         child: Text(_getFlagEmoji(plateController.text), style: const TextStyle(fontSize: 24)),
+                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))
+                    ),
+                    onChanged: (val) => setModalState((){}),
+                  ),
                   const SizedBox(height: 15),
                   DropdownButtonFormField<String>(
                     value: selectedType, decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
@@ -212,7 +264,14 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
                   const SizedBox(height: 15),
 
                   // PLAKA
-                  Text(plate, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(plate, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                      const SizedBox(width: 10),
+                      Text(_getFlagEmoji(plate), style: const TextStyle(fontSize: 32)),
+                    ],
+                  ),
                   const SizedBox(height: 25),
 
                   // CANLI SÜRE KUTUSU (Gri)
@@ -343,16 +402,34 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
       final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
       try {
         final RecognizedText recognizedText = await textRecognizer.processImage(InputImage.fromFilePath(photo.path));
-        RegExp platePattern = RegExp(r'\b\d{2}\s*[A-Z]{1,3}\s*\d{2,4}\b');
-        RegExpMatch? match = platePattern.firstMatch(recognizedText.text.toUpperCase());
-        await _showEntryForm(match?.group(0)?.replaceAll(' ', '') ?? "");
-      } catch (e) { debugPrint(e.toString()); } finally { textRecognizer.close(); }
+        
+        // 1. Gelen metni büyüt, yeni satırları (\n) ve gereksiz işaretleri boşluğa çevir
+        // Böylece "34\nABC\n123" (Kare Plaka) -> "34 ABC 123" (Standart) haline gelir.
+        String cleanText = recognizedText.text.toUpperCase().replaceAll(RegExp(r'[\n\r\-\.\,]'), ' ');
+
+        // 2. Güçlü Regex: (2 Rakam) + (1-3 Harf) + (2-4 Rakam)
+        RegExp platePattern = RegExp(r'\b(\d{2})\s*([A-Z]{1,3})\s*(\d{2,4})\b');
+        RegExpMatch? match = platePattern.firstMatch(cleanText);
+        
+        String foundPlate = "";
+        if (match != null) {
+           // Eşleşen grupları boşluksuz birleştir (Örn: "34", "ABC", "123" -> "34ABC123")
+           foundPlate = "${match.group(1)}${match.group(2)}${match.group(3)}";
+        }
+        
+        await _showEntryForm(foundPlate);
+      } catch (e) { 
+        debugPrint(e.toString()); 
+      } finally { 
+        textRecognizer.close(); 
+      }
     }
   }
 
   Widget _buildCarCard(dynamic vehicle) {
     if (vehicle == null) return const SizedBox.shrink();
     bool isLarge = vehicle['currentType'] == 'LARGE';
+    String? landmarkNames = (vehicle['zone'] != null && vehicle['zone']['landmarkNames'] != null) ? vehicle['zone']['landmarkNames'] : null;
     return InkWell(
       onTap: () => showSpotDetails(vehicle),
       child: Container(
@@ -370,6 +447,11 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
             Icon(isLarge ? Icons.local_shipping : Icons.directions_car, size: 28, color: isLarge ? Colors.orange : Colors.blueAccent),
             const SizedBox(height: 5),
             Text(vehicle['currentPlate'], style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.grey[800])),
+            if (landmarkNames != null && landmarkNames.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Text(landmarkNames, style: const TextStyle(fontSize: 10, color: Colors.grey, fontStyle: FontStyle.italic), textAlign: TextAlign.center),
+              )
           ],
         ),
       ),
@@ -401,7 +483,7 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
 
     return Scaffold(
       backgroundColor: Colors.grey[200],
-      appBar: AppBar(title: Text(widget.street, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)), backgroundColor: const Color(0xFF3F51B5)),
+      appBar: AppBar(title: Text('${widget.street}${widget.zoneName != null ? ' - ' + widget.zoneName! : ''}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)), backgroundColor: const Color(0xFF3F51B5)),
       body: activeVehicles.isEmpty
           ? const Center(child: Text("Sokak boş. Araç eklemek için +'ya basın.", style: TextStyle(color: Colors.grey, fontSize: 16)))
           : ListView.builder(

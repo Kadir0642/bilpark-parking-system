@@ -2,11 +2,15 @@ package com.bilpark.backend.service;
 
 import com.bilpark.backend.model.ParkSpot;
 import com.bilpark.backend.model.ParkingRecord;
+import com.bilpark.backend.model.Zone;
+import com.bilpark.backend.model.SubscriptionStatus;
 import com.bilpark.backend.model.VehicleType;
 import com.bilpark.backend.model.StreetLocation;
 import com.bilpark.backend.model.ParkingStatus;
 import com.bilpark.backend.repository.ParkSpotRepository;
 import com.bilpark.backend.repository.ParkingRecordRepository;
+import com.bilpark.backend.repository.ZoneRepository;
+import com.bilpark.backend.repository.SubscriptionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,12 +27,19 @@ public class ParkingService
     //yardımcı depo nesnesi olusturuluyor,baska sıniflar kullanmasin ve Degiştirilemez olsun | Güvenlik ve saglamlik
     private final ParkSpotRepository parkSpotRepository; //1.Depocu : Park yerlerine bakar.
     private final ParkingRecordRepository parkingRecordRepository; // 2.Depocu: Muhasebe fislerine bakar.
+    private final ZoneRepository zoneRepository;
+    private final SubscriptionRepository subscriptionRepository;
 
     //Dependency Injection sağlayan constructer
-    public ParkingService(ParkSpotRepository parkSpotRepository,ParkingRecordRepository parkingRecordRepository)
+    public ParkingService(ParkSpotRepository parkSpotRepository,
+                          ParkingRecordRepository parkingRecordRepository,
+                          ZoneRepository zoneRepository,
+                          SubscriptionRepository subscriptionRepository)
     {
-        this.parkSpotRepository=parkSpotRepository; // İs yaparken kullanacagimiz repository elemanini aliyoruz
-        this.parkingRecordRepository=parkingRecordRepository; // Fis keserken kayıtlara bakacak elemanı alıyoruz.
+        this.parkSpotRepository=parkSpotRepository; 
+        this.parkingRecordRepository=parkingRecordRepository; 
+        this.zoneRepository = zoneRepository;
+        this.subscriptionRepository = subscriptionRepository;
     }
 
     //Bize park yerlerini döndüren fonksiyon | Neon'a gider, sorgu atip sonucu getiricek.
@@ -39,7 +50,7 @@ public class ParkingService
 
     // --- CHECK-IN (Giris islemi ) ---
     // Otoparka giris olmadan önce calisir. | UPDATE: Artık araç tipinide alıyoruz | spotId yok ve Araç geldikçe yeni kayıt doğar.
-    public ParkSpot checkInVehicle(String licensePlate,String vehicleType,StreetLocation street,String side)
+    public ParkSpot checkInVehicle(String licensePlate,String vehicleType,StreetLocation street,String side, Long zoneId)
     {
         // A. Güvenlik Duvarı: Çifte Kayıt Engelleme (Fail-Fast)
         Optional<ParkSpot> existingVehicle= parkSpotRepository.findByCurrentPlateIgnoreCase(licensePlate);
@@ -48,8 +59,6 @@ public class ParkingService
         }
 
         // B. Araç Tipi Belirleme (Enum Dönüşümü)
-        //Gelen String tipi (SMALL/LARGE) Enum'a çevirip kaydediyoruz.
-        //Eğer boş gelirse default SMALL olur.
         VehicleType type= VehicleType.SMALL; // Default
         if(vehicleType !=null && !vehicleType.isEmpty()) {
             try {
@@ -59,9 +68,20 @@ public class ParkingService
             }
         }
 
+        Zone zone = zoneId != null ? zoneRepository.findById(zoneId).orElse(null) : null;
+
         // C.Yeni araç Oluşturma (Sınırsız Kapasite Mantığı)
         // Araç sokağa girdiği an ParkSpot (AKTİF) tablosunu bir satıra eklenir.
-        ParkSpot newSpot = new ParkSpot(licensePlate.toUpperCase(),street,type, "Merkez", "Bilecik",side);
+        ParkSpot newSpot = new ParkSpot(licensePlate.toUpperCase(),street,type, "Merkez", "Bilecik",side, zone);
+
+        // Calculate runaway debt
+        List<ParkingRecord> unpaidRecords = parkingRecordRepository.findByLicensePlateIgnoreCaseAndStatus(licensePlate, ParkingStatus.RUNAWAY);
+        double totalDebt = unpaidRecords.stream().filter(r -> !r.isDebtPaid()).mapToDouble(ParkingRecord::getFee).sum();
+        newSpot.setAccumulatedDebt(totalDebt);
+
+        // Check if subscribed
+        boolean isSubscribed = subscriptionRepository.findByLicensePlateIgnoreCaseAndStatus(licensePlate, SubscriptionStatus.ACTIVE).isPresent();
+        newSpot.setHasSubscription(isSubscribed);
 
         // Fişi ŞİMDİ KESMİYORUZ! Fiş sadece araç çıkarken kesilir.
         return parkSpotRepository.save(newSpot);
@@ -78,11 +98,12 @@ public class ParkingService
 
         // B. Ücret Hesabi && Süre Hesabi (Dakika cinsinden) | Zaman formatının orijinali long
         long totalMinutes = Duration.between(spot.getEntryTime(), LocalDateTime.now()).toMinutes();// Java'da zaman hesaplamaları (Milisaniye, saniye, dakika) endüstri standardı olarak her zaman long ile yapılır
-        double fee = calculateFee(spot.getCurrentType(), totalMinutes);
+        boolean isSubscribed = subscriptionRepository.findByLicensePlateIgnoreCaseAndStatus(plate, SubscriptionStatus.ACTIVE).isPresent();
+        double fee = isSubscribed ? 0.0 : calculateFee(spot.getCurrentType(), totalMinutes);
 
         // C. Arşive Aktarma (Muhasebe Fişini Şimdi Kesiyoruz)
         ParkingRecord record = new ParkingRecord(
-                spot.getCurrentPlate(), spot.getStreet(), spot.getRegion(), spot.getNeighborhood(), spot.getEntryTime()
+                spot.getCurrentPlate(), spot.getStreet(), spot.getZone(), spot.getRegion(), spot.getNeighborhood(), spot.getEntryTime()
         );
         record.setExitTime(LocalDateTime.now());
         record.setFee(fee);
@@ -106,18 +127,21 @@ public class ParkingService
         ParkSpot spot = parkSpotRepository.findByCurrentPlateIgnoreCase(plate)
                 .orElseThrow(()->new RuntimeException("Hata: Araç Bulunamadı!"));
 
-        // B. Mevcut borcunu hesapla (Belki ileride ceza çarpanı ekleriz.)
+        // B. Mevcut borcunu hesapla (Ceza çarpanı KALDIRILDI)
         long totalMinutes = Duration.between(spot.getEntryTime(),LocalDateTime.now()).toMinutes();
-        double debt = calculateFee(spot.getCurrentType(),totalMinutes);
+        boolean isSubscribed = subscriptionRepository.findByLicensePlateIgnoreCaseAndStatus(plate, SubscriptionStatus.ACTIVE).isPresent();
+        double debt = isSubscribed ? 0.0 : calculateFee(spot.getCurrentType(),totalMinutes);
 
         // C: Kara Listeye (Arşive) Ekle
         ParkingRecord record = new ParkingRecord(
-                spot.getCurrentPlate(),spot.getStreet(),spot.getRegion(), spot.getNeighborhood(), spot.getEntryTime()
+                spot.getCurrentPlate(),spot.getStreet(),spot.getZone(), spot.getRegion(), spot.getNeighborhood(), spot.getEntryTime()
         );
         record.setExitTime(LocalDateTime.now());
         record.setFee(debt); // Ödenmemiş borç
         record.setStatus(ParkingStatus.RUNAWAY); // KAÇAK DAMGASI VURULDU!
         record.setVehicleType(spot.getCurrentType()); // Kaçak araçtaki tipi, arşive kaydeder.
+        record.setDebtPaid(false); // Bu borç ödenmedi
+
         parkingRecordRepository.save(record);
 
         // D. Sokaktan Sil (Kapasite işgal etmesin)
@@ -239,7 +263,8 @@ public class ParkingService
                 .orElseThrow(()->new RuntimeException("Bu plakaya ait otoparkta aktif araç bulunamadı: "+plate));
 
         long minutes=Duration.between(spot.getEntryTime(),LocalDateTime.now()).toMinutes();
-        double fee=calculateFee(spot.getCurrentType(),minutes);
+        boolean isSubscribed = subscriptionRepository.findByLicensePlateIgnoreCaseAndStatus(plate, SubscriptionStatus.ACTIVE).isPresent();
+        double fee = isSubscribed ? 0.0 : calculateFee(spot.getCurrentType(),minutes);
 
         Map<String, Object> response = new HashMap<>();
         response.put("streetName",spot.getStreet().getDisplayName()); //Artık A-6 değil, "Atatürk Caddesi" yazacak
@@ -247,6 +272,7 @@ public class ParkingService
         response.put("entryTime",spot.getEntryTime());
         response.put("durationMinutes",minutes);
         response.put("fee",fee);
+        response.put("hasSubscription", isSubscribed);
 
         return response;
     }

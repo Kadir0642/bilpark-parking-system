@@ -1,8 +1,24 @@
+# Build outputs
 **/target/
-**/.class
+**/*.class
+**/build/
+
+# IDE files
 **/.idea/
 **/*.iml
-**/build/
+**/.vscode/
+
+# Flutter / Dart
 **/.dart_tool/
 **/.pub/
+**/.flutter-plugins-dependencies
+
+# Environment & Secrets (NEVER commit these)
+**/.env
+**/application-local.properties
+
+# macOS
 .DS_Store
+
+# Logs
+*.log

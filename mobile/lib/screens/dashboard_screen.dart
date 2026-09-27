@@ -3,19 +3,22 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'settings_screen.dart';
 import 'history_screen.dart';
-
-final String globalBaseUrl = "https://bilpark-api-rtdl.onrender.com/api/parking";
+import '../core/constants.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String region;
   final String neighborhood;
   final String street;
+  final int? zoneId;
+  final String? zoneName;
 
   const DashboardScreen({
     super.key,
     required this.region,
     required this.neighborhood,
-    required this.street
+    required this.street,
+    this.zoneId,
+    this.zoneName
   });
 
   @override
@@ -25,12 +28,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int activeVehicleCount = 0;
 
-  String get _backendStreetEnum {
-    if (widget.street.contains("Tevfik")) return "TEVFIK_BEY";
-    if (widget.street.contains("Ali Rıza")) return "ALI_RIZA_OZKAY";
-    if (widget.street.contains("Cumhuriyet")) return "CUMHURIYET";
-    return "TEVFIK_BEY";
-  }
+  String get _backendStreetEnum => AppConstants.toBackendEnum(widget.street);
 
   @override
   void initState() {
@@ -39,12 +37,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> fetchStats() async {
-    final uri = Uri.parse('$globalBaseUrl/filter').replace(queryParameters: {
+    final uri = Uri.parse('${AppConstants.baseUrl}/filter').replace(queryParameters: {
       'street': _backendStreetEnum,
     });
 
     try {
-      final response = await http.get(uri);
+      final response = await http.get(
+        uri,
+        headers: {
+          if (AppConstants.authToken != null) 
+            'Authorization': 'Bearer ${AppConstants.authToken}'
+        }
+      );
       if (!mounted) return;
       if (response.statusCode == 200) {
         List<dynamic> spots = json.decode(response.body);
@@ -82,7 +86,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -154,7 +158,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
               child: Icon(icon, size: 40, color: color),
             ),
             const SizedBox(height: 15),

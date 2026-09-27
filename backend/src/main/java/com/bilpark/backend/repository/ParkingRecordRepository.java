@@ -25,7 +25,14 @@ public interface ParkingRecordRepository extends JpaRepository<ParkingRecord, Lo
     // SQL ->SELECT SUM(fee) FROM parking_records WHERE exit_time BETWEEN :start AND :end
     // WHERE->filtre ayarı (kriter çıkışSaati) | BETWEEN ... AND ... -> iki değer arasında kalanı seçer | " : " -> Parametre place holder
     @Query("SELECT SUM(r.fee) FROM ParkingRecord r WHERE r.exitTime BETWEEN :start AND :end") // ParkingRecord(r) sınıfındaki kayıtlarda start-end arasını seçip, fee sütünlarını toplayıp bize vericek.
-    Double getIncomeByDateRange(LocalDateTime start, LocalDateTime end); //Veritabanı null dönerse hata olmasın diye "Double" yazdık
+    Double getIncomeByDateRange(@org.springframework.data.repository.query.Param("start") LocalDateTime start, @org.springframework.data.repository.query.Param("end") LocalDateTime end); //Veritabanı null dönerse hata olmasın diye "Double" yazdık
+
+    @Query("SELECT SUM(r.fee) FROM ParkingRecord r WHERE r.zone = :zone AND r.exitTime BETWEEN :start AND :end")
+    Double getIncomeByZoneAndDateRange(
+        @org.springframework.data.repository.query.Param("zone") com.bilpark.backend.model.Zone zone, 
+        @org.springframework.data.repository.query.Param("start") LocalDateTime start, 
+        @org.springframework.data.repository.query.Param("end") LocalDateTime end
+    );
 
     //3. Sadece seçilen cadde filtresi ile en son 50 kaydı, bizim parametreyle birebir eşleşen, En yeni en üstte olacak şekilde getirir.
     // Geçmiş kayıt sorgusu | Sistemi yormamak için sadece son 50 olayı getirdik
@@ -40,4 +47,7 @@ public interface ParkingRecordRepository extends JpaRepository<ParkingRecord, Lo
 
     // 5. Plakaya göre geçmiş fişleri getir. (Arama çubuğu için)
     List<ParkingRecord> findByLicensePlateIgnoreCase(String licensePlate);
+
+    // 6. Dönem arşivleme için tarih aralığına göre kayıtları silme
+    void deleteByEntryTimeBetween(LocalDateTime start, LocalDateTime end);
 }

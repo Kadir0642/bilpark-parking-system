@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
-final String globalBaseUrl = "https://bilpark-api-rtdl.onrender.com/api/parking";
+import '../core/constants.dart';
 
 class HistoryScreen extends StatefulWidget {
   final String region;
@@ -28,12 +27,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   TextEditingController searchController = TextEditingController();
 
   // Türkçe caddeleri Backend Enum'una çeviren akıllı köprü
-  String get _backendStreetEnum {
-    if (widget.street.contains("Tevfik")) return "TEVFIK_BEY";
-    if (widget.street.contains("Ali Rıza")) return "ALI_RIZA_OZKAY";
-    if (widget.street.contains("Cumhuriyet")) return "CUMHURIYET";
-    return "TEVFIK_BEY";
-  }
+  String get _backendStreetEnum => AppConstants.toBackendEnum(widget.street);
 
   @override
   void initState() {
@@ -45,12 +39,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Future<void> fetchHistory() async {
     setState(() => isLoading = true);
 
-    final uri = Uri.parse('$globalBaseUrl/history').replace(queryParameters: {
+    final uri = Uri.parse('${AppConstants.baseUrl}/history').replace(queryParameters: {
       'street': _backendStreetEnum,
     });
 
     try {
-      final response = await http.get(uri);
+      final response = await http.get(
+        uri,
+        headers: {
+          if (AppConstants.authToken != null) 
+            'Authorization': 'Bearer ${AppConstants.authToken}'
+        }
+      );
 
       if (response.statusCode == 200 && mounted) {
         List<dynamic> allRecords = json.decode(response.body);
@@ -84,12 +84,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
 
     setState(() => isLoading = true);
-    final uri = Uri.parse('$globalBaseUrl/history/search').replace(queryParameters: {
+    final uri = Uri.parse('${AppConstants.baseUrl}/history/search').replace(queryParameters: {
       'plate': plate.toUpperCase().replaceAll(' ', ''),
     });
 
     try {
-      final response = await http.get(uri);
+      final response = await http.get(
+        uri,
+        headers: {
+          if (AppConstants.authToken != null) 
+            'Authorization': 'Bearer ${AppConstants.authToken}'
+        }
+      );
 
       if (response.statusCode == 200 && mounted) {
         List<dynamic> results = json.decode(response.body);
@@ -205,7 +211,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                          color: isRunaway ? Colors.red.withOpacity(0.1) : Colors.green.withOpacity(0.1),
+                          color: isRunaway ? Colors.red.withValues(alpha: 0.1) : Colors.green.withValues(alpha: 0.1),
                           shape: BoxShape.circle
                       ),
                       child: Icon(

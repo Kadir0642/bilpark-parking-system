@@ -88,6 +88,42 @@
         </div>
     </div>
 
+    <!-- CİRO KPI KARTLARI -->
+    <div class="row mt-3">
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-top border-4 border-secondary">
+                <div class="card-body text-center">
+                    <div class="kpi-label mb-2"><i class="fa-solid fa-coins"></i> Günlük Ciro</div>
+                    <div class="kpi-value text-secondary" id="kpiDaily">₺0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-top border-4 border-secondary">
+                <div class="card-body text-center">
+                    <div class="kpi-label mb-2"><i class="fa-solid fa-money-bill-wave"></i> Haftalık Ciro</div>
+                    <div class="kpi-value text-secondary" id="kpiWeekly">₺0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-top border-4 border-secondary">
+                <div class="card-body text-center">
+                    <div class="kpi-label mb-2"><i class="fa-solid fa-money-check-dollar"></i> Aylık Ciro</div>
+                    <div class="kpi-value text-secondary" id="kpiMonthly">₺0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-top border-4 border-secondary">
+                <div class="card-body text-center">
+                    <div class="kpi-label mb-2"><i class="fa-solid fa-vault"></i> Yıllık Ciro</div>
+                    <div class="kpi-value text-secondary" id="kpiYearly">₺0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-lg-6">
             <div class="card h-100">
@@ -109,28 +145,11 @@
                                 <th>Personel</th>
                                 <th>Sorumlu Bölge</th>
                                 <th>Giriş Saati</th>
+                                <th>Kazanılan Ciro</th>
                                 <th>Çalışma Süresi</th>
                             </tr>
                             </thead>
-                            <tbody>
-                            <tr>
-                                <td><i class="fa-solid fa-user-tie me-2 text-secondary"></i>Cengiz Yıldırım</td>
-                                <td><span class="badge bg-primary">Tevfik Bey Cad.</span></td>
-                                <td>08:30</td>
-                                <td class="text-success fw-bold">6 Saat 15 Dk</td>
-                            </tr>
-                            <tr>
-                                <td><i class="fa-solid fa-user-tie me-2 text-secondary"></i>Ahmet Yılmaz</td>
-                                <td><span class="badge bg-info">Cumhuriyet Cad.</span></td>
-                                <td>09:00</td>
-                                <td class="text-success fw-bold">5 Saat 45 Dk</td>
-                            </tr>
-                            <tr>
-                                <td><i class="fa-solid fa-user-tie me-2 text-secondary"></i>Mehmet Demir</td>
-                                <td><span class="badge bg-warning text-dark">Ali Rıza Özkay Cad.</span></td>
-                                <td>14:00</td>
-                                <td class="text-success fw-bold">0 Saat 45 Dk</td>
-                            </tr>
+                            <tbody id="shiftsTableBody">
                             </tbody>
                         </table>
                     </div>
@@ -140,9 +159,17 @@
     </div>
 
     <div class="card mt-2">
-        <div class="card-header d-flex justify-content-between align-items-center py-3">
-            <span><i class="fa-solid fa-folder-open me-2"></i>Arşiv ve Operasyon Dökümü</span>
-            <button class="btn btn-success fw-bold" onclick="downloadExcel()"><i class="fa-solid fa-file-excel me-2"></i>Excel'e Aktar</button>
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center py-3 gap-2">
+            <span><i class="fa-solid fa-folder-open me-2"></i>Arşiv ve Dönem Yönetimi</span>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+                <select id="fiscalYearSelect" class="form-select w-auto" onchange="fetchHistory()">
+                    <option value="">-- Dönem Seçin --</option>
+                </select>
+                <button class="btn btn-outline-primary btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#createFiscalYearModal"><i class="fa-solid fa-plus me-1"></i>Yeni Dönem</button>
+                <button class="btn btn-success fw-bold" onclick="downloadExcel()"><i class="fa-solid fa-file-excel me-2"></i>Excel İndir</button>
+                <button class="btn btn-danger fw-bold" onclick="archiveFiscalYear()"><i class="fa-solid fa-box-archive me-2"></i>Dönemi Kapat & Arşivle</button>
+                <button class="btn btn-outline-danger fw-bold ms-2" onclick="deleteFiscalYear()"><i class="fa-solid fa-trash me-2"></i>Dönemi Sil</button>
+            </div>
         </div>
         <div class="card-body">
 
@@ -203,10 +230,41 @@
 
 </div>
 
+<!-- Yeni Dönem Modal -->
+<div class="modal fade" id="createFiscalYearModal" tabindex="-1" aria-labelledby="createFiscalYearModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content bg-dark text-white">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title" id="createFiscalYearModalLabel"><i class="fa-solid fa-folder-plus me-2 text-primary"></i>Yeni Dönem Oluştur</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="fyLabel" class="form-label">Dönem Adı</label>
+          <input type="text" class="form-control bg-secondary text-white border-0" id="fyLabel" placeholder="Örn: 2026 Dönemi">
+        </div>
+        <div class="mb-3">
+          <label for="fyStartDate" class="form-label">Başlangıç Tarihi</label>
+          <input type="date" class="form-control bg-secondary text-white border-0" id="fyStartDate">
+        </div>
+        <div class="mb-3">
+          <label for="fyEndDate" class="form-label">Bitiş Tarihi</label>
+          <input type="date" class="form-control bg-secondary text-white border-0" id="fyEndDate">
+        </div>
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+        <button type="button" class="btn btn-primary" onclick="createFiscalYear()">Oluştur</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="config.js"></script>
 
 <script>
-    const BASE_URL = "https://bilpark-api-rtdl.onrender.com/api/parking";
+    const BASE_URL = CONFIG.BASE_URL + "/api/parking";
 
     let incomeBarChartInstance = null;
     let globalHistoryData = [];
@@ -216,6 +274,14 @@
         "ALI_RIZA_OZKAY": "Ali Rıza Özkay Cad.",
         "CUMHURIYET": "Cumhuriyet Cad."
     };
+
+    // YENİ: Fetch Helper (Tüm isteklere otomatik Token ekler)
+    async function fetchWithAuth(url, options = {}) {
+        const token = localStorage.getItem('token');
+        if (!options.headers) options.headers = {};
+        if (token) options.headers['Authorization'] = 'Bearer ' + token;
+        return fetch(url, options);
+    }
 
     // 1. CANLI SAHA VERİLERİ
     async function fetchActiveSpots() {
@@ -245,7 +311,8 @@
             Chart.defaults.font.family = "'Urbanist', sans-serif";
             Chart.defaults.color = "#94a3b8";
 
-            const incomeRes = await fetch(`${BASE_URL}/bi/income-by-type`);
+            const incomeRes = await fetchWithAuth(`${BASE_URL}/bi/income-by-type`);
+            if(!incomeRes.ok) return;
             const incomeData = await incomeRes.json();
 
             const incomeCtx = document.getElementById('incomeBarChart').getContext('2d');
@@ -273,7 +340,8 @@
     // 3. SEKMELİ TABLOLAR (Ödenenler ve Kaçaklar Ayrıldı)
     async function fetchHistoryTable() {
         try {
-            const response = await fetch(`${BASE_URL}/bi/last-records`);
+            const response = await fetchWithAuth(`${BASE_URL}/bi/last-records`);
+            if(!response.ok) return;
             const records = await response.json();
             globalHistoryData = records;
 
@@ -317,14 +385,112 @@
         } catch (error) { console.error("Tablo verisi hatası:", error); }
     }
 
+    // YENİ: CİRO KPI Verilerini Getir
+    async function fetchIncomeKPI() {
+        try {
+            const select = document.getElementById("fiscalYearSelect");
+            let url = `${BASE_URL}/bi/income-summary`;
+            
+            if(select && select.value && select.selectedOptions[0]) {
+                const startDate = select.selectedOptions[0].dataset.start;
+                const endDate = select.selectedOptions[0].dataset.end;
+                url += `?start=${startDate}&end=${endDate}`;
+            }
+
+            const res = await fetchWithAuth(url);
+            if (!res.ok) return;
+            const data = await res.json();
+
+            document.getElementById("kpiDaily").innerText = `₺${data.daily.toFixed(2)}`;
+            document.getElementById("kpiWeekly").innerText = `₺${data.weekly.toFixed(2)}`;
+            document.getElementById("kpiMonthly").innerText = `₺${data.monthly.toFixed(2)}`;
+            document.getElementById("kpiYearly").innerText = `₺${data.yearly.toFixed(2)}`;
+        } catch (error) { console.error("KPI verisi hatası:", error); }
+    }
+
+    // YENİ: Mali Dönem Yönetimi (Fiscal Years)
+    async function fetchFiscalYears() {
+        try {
+            const res = await fetchWithAuth(`${CONFIG.BASE_URL}/api/admin/fiscal-years`);
+            if (!res.ok) return;
+            const years = await res.json();
+
+            const select = document.getElementById("fiscalYearSelect");
+            select.innerHTML = '<option value="">-- Dönem Seçin --</option>';
+            years.forEach(y => {
+                const opt = document.createElement("option");
+                opt.value = y.id;
+                opt.dataset.start = y.startDate;
+                opt.dataset.end = y.endDate;
+                opt.text = `${y.label} (${y.startDate} - ${y.endDate}) ${y.isActive ? '[Aktif]' : '[Arşivli]'}`;
+                select.appendChild(opt);
+            });
+        } catch (error) { console.error("Dönem verisi hatası:", error); }
+    }
+
+
+
+    // YENİ: Aktif Vardiya (Shift) Verilerini Getir
+    async function fetchShifts() {
+        try {
+            const res = await fetchWithAuth(`${CONFIG.BASE_URL}/api/parking/bi/shifts`);
+            if (!res.ok) return;
+            const shifts = await res.json();
+
+            let html = "";
+            shifts.forEach(s => {
+                const loginDate = new Date(s.lastLogin).toLocaleTimeString('tr-TR', { hour: '2-digit', minute:'2-digit' });
+                const duration = s.activeMinutes;
+                const hours = Math.floor(duration / 60);
+                const mins = duration % 60;
+                const durationText = hours > 0 ? `${hours} Saat ${mins} Dk` : `${mins} Dk`;
+                const badgeClass = s.street === 'TEVFIK_BEY' ? 'bg-primary' : (s.street === 'CUMHURIYET' ? 'bg-info' : 'bg-warning text-dark');
+
+                html += `
+                    <tr>
+                        <td><i class="fa-solid fa-user-tie me-2 text-secondary"></i>${s.username}</td>
+                        <td><span class="badge ${badgeClass}">${s.zoneName}</span></td>
+                        <td>${loginDate}</td>
+                        <td class="text-success fw-bold">₺${s.revenue.toFixed(2)}</td>
+                        <td class="text-primary fw-bold">${durationText}</td>
+                    </tr>
+                `;
+            });
+            
+            document.getElementById("shiftsTableBody").innerHTML = html || `<tr><td colspan="5" class="text-center py-4 text-secondary">Aktif personel bulunamadı.</td></tr>`;
+        } catch (error) { console.error("Vardiya verisi hatası:", error); }
+    }
+
+    function fetchHistory() {
+        // Dropdown değiştiğinde tabloyu (ve KPI'ları) güncellemek isteniyorsa buraya eklenebilir.
+        fetchIncomeKPI();
+    }
+
     // 4. EXCEL İNDİRME
     function downloadExcel() {
-        if(globalHistoryData.length === 0) {
-            alert("İndirilecek veri yok!");
+        if(!globalHistoryData || globalHistoryData.length === 0) {
+            alert("İndirilecek veri yok! Lütfen verilerin yüklendiğinden emin olun.");
             return;
         }
 
-        const excelData = globalHistoryData.map(r => ({
+        let filteredData = globalHistoryData;
+        const select = document.getElementById("fiscalYearSelect");
+        if(select.value && select.selectedOptions[0]) {
+            const startDate = new Date(select.selectedOptions[0].dataset.start);
+            const endDate = new Date(select.selectedOptions[0].dataset.end);
+            
+            filteredData = globalHistoryData.filter(r => {
+                const entryDate = new Date(r.entryTime);
+                return entryDate >= startDate && entryDate <= endDate;
+            });
+
+            if (filteredData.length === 0) {
+                alert("Seçilen döneme ait veri bulunamadı.");
+                return;
+            }
+        }
+
+        const excelData = filteredData.map(r => ({
             "Plaka": r.licensePlate,
             "Cadde": streetNames[r.street] || r.street,
             "Araç Tipi": r.vehicleType === 'LARGE' ? 'Kamyonet' : 'Otomobil',
@@ -338,13 +504,127 @@
         worksheet['!cols'] = [ {wch:15}, {wch:20}, {wch:15}, {wch:15}, {wch:15}, {wch:20}, {wch:20} ];
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "BilPark Verileri");
-        XLSX.writeFile(workbook, "BilPark_Rapor.xlsx");
+        
+        const fileName = select.value ? `BilPark_Rapor_${select.options[select.selectedIndex].text.split(' ')[0]}.xlsx` : "BilPark_Rapor_Tumu.xlsx";
+        XLSX.writeFile(workbook, fileName);
+    }
+    async function handleApiResponse(res, successMsg, onSuccess) {
+        if (res.ok) {
+            alert(successMsg);
+            if(onSuccess) onSuccess();
+        } else {
+            let data = {};
+            const text = await res.text();
+            try { 
+                if (text) data = JSON.parse(text); 
+            } catch(e) { 
+                console.error("Could not parse JSON:", text); 
+            }
+            alert("Hata: " + (data.message || data.error || `İşlem başarısız. (HTTP ${res.status})`));
+        }
+    }
+
+    // YENİ: DÖNEM OLUŞTUR (Modal üzerinden)
+    async function createFiscalYear() {
+        const label = document.getElementById("fyLabel").value;
+        const startDateStr = document.getElementById("fyStartDate").value;
+        const endDateStr = document.getElementById("fyEndDate").value;
+        
+        if (!label || label.trim() === "" || !startDateStr || !endDateStr) {
+            alert("Lütfen tüm alanları geçerli şekilde doldurun (Dönem adı boş olamaz).");
+            return;
+        }
+        
+        try {
+            const res = await fetchWithAuth(`${CONFIG.BASE_URL}/api/admin/fiscal-years/create`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    label: label,
+                    startDate: startDateStr,
+                    endDate: endDateStr
+                })
+            });
+            await handleApiResponse(res, "Yeni dönem başarıyla oluşturuldu.", () => {
+                fetchFiscalYears(); // Dropdown'u yenile
+                // Modalı kapat
+                const modal = bootstrap.Modal.getInstance(document.getElementById('createFiscalYearModal'));
+                if (modal) modal.hide();
+                
+                // Formu temizle
+                document.getElementById("fyLabel").value = "";
+                document.getElementById("fyStartDate").value = "";
+                document.getElementById("fyEndDate").value = "";
+            });
+        } catch(e) {
+            alert("Sistem hatası: " + e);
+        }
+    }
+
+    // 5. YENİ: DÖNEMİ KAPAT & ARŞİVLE
+    async function archiveFiscalYear() {
+        const select = document.getElementById("fiscalYearSelect");
+        if (!select.value) {
+            alert("Lütfen arşivlemek istediğiniz dönemi seçin.");
+            return;
+        }
+
+        const confirmArchive = confirm("Bu işlem seçili dönemdeki tüm verileri Excel olarak indirecek ve ardından VERİTABANINDAN SİLECEKTİR (Dönem arşivlenmiş olarak kalır). Emin misiniz?");
+        if (!confirmArchive) return;
+
+        downloadExcel();
+
+        try {
+            const res = await fetchWithAuth(`${CONFIG.BASE_URL}/api/admin/fiscal-years/${select.value}/archive`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            await handleApiResponse(res, "Dönem başarıyla arşivlendi ve eski veriler temizlendi.", updateDashboard);
+        } catch (error) {
+            console.error(error);
+            alert("Sistem hatası oluştu: " + error);
+        }
+    }
+
+    // 6. YENİ: DÖNEMİ SİL
+    async function deleteFiscalYear() {
+        const select = document.getElementById("fiscalYearSelect");
+        if (!select.value) {
+            alert("Lütfen silmek istediğiniz dönemi seçin.");
+            return;
+        }
+
+        const confirmFirst = confirm("DİKKAT: Bu dönemi TAMAMEN siliyorsunuz. Bu işlem geri alınamaz. Emin misiniz?");
+        if (!confirmFirst) return;
+
+        try {
+            const res = await fetchWithAuth(`${CONFIG.BASE_URL}/api/admin/fiscal-years/${select.value}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            await handleApiResponse(res, "Dönem başarıyla silindi.", () => {
+                select.value = ""; // Seçimi temizle
+                updateDashboard();
+            });
+        } catch (error) {
+            console.error(error);
+            alert("Sistem hatası oluştu: " + error);
+        }
     }
 
     function updateDashboard() {
         fetchActiveSpots();
         fetchBICharts();
+        fetchIncomeKPI();
+        fetchFiscalYears();
         fetchHistoryTable();
+        fetchShifts();
     }
 
     updateDashboard();

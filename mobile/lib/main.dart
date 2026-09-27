@@ -61,12 +61,16 @@ class MainContainer extends StatefulWidget {
   final String region;
   final String neighborhood;
   final String street;
+  final int? zoneId;
+  final String? zoneName;
 
   const MainContainer({
     super.key,
     required this.region,
     required this.neighborhood,
-    required this.street
+    required this.street,
+    this.zoneId,
+    this.zoneName
   });
 
   @override
@@ -85,13 +89,17 @@ class _MainContainerState extends State<MainContainer> {
           DashboardScreen(
               region: widget.region,
               neighborhood: widget.neighborhood,
-              street: widget.street
+              street: widget.street,
+              zoneId: widget.zoneId,
+              zoneName: widget.zoneName
           ),
           // 👇 EKSİK OLAN KISIM BURASIYDI, EKLENDİ 👇
           ParkingMapScreen(
               region: widget.region,
               neighborhood: widget.neighborhood,
-              street: widget.street
+              street: widget.street,
+              zoneId: widget.zoneId,
+              zoneName: widget.zoneName
           ),
         ],
       ),
