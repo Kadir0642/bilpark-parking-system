@@ -140,8 +140,8 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
   }
 
   bool _isForeignPlate(String plate) {
-    // 2 rakam, ardından MA-MZ arası 2 harf (M ve A-Z), ardından 3-4 rakam.
-    return RegExp(r'^\d{2}M[A-Z]\d{3,4}$').hasMatch(plate.toUpperCase().replaceAll(' ', ''));
+    // 2 rakam, ardından MA-MZ veya MAA-MZZ arası harfler, ardından 3-4 rakam.
+    return RegExp(r'^\d{2}M[A-Z]{1,2}\d{3,4}$').hasMatch(plate.toUpperCase().replaceAll(' ', ''));
   }
 
   String _getFlagEmoji(String plate) {
@@ -392,6 +392,7 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
     ).then((_) {
       // Kullanıcı dışarı tıklayıp kartı kapatırsa diye güvenliği elden bırakmıyoruz
       // (Burası tetiklenir ve sayaç arka planda çalışıp telefonu ısıtmaz)
+      dialogTimer?.cancel();
     });
   }
 

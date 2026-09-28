@@ -248,7 +248,14 @@ public class ParkingController {
 
     // GET /api/parking/bi/last-records
     @GetMapping("/bi/last-records")
-    public List<ParkingRecord> getLastRecordsBI() {
+    public List<ParkingRecord> getLastRecordsBI(
+            @RequestParam(required = false) String start, 
+            @RequestParam(required = false) String end) {
+        if (start != null && end != null) {
+            java.time.LocalDateTime customStart = java.time.LocalDate.parse(start).atStartOfDay();
+            java.time.LocalDateTime customEnd = java.time.LocalDate.parse(end).plusDays(1).atStartOfDay();
+            return parkingService.getRecordsByDateRange(customStart, customEnd);
+        }
         return parkingService.getLast100Records();
     }
 }

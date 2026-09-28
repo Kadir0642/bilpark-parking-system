@@ -19,7 +19,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       
       if (token != null) {
         await http.post(
-          Uri.parse('${AppConstants.baseUrl}/api/auth/logout'),
+          Uri.parse('${AppConstants.apiBase}/auth/logout'),
           headers: {'Authorization': 'Bearer $token'},
         );
       }
@@ -63,8 +63,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             secondary: Icon(isDarkMode ? Icons.dark_mode : Icons.light_mode),
             value: isDarkMode,
             activeColor: Colors.indigoAccent,
-            onChanged: (bool value) {
+            onChanged: (bool value) async {
               themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('isDarkMode', value);
             },
           ),
 

@@ -49,5 +49,10 @@ public interface ParkingRecordRepository extends JpaRepository<ParkingRecord, Lo
     List<ParkingRecord> findByLicensePlateIgnoreCase(String licensePlate);
 
     // 6. Dönem arşivleme için tarih aralığına göre kayıtları silme
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
     void deleteByEntryTimeBetween(LocalDateTime start, LocalDateTime end);
+
+    // 7. Tarih aralığına göre tüm kayıtları getir (Excel indirme için)
+    List<ParkingRecord> findByEntryTimeBetweenOrderByEntryTimeDesc(LocalDateTime start, LocalDateTime end);
 }

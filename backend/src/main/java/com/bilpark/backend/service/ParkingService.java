@@ -239,6 +239,12 @@ public class ParkingService
         return (total != null) ? total : 0.0;
     }
 
+    // --- Belirli tarih aralığında gelir (Controller'dan çağrılır) ---
+    public Double getIncomeByDateRange(LocalDateTime start, LocalDateTime end) {
+        Double total = parkingRecordRepository.getIncomeByDateRange(start, end);
+        return (total != null) ? total : 0.0;
+    }
+
     // --- FİLTRELEME SERVİSLERİ ---
 
     // Sadece seçilen caddedeki aktif araçları getirir
@@ -323,4 +329,8 @@ public class ParkingService
         return parkingRecordRepository.findTop100ByOrderByEntryTimeDesc();
     }
 
+    // 9.4 Tarih Aralığına Göre Arşiv Kayıtları (Excel İndirme ve Filtreleme İçin)
+    public List<ParkingRecord> getRecordsByDateRange(LocalDateTime start, LocalDateTime end) {
+        return parkingRecordRepository.findByEntryTimeBetweenOrderByEntryTimeDesc(start, end);
+    }
 }

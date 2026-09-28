@@ -4,10 +4,17 @@ import 'screens/dashboard_screen.dart';
 import 'screens/parking_map_screen.dart';
 import 'screens/auth_screen.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 // 🪄 YENİ: Tüm uygulamanın temasını dinleyen global haberci
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  final isDarkMode = prefs.getBool('isDarkMode') ?? false;
+  themeNotifier.value = isDarkMode ? ThemeMode.dark : ThemeMode.light;
+  
   runApp(const BilParkApp());
 }
 

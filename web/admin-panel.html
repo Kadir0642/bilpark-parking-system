@@ -286,7 +286,7 @@
     // 1. CANLI SAHA VERİLERİ
     async function fetchActiveSpots() {
         try {
-            const response = await fetch(`${BASE_URL}/spots`);
+            const response = await fetchWithAuth(`${BASE_URL}/spots`);
             const spots = await response.json();
 
             let total = spots.length;
@@ -340,7 +340,16 @@
     // 3. SEKMELİ TABLOLAR (Ödenenler ve Kaçaklar Ayrıldı)
     async function fetchHistoryTable() {
         try {
-            const response = await fetchWithAuth(`${BASE_URL}/bi/last-records`);
+            const select = document.getElementById("fiscalYearSelect");
+            let url = `${BASE_URL}/bi/last-records`;
+            
+            if(select && select.value && select.selectedOptions[0]) {
+                const startDate = select.selectedOptions[0].dataset.start;
+                const endDate = select.selectedOptions[0].dataset.end;
+                url += `?start=${startDate}&end=${endDate}`;
+            }
+
+            const response = await fetchWithAuth(url);
             if(!response.ok) return;
             const records = await response.json();
             globalHistoryData = records;
@@ -422,7 +431,7 @@
                 opt.value = y.id;
                 opt.dataset.start = y.startDate;
                 opt.dataset.end = y.endDate;
-                opt.text = `${y.label} (${y.startDate} - ${y.endDate}) ${y.isActive ? '[Aktif]' : '[Arşivli]'}`;
+                opt.text = `${y.label} (${y.startDate} - ${y.endDate}) ${y.active ? '[Aktif]' : '[Arşivli]'}`;
                 select.appendChild(opt);
             });
         } catch (error) { console.error("Dönem verisi hatası:", error); }
@@ -462,8 +471,8 @@
     }
 
     function fetchHistory() {
-        // Dropdown değiştiğinde tabloyu (ve KPI'ları) güncellemek isteniyorsa buraya eklenebilir.
         fetchIncomeKPI();
+        fetchHistoryTable();
     }
 
     // 4. EXCEL İNDİRME
@@ -628,7 +637,7 @@
     }
 
     updateDashboard();
-    setInterval(updateDashboard, 10000);
+    setInterval(updateDashboard, 30000);
 </script>
 </body>
 </html>
