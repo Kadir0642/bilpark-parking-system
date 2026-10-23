@@ -61,7 +61,7 @@ docker compose up --build
 docker compose ps
 ```
 
-`backend` satırında `(healthy)` görünmeli. Tarayıcıda http://localhost:8081/api/zones açınca 6 bölgenin JSON listesi gelmeli.
+`backend` satırında `(healthy)` görünmeli. Tarayıcıda http://localhost:8081/api/health açınca `{"status":"UP", ...}` gelmeli.
 
 **2.3. (İsteğe bağlı) Örnek veri yükle:**
 
@@ -137,7 +137,7 @@ Bu rehberin geri kalanında bu adrese `<PC-IP>` diyoruz.
 
 ### 4.3. Telefonu aynı Wi-Fi'ye bağla
 
-Telefon, bilgisayarla **aynı Wi-Fi ağına** bağlı olmalı (mobil veri kapalı ya da önemsiz; misafir ağları cihazları birbirinden yalıttığı için çalışmaz). Kontrol: telefonun tarayıcısında `http://<PC-IP>:8081/api/zones` aç. JSON listesi geliyorsa ağ ve güvenlik duvarı tamam.
+Telefon, bilgisayarla **aynı Wi-Fi ağına** bağlı olmalı (mobil veri kapalı ya da önemsiz; misafir ağları cihazları birbirinden yalıttığı için çalışmaz). Kontrol: telefonun tarayıcısında `http://<PC-IP>:8081/api/health` aç. `{"status":"UP", ...}` geliyorsa ağ ve güvenlik duvarı tamam.
 
 ### 4.4. Uygulamayı telefona kur ve çalıştır
 
@@ -204,13 +204,16 @@ $env:DEMO_API_PORT=8082; $env:DEMO_DB_PORT=5434; $env:DEMO_WEB_PORT=5501; docker
 Bu durumda telefon için `API_BASE=http://<PC-IP>:8082/api`, panel için `admin-panel.html?api=http://localhost:8082` kullan ve güvenlik duvarı kuralını yeni porta aç. Web portunu değiştirdiysen panel adresi de `http://localhost:5501/...` olur.
 
 **Telefon bağlanamıyor** (uygulamada zaman aşımı / "bağlantı kurulamadı")
-1. Bilgisayarda http://localhost:8081/api/zones açılıyor mu? Açılmıyorsa sorun backend'de: `docker compose logs backend`.
-2. Telefonun tarayıcısında `http://<PC-IP>:8081/api/zones` açılıyor mu? Açılmıyorsa:
+1. Bilgisayarda http://localhost:8081/api/health açılıyor mu? Açılmıyorsa sorun backend'de: `docker compose logs backend`.
+2. Telefonun tarayıcısında `http://<PC-IP>:8081/api/health` açılıyor mu? Açılmıyorsa:
    - Güvenlik duvarı kuralı eklendi mi ve Wi-Fi profili **Özel** mi? (Bölüm 4.2)
    - IP doğru mu? `vEthernet`/WSL adresi değil, Wi-Fi adaptörünün adresi olmalı.
    - Telefon misafir ağında ya da mobil veride olabilir; aynı ağa bağlan.
    - VPN veya üçüncü parti antivirüs güvenlik duvarı (ESET, Kaspersky vb.) kendi kuralını ister.
 3. Tarayıcıda açılıyor ama uygulama bağlanmıyorsa: `API_BASE` sonunda `/api` var mı, `https` değil `http` mi, ve uygulama **debug** mi derlendi?
+
+**`Set-NetConnectionProfile` veya `New-NetFirewallRule`: "Erişim engellendi" (Windows System Error 5)**
+PowerShell yönetici olarak açılmamış. Başlat → "PowerShell" → sağ tık → **Yönetici olarak çalıştır**; pencere başlığında "Yönetici" yazmalı. Ağ profilini komut yerine Ayarlar → Ağ ve İnternet → Wi-Fi → ağın özellikleri → **Özel ağ** yolundan da değiştirebilirsin. Okul, yurt, kafe gibi ortak ağları Özel yapma; bunun yerine kendi ev ağını ya da telefonunun hotspot'unu kullan.
 
 **Docker'ın "Inference manager" hatası** (Docker Desktop açılırken ya da `docker compose up` sırasında *inference manager* / *model runner* ile ilgili hata)
 Bu, Docker Desktop'ın yapay zekâ modeli çalıştırma özelliğinden (Docker Model Runner) gelir; BilPark bunu kullanmaz.
