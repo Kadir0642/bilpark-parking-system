@@ -5,6 +5,7 @@ import com.bilpark.backend.common.ErrorCodes;
 import com.bilpark.backend.common.PlateNormalizer;
 import com.bilpark.backend.model.Subscription;
 import com.bilpark.backend.model.SubscriptionStatus;
+import com.bilpark.backend.model.Tariff;
 import com.bilpark.backend.model.VehicleType;
 import com.bilpark.backend.repository.SubscriptionRepository;
 import org.slf4j.Logger;
@@ -26,8 +27,11 @@ public class SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
 
-    public SubscriptionService(SubscriptionRepository subscriptionRepository) {
+    private final TariffService tariffService;
+
+    public SubscriptionService(SubscriptionRepository subscriptionRepository, TariffService tariffService) {
         this.subscriptionRepository = subscriptionRepository;
+        this.tariffService = tariffService;
     }
 
     /**
@@ -61,6 +65,10 @@ public class SubscriptionService {
         }
 
         Subscription sub = new Subscription(plate, type, LocalDate.now(), ownerName, ownerPhone);
+        // Aylık ücret geçerli tarifeden gelir
+        Tariff tariff = tariffService.current();
+        sub.setMonthlyFee(type == VehicleType.LARGE
+                ? tariff.getSubscriptionLargeMonthly() : tariff.getSubscriptionSmallMonthly());
         try {
             return subscriptionRepository.saveAndFlush(sub);
         } catch (DataIntegrityViolationException e) {

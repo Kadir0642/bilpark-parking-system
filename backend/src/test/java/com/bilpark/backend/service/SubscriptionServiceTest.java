@@ -4,6 +4,7 @@ import com.bilpark.backend.common.ApiException;
 import com.bilpark.backend.common.ErrorCodes;
 import com.bilpark.backend.model.Subscription;
 import com.bilpark.backend.model.SubscriptionStatus;
+import com.bilpark.backend.model.Tariff;
 import com.bilpark.backend.model.VehicleType;
 import com.bilpark.backend.repository.SubscriptionRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,11 +23,17 @@ class SubscriptionServiceTest {
 
     private SubscriptionRepository repo;
     private SubscriptionService service;
+    private TariffService tariffService;
 
     @BeforeEach
     void setUp() {
         repo = mock(SubscriptionRepository.class);
-        service = new SubscriptionService(repo);
+        tariffService = mock(TariffService.class);
+        Tariff t = new Tariff();
+        t.setSubscriptionSmallMonthly(2600.0);
+        t.setSubscriptionLargeMonthly(3100.0);
+        when(tariffService.current()).thenReturn(t);
+        service = new SubscriptionService(repo, tariffService);
         when(repo.saveAndFlush(any(Subscription.class))).thenAnswer(i -> i.getArguments()[0]);
     }
 
@@ -35,7 +42,14 @@ class SubscriptionServiceTest {
         when(repo.findByPlateAndStatusForUpdate("34ABC123", SubscriptionStatus.ACTIVE)).thenReturn(List.of());
         Subscription s = service.createSubscription("34 abc-123", "LARGE", "o", "5");
         assertEquals("34ABC123", s.getLicensePlate());
-        assertEquals(3000.0, s.getMonthlyFee());
+        assertEquals(3100.0, s.getMonthlyFee());
+    }
+
+    @Test
+    void smallSubscriptionUsesCurrentTariffPrice() {
+        when(repo.findByPlateAndStatusForUpdate("34ABC123", SubscriptionStatus.ACTIVE)).thenReturn(List.of());
+        Subscription s = service.createSubscription("34ABC123", "SMALL", "o", "5");
+        assertEquals(2600.0, s.getMonthlyFee());
     }
 
     @Test
