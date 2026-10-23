@@ -46,8 +46,8 @@ services:
     ports:
       - "${DEMO_API_PORT:-8081}:8080"
     healthcheck:
-      # /api/zones kimlik istemez; uygulama ve veritabanı hazırsa 200 döner.
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/zones > /dev/null || exit 1"]
+      # /api/health kimlik istemez; uygulama ayaktaysa 200 döner.
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/health > /dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 30
