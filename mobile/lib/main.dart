@@ -155,14 +155,23 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
     if (!mounted) return;
     switch (e.type) {
       case 'TARIFF_UPDATED':
-        final hadUpcoming = TariffStore.current.value?.upcoming != null;
+        final before = TariffStore.current.value;
         TariffStore.applyPayload(e.payload);
-        final up = TariffStore.current.value?.upcoming;
+        final now = TariffStore.current.value;
+        final up = now?.upcoming;
         final from = up?.effectiveFrom;
-        final msg = (up != null && !hadUpcoming && from != null)
-            ? 'Yeni tarife zamanlandı: ${formatDayMonth(from)} ${formatHm(from)}'
-            : 'Tarife güncellendi';
-        ScaffoldMessenger.of(context).showSnackBar(bpSnackBar(context, msg));
+        final String msg;
+        if (up != null && before?.upcoming?.id != up.id && from != null) {
+          msg = 'Yeni tarife zamanlandı: ${formatDayMonth(from)} ${formatHm(from)}';
+        } else if (before != null && now != null && before.id != now.id) {
+          msg = 'Yeni tarife yürürlüğe girdi';
+        } else {
+          msg = 'Tarife güncellendi';
+        }
+        // Kuyrukta bekleyen eski tarife bildirimi yenisinin önüne geçmesin
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(bpSnackBar(context, msg));
       case 'VEHICLE_ENTERED' || 'VEHICLE_EXITED' || 'VEHICLE_RUNAWAY':
         if (_isMine(e)) _scheduleRefresh();
     }
