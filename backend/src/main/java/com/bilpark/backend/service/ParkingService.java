@@ -37,10 +37,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Service // İş mantığını yöneten sınıf | Uygulama Beyni
 public class ParkingService
@@ -77,7 +80,24 @@ public class ParkingService
 
     public List<ParkSpot> getAllSpots()
     {
-        return parkSpotRepository.findAll();
+        return withSubscriptionAndDebt(parkSpotRepository.findAll());
+    }
+
+    // Listelerde @Transient alanları doldurur: abonelik ve kaçak borç, tüm liste için iki sorgu (N+1 yok)
+    private List<ParkSpot> withSubscriptionAndDebt(List<ParkSpot> spots) {
+        if (spots.isEmpty()) return spots;
+        List<String> plates = spots.stream().map(ParkSpot::getCurrentPlate).distinct().toList();
+        Set<String> subscribed = new HashSet<>(
+                subscriptionRepository.findCurrentlyActivePlates(plates, LocalDate.now(clock)));
+        Map<String, Double> debts = new HashMap<>();
+        for (Object[] row : parkingRecordRepository.sumUnpaidRunawayDebtByPlate(plates)) {
+            debts.put((String) row[0], row[1] == null ? 0.0 : ((Number) row[1]).doubleValue());
+        }
+        for (ParkSpot s : spots) {
+            s.setHasSubscription(subscribed.contains(s.getCurrentPlate()));
+            s.setAccumulatedDebt(debts.getOrDefault(s.getCurrentPlate(), 0.0));
+        }
+        return spots;
     }
 
     // --- CHECK-IN ---
@@ -116,7 +136,7 @@ public class ParkingService
         VehicleType type = VehicleType.SMALL; // Default
         if (vehicleType != null && !vehicleType.isEmpty()) {
             try {
-                type = VehicleType.valueOf(vehicleType.toUpperCase());
+                type = VehicleType.valueOf(vehicleType.toUpperCase(Locale.ROOT));
             } catch (IllegalArgumentException e) {
                 type = VehicleType.SMALL; // Hatalı gelirse küçük say
             }
@@ -396,7 +416,7 @@ public class ParkingService
 
     // --- FİLTRELEME SERVİSLERİ ---
     public List<ParkSpot> getSpotsByStreet(StreetLocation street){
-        return parkSpotRepository.findByStreet(street);
+        return withSubscriptionAndDebt(parkSpotRepository.findByStreet(street));
     }
 
     public List<ParkingRecord> getHistoryByLocation(StreetLocation street){

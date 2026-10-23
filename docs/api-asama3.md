@@ -179,6 +179,7 @@ Memurun ödeme ekranı için kullanılır. Gövde `/debt` ile aynıdır, ayrıca
 
 ### Mevcut uç noktalardaki eklemeler
 
+- `GET /api/parking/spots` ve `GET /api/parking/filter?street=` → her araçta `hasSubscription` (boolean) ve `accumulatedDebt` (ödenmemiş kaçak borç toplamı, TL; borç yoksa `0.0`) artık dolu gelir. Önceden yalnızca check-in yanıtında doluydu, listelerde `null` dönüyordu. Tüm liste için toplam iki sorgu çalışır, araç başına sorgu atılmaz. Abone araçları farklı renkte göstermek ve borçlu aracı işaretlemek için bu alanlar kullanılabilir.
 - `POST /api/parking/check-out` → `ParkingRecord` yanıtına `tariffId` ve `paidMinutes` eklendi.
 - `POST /api/parking/runaway` → `{message, debt, record}` yanıtına `segments` eklendi. `record` içinde de `tariffId` ve `paidMinutes` var.
 

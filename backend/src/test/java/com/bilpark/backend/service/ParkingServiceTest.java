@@ -572,4 +572,39 @@ public class ParkingServiceTest {
 
         assertNotNull(parkingService.checkOutVehicle("34XYZ789", admin()));
     }
+
+    // --- spot lists: subscription + runaway debt filled with one batch query each (no N+1) ---
+    @Test
+    void testGetAllSpots_FillsSubscriptionAndDebtInBatch() {
+        ParkSpot a = spot("34AAA001", VehicleType.SMALL, null, 10);
+        ParkSpot b = spot("34BBB002", VehicleType.SMALL, null, 10);
+        ParkSpot c = spot("34CCC003", VehicleType.LARGE, null, 10);
+        when(parkSpotRepository.findAll()).thenReturn(List.of(a, b, c));
+        when(subscriptionRepository.findCurrentlyActivePlates(any(), eq(LocalDate.of(2026, 10, 21))))
+                .thenReturn(List.of("34BBB002"));
+        when(parkingRecordRepository.sumUnpaidRunawayDebtByPlate(any()))
+                .thenReturn(List.<Object[]>of(new Object[]{"34CCC003", 70.0}));
+
+        List<ParkSpot> spots = parkingService.getAllSpots();
+
+        assertEquals(3, spots.size());
+        assertFalse(a.getHasSubscription());
+        assertEquals(0.0, a.getAccumulatedDebt());
+        assertTrue(b.getHasSubscription());
+        assertEquals(0.0, b.getAccumulatedDebt());
+        assertFalse(c.getHasSubscription());
+        assertEquals(70.0, c.getAccumulatedDebt());
+        verify(subscriptionRepository, times(1)).findCurrentlyActivePlates(any(), any());
+        verify(parkingRecordRepository, times(1)).sumUnpaidRunawayDebtByPlate(any());
+        verify(subscriptionRepository, never()).findFirstByLicensePlateAndStatusOrderByEndDateDesc(any(), any());
+        verify(parkingRecordRepository, never()).findByLicensePlateAndStatus(any(), any());
+    }
+
+    @Test
+    void testGetSpotsByStreet_EmptyListSkipsQueries() {
+        when(parkSpotRepository.findByStreet(StreetLocation.CUMHURIYET)).thenReturn(List.of());
+        assertTrue(parkingService.getSpotsByStreet(StreetLocation.CUMHURIYET).isEmpty());
+        verifyNoInteractions(subscriptionRepository);
+        verify(parkingRecordRepository, never()).sumUnpaidRunawayDebtByPlate(any());
+    }
 }

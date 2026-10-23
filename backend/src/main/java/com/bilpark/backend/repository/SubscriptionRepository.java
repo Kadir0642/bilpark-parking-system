@@ -34,6 +34,13 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     // All active subscriptions
     List<Subscription> findByStatus(SubscriptionStatus status);
 
+    // Plates (from the given list) with a currently valid ACTIVE subscription: one query for a whole spot list
+    @Query("SELECT DISTINCT s.licensePlate FROM Subscription s WHERE s.licensePlate IN :plates "
+            + "AND s.status = com.bilpark.backend.model.SubscriptionStatus.ACTIVE "
+            + "AND s.startDate <= :today AND s.endDate >= :today")
+    List<String> findCurrentlyActivePlates(@Param("plates") java.util.Collection<String> plates,
+                                           @Param("today") LocalDate today);
+
     // Find expired subscriptions that haven't been marked expired yet
     @Query("SELECT s FROM Subscription s WHERE s.status = com.bilpark.backend.model.SubscriptionStatus.ACTIVE AND s.endDate < :today")
     List<Subscription> findExpiredSubscriptions(@Param("today") LocalDate today);
