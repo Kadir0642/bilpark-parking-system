@@ -45,16 +45,12 @@
         .receipt-value { font-weight: 600; color: #0f172a; text-align: right; }
         .total-price { font-size: 32px; font-weight: 800; color: var(--success); text-align: center; margin: 20px 0;}
 
-        /* Başarı Ekranı */
-        .success-icon { width: 80px; height: 80px; background: #d1fae5; color: var(--success); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 40px; margin: 0 auto 20px; }
+        .pay-notice { background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; border-radius: 16px; padding: 16px; margin-bottom: 20px; text-align: center; font-size: 15px; line-height: 1.5; }
 
         .loader { display: none; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
         #errorMsg { color: var(--error); text-align: center; font-size: 14px; font-weight: 600; margin-top: 15px; display: none; background: #fee2e2; padding: 10px; border-radius: 8px;}
-        #subErrorMsg, #subSuccessMsg { text-align: center; font-size: 14px; font-weight: 600; margin-top: 15px; display: none; padding: 10px; border-radius: 8px;}
-        #subErrorMsg { color: var(--error); background: #fee2e2; }
-        #subSuccessMsg { color: var(--success); background: #d1fae5; }
 
         /* TABS */
         .tabs { display: flex; background: #e2e8f0; border-radius: 12px; padding: 5px; margin-bottom: 25px; }
@@ -77,7 +73,7 @@
 
     <!-- TABS -->
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchMainTab('payment')">Otopark Ödemesi</button>
+        <button class="tab-btn active" onclick="switchMainTab('payment')">Borç Sorgulama</button>
         <button class="tab-btn" onclick="switchMainTab('subscription')">Aylık Abonelik</button>
     </div>
 
@@ -115,65 +111,20 @@
             <div class="total-price" id="resFee">25.0 TL</div>
         </div>
 
-        <div class="input-group" style="opacity: 0.6; pointer-events: none;">
-            <label>Kredi Kartı (Sistem Kayıtlı Karta Yönlendirilecek)</label>
-            <input type="text" class="plate-input" style="font-size: 18px; letter-spacing: 2px;" value="**** **** **** 1234" disabled>
+        <div class="pay-notice">
+            <strong>Ödemenizi saha personeline yapınız.</strong><br>
+            Nakit veya POS ile ödeme sahadaki görevliye yapılır.
         </div>
 
-        <button class="btn btn-primary" onclick="payDebt()" id="btnPay" style="background: var(--success); box-shadow: 0 8px 15px rgba(16, 185, 129, 0.25);">
-            <span id="txtPay">Güvenli Ödeme Yap</span>
-            <div class="loader" id="ldrPay"></div>
-        </button>
-        <button class="btn btn-secondary" onclick="switchView('view-search')">Vazgeç ve Geri Dön</button>
-    </div>
-
-    <div id="view-success" class="view" style="text-align: center; padding-top: 30px;">
-        <div class="success-icon">✓</div>
-        <h2 style="font-size: 24px; color: #111; margin-bottom: 10px;">Ödeme Başarılı!</h2>
-        <p style="color: #64748b; line-height: 1.6; font-size: 15px;">Aracınızın çıkış işlemi sistemden otomatik olarak verilmiştir. Bizi tercih ettiğiniz için teşekkür ederiz. İyi yolculuklar!</p>
-        <button class="btn btn-secondary" style="margin-top: 30px;" onclick="window.location.reload()">Yeni İşlem Yap</button>
+        <button class="btn btn-secondary" onclick="switchView('view-search')">Geri Dön</button>
     </div>
 
     <!-- ABONELİK GÖRÜNÜMÜ -->
     <div id="view-subscription" class="view">
-        <div class="input-group">
-            <label>Araç Plakası</label>
-            <input type="text" id="subPlate" class="plate-input" placeholder="34 ABC 123" maxlength="11" oninput="formatPlate(this)">
+        <div class="pay-notice">
+            <strong>Aylık abonelik</strong><br>
+            Aylık abonelik başvurusu için saha personeline veya yönetime başvurunuz.
         </div>
-        <div class="input-group">
-            <label>Araç Tipi</label>
-            <select id="subType" class="plate-input" style="font-size: 18px; text-transform: none; letter-spacing: normal; text-align: left;" onchange="updateSubscriptionPrice()">
-                <option value="SMALL">Otomobil / Küçük Minibüs (2.500 TL)</option>
-                <option value="LARGE">Yarım Otobüs / Kamyon (3.000 TL)</option>
-            </select>
-        </div>
-        <div class="input-group">
-            <label>Ad Soyad (Opsiyonel)</label>
-            <input type="text" id="subName" class="plate-input" style="font-size: 18px; text-transform: none; letter-spacing: normal; text-align: left;" placeholder="Adınız Soyadınız">
-        </div>
-        <div class="input-group">
-            <label>Telefon (Opsiyonel)</label>
-            <input type="text" id="subPhone" class="plate-input" style="font-size: 18px; text-transform: none; letter-spacing: normal; text-align: left;" placeholder="05XX XXX XX XX">
-        </div>
-
-        <div class="receipt-card" style="margin-top: 20px;">
-            <div class="receipt-row">
-                <span class="receipt-label">Aylık Abonelik Ücreti</span>
-                <span class="receipt-value" id="subPriceDisplay" style="color: var(--primary); font-size: 18px;">2500.00 TL</span>
-            </div>
-        </div>
-
-        <div class="input-group" style="opacity: 0.6; pointer-events: none;">
-            <label>Kredi Kartı (Sistem Kayıtlı Karta Yönlendirilecek)</label>
-            <input type="text" class="plate-input" style="font-size: 18px; letter-spacing: 2px;" value="**** **** **** 1234" disabled>
-        </div>
-
-        <button class="btn btn-primary" onclick="purchaseSubscription()" id="btnPurchase" style="background: var(--success); box-shadow: 0 8px 15px rgba(16, 185, 129, 0.25);">
-            <span id="txtPurchase">Abonelik Satın Al</span>
-            <div class="loader" id="ldrPurchase"></div>
-        </button>
-        <div id="subErrorMsg"></div>
-        <div id="subSuccessMsg"></div>
     </div>
 
 </div>
@@ -233,12 +184,10 @@
                     document.getElementById('subRow').style.display = 'flex';
                     document.getElementById('resFee').innerText = 'Ücretsiz (Abonelik)';
                     document.getElementById('resFee').style.color = 'var(--primary)';
-                    document.getElementById('txtPay').innerText = 'Ücretsiz Çıkış Yap';
                 } else {
                     document.getElementById('subRow').style.display = 'none';
                     document.getElementById('resFee').innerText = `${data.fee} TL`;
                     document.getElementById('resFee').style.color = 'var(--success)';
-                    document.getElementById('txtPay').innerText = 'Güvenli Ödeme Yap';
                 }
 
                 switchView('view-payment');
@@ -254,45 +203,6 @@
             btnQuery.disabled = false;
             document.getElementById('txtQuery').style.display = 'block';
             document.getElementById('ldrQuery').style.display = 'none';
-        }
-    }
-
-    async function payDebt() {
-        if (isProcessing) return;
-
-        const plate = document.getElementById('resPlate').innerText;
-        const btnPay = document.getElementById('btnPay');
-
-        isProcessing = true;
-        btnPay.disabled = true;
-        document.getElementById('txtPay').style.display = 'none';
-        document.getElementById('ldrPay').style.display = 'block';
-
-        try {
-            const response = await fetch(`${BASE_URL}/pay?plate=${plate}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-
-            let data = {};
-            const contentType = response.headers.get("content-type");
-            if (contentType && contentType.includes("application/json")) {
-                data = await response.json();
-            }
-
-            if(response.ok) {
-                switchView('view-success');
-            } else {
-                alert("Ödeme alınamadı: " + (data.error || "Bilinmeyen Hata"));
-                switchView('view-search');
-            }
-        } catch (error) {
-            alert("Bağlantı hatası oluştu. Lütfen internetinizi kontrol edin.");
-        } finally {
-            isProcessing = false;
-            btnPay.disabled = false;
-            document.getElementById('txtPay').style.display = 'block';
-            document.getElementById('ldrPay').style.display = 'none';
         }
     }
 
@@ -318,80 +228,6 @@
         } else {
             document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
             document.getElementById('view-subscription').classList.add('active');
-        }
-    }
-
-    function updateSubscriptionPrice() {
-        const type = document.getElementById('subType').value;
-        const priceDisplay = document.getElementById('subPriceDisplay');
-        if (type === 'SMALL') {
-            priceDisplay.innerText = "2500.00 TL";
-        } else {
-            priceDisplay.innerText = "3000.00 TL";
-        }
-    }
-
-    async function purchaseSubscription() {
-        if (isProcessing) return;
-
-        const plate = document.getElementById('subPlate').value.trim().toUpperCase().replace(/\s/g, '');
-        const type = document.getElementById('subType').value;
-        const name = document.getElementById('subName').value.trim();
-        const phone = document.getElementById('subPhone').value.trim();
-
-        const errorMsg = document.getElementById('subErrorMsg');
-        const successMsg = document.getElementById('subSuccessMsg');
-
-        if (plate.length < 5 || plate.length > 9) {
-            errorMsg.innerText = "Lütfen geçerli bir plaka giriniz.";
-            errorMsg.style.display = 'block';
-            successMsg.style.display = 'none';
-            return;
-        }
-
-        isProcessing = true;
-        document.getElementById('btnPurchase').disabled = true;
-        document.getElementById('txtPurchase').style.display = 'none';
-        document.getElementById('ldrPurchase').style.display = 'block';
-        errorMsg.style.display = 'none';
-        successMsg.style.display = 'none';
-
-        try {
-            const response = await fetch(`${BASE_URL.replace('/parking', '')}/subscription/create`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    licensePlate: plate,
-                    vehicleType: type,
-                    ownerName: name,
-                    ownerPhone: phone
-                })
-            });
-
-            let data = {};
-            const contentType = response.headers.get("content-type");
-            if (contentType && contentType.includes("application/json")) {
-                data = await response.json();
-            }
-
-            if(response.ok) {
-                successMsg.innerText = "Abonelik başarıyla oluşturuldu! Artık ücretsiz giriş yapabilirsiniz.";
-                successMsg.style.display = 'block';
-                document.getElementById('subPlate').value = '';
-                document.getElementById('subName').value = '';
-                document.getElementById('subPhone').value = '';
-            } else {
-                errorMsg.innerText = data.error || "Abonelik oluşturulamadı.";
-                errorMsg.style.display = 'block';
-            }
-        } catch (error) {
-            errorMsg.innerText = "Bağlantı koptu. Lütfen internetinizi kontrol edin.";
-            errorMsg.style.display = 'block';
-        } finally {
-            isProcessing = false;
-            document.getElementById('btnPurchase').disabled = false;
-            document.getElementById('txtPurchase').style.display = 'block';
-            document.getElementById('ldrPurchase').style.display = 'none';
         }
     }
 </script>
