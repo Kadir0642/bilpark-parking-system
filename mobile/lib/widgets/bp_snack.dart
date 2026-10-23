@@ -1,0 +1,29 @@
+import 'package:flutter/material.dart';
+import '../core/theme.dart';
+import 'status_badge.dart';
+
+/// Tema renklerinden SnackBar üretir. [tone] success/danger dışında verilmezse koyu nötr görünür.
+SnackBar bpSnackBar(
+  BuildContext context,
+  String message, {
+  BadgeTone? tone,
+  Duration duration = const Duration(seconds: 4),
+  SnackBarAction? action,
+}) {
+  final c = context.bp;
+  Color? bg;
+  Color? fg;
+  if (tone == BadgeTone.success) {
+    bg = c.success;
+    fg = c.onSuccess;
+  } else if (tone == BadgeTone.danger) {
+    bg = c.danger;
+    fg = c.onDanger;
+  }
+  return SnackBar(
+    content: Text(message, style: fg != null ? TextStyle(color: fg, fontSize: 15) : null),
+    backgroundColor: bg,
+    duration: duration,
+    action: action,
+  );
+}
