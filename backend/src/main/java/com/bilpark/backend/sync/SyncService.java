@@ -8,6 +8,8 @@ import com.bilpark.backend.model.SyncScope;
 import com.bilpark.backend.repository.SyncEventRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.event.ContextClosedEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -293,6 +295,12 @@ public class SyncService implements ChangePublisher {
                 // already gone
             }
         }
+    }
+
+    // Runs before the web server's graceful shutdown, which would otherwise wait for every open stream
+    @EventListener(ContextClosedEvent.class)
+    public void closeAllStreams() {
+        for (Client c : clients) close(c);
     }
 
     public int connectedCount() {
