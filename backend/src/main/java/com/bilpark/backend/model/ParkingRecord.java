@@ -59,6 +59,14 @@ public class ParkingRecord {
     @Column(name = "device_id", length = 64)
     private String deviceId; // X-Device-Id of the device that closed the record
 
+    // Tariff version (tariffs.id) that priced this record; null for records before stage 3
+    @Column(name = "tariff_id")
+    private Long tariffId;
+
+    // Billable minutes inside the paid hours (entry to exit); null for records before stage 3
+    @Column(name = "paid_minutes")
+    private Integer paidMinutes;
+
     public ParkingRecord(String licensePlate, StreetLocation street, Zone zone,
                          String region, String neighborhood, LocalDateTime entryTime) {
         this.licensePlate = licensePlate;

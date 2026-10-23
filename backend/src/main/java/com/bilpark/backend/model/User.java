@@ -38,6 +38,10 @@ public class User {
     @Column(name = "last_login_time")
     private java.time.LocalDateTime lastLoginTime;
 
+    // false = passive: cannot log in, existing tokens stop working (Flyway V3)
+    @Column(nullable = false)
+    private boolean active = true;
+
     public User(String username, String password, Role role, Zone assignedZone) {
         this.username = username;
         this.password = password;

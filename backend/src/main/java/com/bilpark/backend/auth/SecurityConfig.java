@@ -2,6 +2,7 @@ package com.bilpark.backend.auth;
 
 import org.springframework.context.annotation.Bean;
 import com.bilpark.backend.common.ErrorCodes;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.springframework.context.annotation.Configuration;
@@ -43,9 +44,15 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        // SSE: the request was authorized when the stream opened; its async dispatches carry no token
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
+
                         // Public endpoints
                         .requestMatchers(
                                 "/api/auth/login",
+                                "/api/health",           // keep-alive / uptime check, never touches the DB
+                                "/api/streets",          // streets with their zones
+                                "/api/tariff/current",   // citizen page + apps show the live tariff
                                 "/api/parking/debt",
                                 "/api/zones",            // Officers need zones on login screen
                                 "/api/zones/by-street",  // Officers filter zones by street
@@ -59,6 +66,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/subscription/create").hasRole("ADMIN")
 
                         // Admin only endpoints
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/parking/bi/**").hasRole("ADMIN")
                         .requestMatchers("/api/parking/income/**").hasRole("ADMIN")
                         
@@ -93,7 +101,7 @@ public class SecurityConfig {
         // In a real production app, restrict these to actual frontend domains
         configuration.setAllowedOrigins(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Device-Id"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Device-Id", "Last-Event-ID", "Cache-Control"));
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

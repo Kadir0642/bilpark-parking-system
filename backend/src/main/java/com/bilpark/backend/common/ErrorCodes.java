@@ -19,4 +19,8 @@ public final class ErrorCodes {
     public static final String FORBIDDEN = "FORBIDDEN";
     public static final String BAD_REQUEST = "BAD_REQUEST";
     public static final String INTERNAL_ERROR = "INTERNAL_ERROR";
+    public static final String INVALID_TARIFF = "INVALID_TARIFF";         // tarife alanları geçersiz
+    public static final String TARIFF_STATE = "TARIFF_STATE";             // tarife bu durumda bu işleme izin vermiyor
+    public static final String PASSWORD_MISMATCH = "PASSWORD_MISMATCH";   // yönetici şifresi tekrar doğrulanamadı
+    public static final String SYNC_RESET_REQUIRED = "SYNC_RESET_REQUIRED";
 }
