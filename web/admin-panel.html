@@ -1,309 +1,422 @@
 <!DOCTYPE html>
-<html lang="tr" data-bs-theme="dark">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BilPark Yönetim ve İş Zekası Paneli</title>
+    <title>BilPark Yönetim Paneli</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="theme.css">
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
-        body { font-family: 'Urbanist', sans-serif; background-color: #0f172a; color: #f8fafc; padding-bottom: 50px;}
-        .navbar { background-color: #1e293b !important; border-bottom: 1px solid rgba(255,255,255,0.1); }
-
-        /* Kart Tasarımları */
-        .card { background-color: #1e293b; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 24px;}
-        .card-header { background-color: transparent; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: 700; font-size: 1.25rem; padding: 15px 20px;}
-
-        /* Büyük KPI Yazıları (Hocanın istediği okunaklılık) */
-        .kpi-value { font-size: 3rem; font-weight: 800; line-height: 1; margin-bottom: 5px;}
-        .kpi-label { font-size: 1rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;}
-
-        /* Tablo Yazı Boyutları */
-        .table { font-size: 1.1rem; } /* Tablo yazılarını büyüttük */
-        .table th { color: #94a3b8; font-weight: 600; text-transform: uppercase; font-size: 0.95rem; letter-spacing: 0.5px;}
-
-        /* Canlı İkonu */
-        .live-indicator { display: inline-block; width: 10px; height: 10px; background-color: #10b981; border-radius: 50%; margin-right: 8px; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
-
-        /* Custom Sekme (Tabs) Renkleri */
-        .nav-pills .nav-link { color: #94a3b8; font-weight: 600; font-size: 1.1rem; margin-right: 10px; border-radius: 8px;}
-        .nav-pills .nav-link.active.bg-success { background-color: #10b981 !important; color: #fff;}
-        .nav-pills .nav-link.active.bg-danger { background-color: #ef4444 !important; color: #fff;}
+        /* Sayfaya özel düzen; renkler theme.css değişkenlerinden gelir */
         #loginScreen { display: none; min-height: 100vh; align-items: center; justify-content: center; padding: 16px; }
-        #loginScreen .login-card { width: 100%; max-width: 380px; }
+        #loginScreen .login-card { width: 100%; max-width: 400px; padding: var(--s-8) var(--s-6); display: flex; flex-direction: column; gap: var(--s-4); }
+        .brand { display: flex; align-items: center; gap: 10px; }
+        .brand-mark { width: 40px; height: 40px; border-radius: 10px; background: var(--primary); color: var(--on-primary); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; flex: none; }
+        .brand-name { font-size: 18px; font-weight: 800; }
+        .brand-sub { font-size: 13px; color: var(--text-2); }
+
+        #dashboardRoot { display: none; }
+        .app { display: flex; flex-wrap: wrap; align-items: stretch; min-height: 100vh; }
+        .sidebar { flex: 1 1 248px; max-width: 100%; background: var(--surface); border-right: 1px solid var(--border); padding: 20px 16px; display: flex; flex-direction: column; gap: 20px; }
+        .main { flex: 999 1 560px; min-width: 0; padding: 20px 16px 48px; display: flex; flex-direction: column; gap: var(--s-5); }
+        @media (min-width: 900px) { .main { padding: 28px 32px 48px; } .sidebar { position: sticky; top: 0; align-self: flex-start; height: 100vh; overflow-y: auto; max-width: 280px; } }
+        .nav { display: flex; flex-wrap: wrap; gap: 4px; }
+        .nav a { flex: 1 1 160px; min-height: var(--tap); display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: var(--r-sm); text-decoration: none; color: var(--text); font-size: 15px; font-weight: 500; }
+        .nav a:hover { background: var(--surface-2); }
+        .nav a.active { background: var(--primary-soft); color: var(--on-primary-soft); font-weight: 700; }
+        .nav i { width: 20px; text-align: center; }
+        .soon-title { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: var(--text-2); margin-bottom: var(--s-2); }
+        .soon-list { display: flex; flex-wrap: wrap; gap: 4px; }
+        .soon-item { flex: 1 1 160px; min-height: var(--tap); display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 12px; color: var(--text-2); font-size: 15px; opacity: 0.8; }
+        .side-foot { margin-top: auto; display: flex; align-items: center; gap: var(--s-2); }
+        .side-user { flex: 1; min-width: 0; font-size: 14px; }
+        .side-user b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .side-user span { color: var(--text-2); font-size: 13px; }
+
+        .page-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--s-3); }
+        .page-head h1 { margin: 0; font-size: 26px; font-weight: 800; }
+        .page-sub { color: var(--text-2); font-size: 15px; margin-top: 2px; }
+        .grid { display: grid; gap: var(--s-4); }
+        .grid-kpi { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+        .grid-2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+        .kpi { padding: var(--s-4); display: flex; flex-direction: column; gap: 4px; }
+        .kpi-label { font-size: 14px; font-weight: 600; color: var(--text-2); }
+        .kpi-value { font-size: 32px; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; }
+        .kpi-note { font-size: 13px; color: var(--text-2); }
+        .kpi-danger .kpi-value { color: var(--danger); }
+        .card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); padding: var(--s-4); border-bottom: 1px solid var(--border); }
+        .card-head h2 { margin: 0; font-size: 17px; font-weight: 700; }
+        .card-body { padding: var(--s-4); }
+        .link { color: var(--primary); font-weight: 600; font-size: 14px; text-decoration: none; display: inline-flex; align-items: center; min-height: var(--tap); }
+        .link:hover { text-decoration: underline; }
+
+        .zone-row { display: grid; grid-template-columns: minmax(110px, 1.2fr) 3fr auto; gap: var(--s-3); align-items: center; padding: 6px 0; font-size: 14px; }
+        .zone-bar { height: 10px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+        .zone-bar > div { height: 100%; background: var(--primary); border-radius: 999px; }
+        .chart-box { position: relative; height: 240px; }
+
+        .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--s-3); padding: var(--s-4); align-items: end; }
+        .check { display: flex; align-items: center; gap: var(--s-2); min-height: var(--tap); font-size: 15px; font-weight: 600; color: var(--text); cursor: pointer; }
+        .check input { width: 22px; height: 22px; accent-color: var(--primary); }
+        .toolbar { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; }
+        .row-detail td { background: var(--surface-2); }
+        .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--s-4); padding: var(--s-2) 0; }
+        .detail-grid dt { font-size: 13px; color: var(--text-2); font-weight: 600; }
+        .detail-grid dd { margin: 2px 0 var(--s-2); font-weight: 600; word-break: break-all; }
+        .pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) var(--s-4); border-top: 1px solid var(--border); font-size: 14px; color: var(--text-2); }
+        .danger-card { border-color: var(--danger); }
+        .danger-card .card-head h2 { color: var(--danger); }
+        .search { position: relative; }
+        .search i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-2); pointer-events: none; }
+        .search .input { padding-left: 38px; }
+        .col-muted { color: var(--text-2); }
+        .zone-warn { background: var(--warning-soft); color: var(--on-warning-soft); }
+
+        dialog { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 0; width: min(480px, calc(100vw - 32px)); box-shadow: var(--shadow); }
+        dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
+        .dlg-body { padding: var(--s-5); display: flex; flex-direction: column; gap: var(--s-4); }
+        .dlg-body h2 { margin: 0; font-size: 18px; }
+        .dlg-body p { margin: 0; color: var(--text-2); }
+        .dlg-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--s-2); }
+        .toast-stack { z-index: 2000; }
+        .live-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+        @media (max-width: 600px) { .page-head h1 { font-size: 22px; } .kpi-value { font-size: 28px; } }
     </style>
 </head>
 <body>
 
+<!-- GİRİŞ -->
 <div id="loginScreen">
     <div class="card login-card">
-        <div class="card-body p-4">
-            <h3 class="fw-bold text-center mb-4"><i class="fa-solid fa-square-parking text-primary me-2"></i>BilPark Yönetim</h3>
-            <form id="loginForm" onsubmit="event.preventDefault(); doLogin();">
-                <div class="mb-3">
-                    <label class="form-label" for="loginUsername">Kullanıcı Adı</label>
-                    <input type="text" id="loginUsername" class="form-control" autocomplete="username" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label" for="loginPassword">Şifre</label>
-                    <input type="password" id="loginPassword" class="form-control" autocomplete="current-password" required>
-                </div>
-                <div id="loginError" class="alert alert-danger py-2 small" style="display:none;"></div>
-                <button type="submit" id="btnLogin" class="btn btn-primary w-100">Giriş Yap</button>
-            </form>
+        <div class="brand">
+            <div class="brand-mark">P</div>
+            <div><div class="brand-name">BilPark</div><div class="brand-sub">Yönetim paneli</div></div>
         </div>
+        <form id="loginForm" style="display:flex; flex-direction:column; gap:16px;" onsubmit="event.preventDefault(); doLogin();">
+            <label class="field">Kullanıcı adı
+                <input type="text" id="loginUsername" class="input" autocomplete="username" required>
+            </label>
+            <label class="field">Şifre
+                <input type="password" id="loginPassword" class="input" autocomplete="current-password" required>
+            </label>
+            <div id="loginError" class="alert alert-danger" role="alert" hidden></div>
+            <button type="submit" id="btnLogin" class="btn btn-primary btn-lg btn-block">Giriş yap</button>
+        </form>
     </div>
 </div>
 
-<div id="dashboardRoot" style="display:none;">
-<nav class="navbar navbar-expand-lg navbar-dark py-3 mb-4">
-    <div class="container-fluid px-4">
-        <a class="navbar-brand fs-3 fw-bold" href="#"><i class="fa-solid fa-square-parking text-primary me-2"></i>BilPark Yönetim Paneli</a>
-        <div class="d-flex align-items-center gap-3">
-            <span class="text-light small"><i class="fa-solid fa-user me-1"></i><span id="navUsername"></span></span>
-            <button class="btn btn-outline-light btn-sm" onclick="logout()"><i class="fa-solid fa-right-from-bracket me-1"></i>Çıkış</button>
-            <span class="badge bg-dark border border-success text-success fs-6 py-2 px-3 rounded-pill">
-                <span class="live-indicator"></span> SİSTEM AKTİF
-            </span>
+<!-- PANEL -->
+<div id="dashboardRoot">
+<div class="app">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-mark">P</div>
+            <div><div class="brand-name">BilPark</div><div class="brand-sub">Yönetim paneli</div></div>
         </div>
-    </div>
-</nav>
+        <nav class="nav" aria-label="Panel menüsü">
+            <a href="#genel" data-nav="genel"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>Genel bakış</a>
+            <a href="#kayitlar" data-nav="kayitlar"><i class="fa-solid fa-list" aria-hidden="true"></i>Kayıtlar</a>
+            <a href="#kacaklar" data-nav="kacaklar"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>Kaçaklar</a>
+            <a href="#vardiyalar" data-nav="vardiyalar"><i class="fa-solid fa-users" aria-hidden="true"></i>Vardiyalar</a>
+        </nav>
+        <div>
+            <div class="soon-title">SONRAKİ AŞAMALAR</div>
+            <div class="soon-list">
+                <span class="soon-item" aria-disabled="true">Aboneler <span class="badge badge-neutral">Yakında</span></span>
+                <span class="soon-item" aria-disabled="true">Tarife <span class="badge badge-neutral">Yakında</span></span>
+                <span class="soon-item" aria-disabled="true">Personel raporları <span class="badge badge-neutral">Yakında</span></span>
+            </div>
+        </div>
+        <div class="side-foot">
+            <div class="side-user"><b id="navUsername"></b><span>Yönetici</span></div>
+            <button type="button" id="btnTheme" class="btn btn-secondary btn-icon" aria-label="Temayı değiştir"><i class="fa-solid fa-moon" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-secondary btn-icon" aria-label="Çıkış" title="Çıkış" onclick="logout()"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i></button>
+        </div>
+    </aside>
 
-<div class="container-fluid px-4">
+    <main class="main">
 
-    <div class="row">
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-top border-4 border-success">
-                <div class="card-body text-center">
-                    <div class="kpi-label mb-2"><i class="fa-solid fa-car"></i> Sokaktaki Toplam Araç</div>
-                    <div class="kpi-value text-success" id="totalActive">0</div>
+        <!-- GENEL BAKIŞ -->
+        <section id="sec-genel" data-sec="genel" hidden>
+            <div class="page-head">
+                <div><h1>Genel bakış</h1><div class="page-sub">Sahadaki anlık durum ve ciro özeti</div></div>
+                <span class="status-pill status-online live-pill"></span>
+            </div>
+            <div class="grid grid-kpi" style="margin-top:16px;">
+                <div class="card kpi"><div class="kpi-label">Sahadaki araç</div><div class="kpi-value" id="kpiSpots">0</div><div class="kpi-note" id="kpiSpotsNote">-</div></div>
+                <div class="card kpi"><div class="kpi-label">Bugünkü ciro</div><div class="kpi-value" id="kpiDaily">₺0,00</div></div>
+                <div class="card kpi"><div class="kpi-label">Haftalık ciro</div><div class="kpi-value" id="kpiWeekly">₺0,00</div></div>
+                <div class="card kpi"><div class="kpi-label">Aylık ciro</div><div class="kpi-value" id="kpiMonthly">₺0,00</div></div>
+                <div class="card kpi"><div class="kpi-label">Yıllık ciro</div><div class="kpi-value" id="kpiYearly">₺0,00</div></div>
+                <div class="card kpi kpi-danger"><div class="kpi-label">Açık kaçak borcu</div><div class="kpi-value" id="kpiDebt">₺0,00</div><div class="kpi-note" id="kpiDebtNote">0 araç</div></div>
+                <div class="card kpi"><div class="kpi-label">Aktif personel</div><div class="kpi-value" id="kpiStaff">0</div><div class="kpi-note">açık vardiyada</div></div>
+            </div>
+            <div class="grid grid-2" style="margin-top:16px;">
+                <div class="card">
+                    <div class="card-head"><h2>Saha doluluğu</h2></div>
+                    <div class="card-body" id="zoneBars"></div>
+                </div>
+                <div class="card">
+                    <div class="card-head"><h2>Araç tipine göre ciro</h2></div>
+                    <div class="card-body"><div class="chart-box"><canvas id="incomeBarChart" aria-label="Araç tipine göre ciro grafiği" role="img"></canvas></div></div>
                 </div>
             </div>
-        </div>
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-top border-4 border-primary">
-                <div class="card-body text-center">
-                    <div class="kpi-label mb-2">Tevfik Bey Cad.</div>
-                    <div class="kpi-value text-primary" id="countTevfik">0</div>
+            <div class="card" style="margin-top:16px;">
+                <div class="card-head"><h2>Aktif vardiyalar</h2><a class="link" href="#vardiyalar">Tümünü gör</a></div>
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead><tr><th>Personel</th><th>Saha</th><th>Başlangıç</th><th>Süre</th><th class="right">Ciro</th></tr></thead>
+                        <tbody id="miniShiftBody"></tbody>
+                    </table>
                 </div>
             </div>
-        </div>
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-top border-4 border-info">
-                <div class="card-body text-center">
-                    <div class="kpi-label mb-2">Cumhuriyet Cad.</div>
-                    <div class="kpi-value text-info" id="countCumhuriyet">0</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-top border-4 border-warning">
-                <div class="card-body text-center">
-                    <div class="kpi-label mb-2">Ali Rıza Özkay Cad.</div>
-                    <div class="kpi-value text-warning" id="countAliRiza">0</div>
-                </div>
-            </div>
-        </div>
-    </div>
+        </section>
 
-    <!-- CİRO KPI KARTLARI -->
-    <div class="row mt-3">
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-top border-4 border-secondary">
-                <div class="card-body text-center">
-                    <div class="kpi-label mb-2"><i class="fa-solid fa-coins"></i> Günlük Ciro</div>
-                    <div class="kpi-value text-secondary" id="kpiDaily">₺0</div>
+        <!-- KAYITLAR -->
+        <section id="sec-kayitlar" data-sec="kayitlar" hidden>
+            <div class="page-head">
+                <div><h1>Kayıtlar</h1><div class="page-sub">Tüm giriş, çıkış ve ödeme kayıtları</div></div>
+                <div class="toolbar">
+                    <span class="status-pill status-online live-pill"></span>
+                    <button type="button" class="btn btn-success" onclick="downloadExcel()"><i class="fa-solid fa-file-excel" aria-hidden="true"></i>Excel indir</button>
                 </div>
             </div>
-        </div>
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-top border-4 border-secondary">
-                <div class="card-body text-center">
-                    <div class="kpi-label mb-2"><i class="fa-solid fa-money-bill-wave"></i> Haftalık Ciro</div>
-                    <div class="kpi-value text-secondary" id="kpiWeekly">₺0</div>
+            <div class="card" style="margin-top:16px;">
+                <div class="filters">
+                    <label class="field">Plaka ara
+                        <span class="search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" id="fPlate" class="input" placeholder="34 ABC 123" autocomplete="off"></span>
+                    </label>
+                    <label class="field">Cadde
+                        <select id="fStreet" class="select"><option value="">Tümü</option></select>
+                    </label>
+                    <label class="field">Durum
+                        <select id="fStatus" class="select">
+                            <option value="">Tümü</option>
+                            <option value="PAID">Ödendi</option>
+                            <option value="RUNAWAY">Kaçak</option>
+                        </select>
+                    </label>
+                    <label class="field">Yöntem
+                        <select id="fMethod" class="select"><option value="">Tümü</option></select>
+                    </label>
+                    <label class="field">Dönem
+                        <select id="fiscalYearSelect" class="select"><option value="">Tüm kayıtlar</option></select>
+                    </label>
+                    <label class="check"><input type="checkbox" id="fHideSub"> Aboneleri gizle</label>
                 </div>
             </div>
-        </div>
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-top border-4 border-secondary">
-                <div class="card-body text-center">
-                    <div class="kpi-label mb-2"><i class="fa-solid fa-money-check-dollar"></i> Aylık Ciro</div>
-                    <div class="kpi-value text-secondary" id="kpiMonthly">₺0</div>
+            <div class="card" style="margin-top:16px;">
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead><tr><th>Plaka</th><th>Saha</th><th>Tip</th><th>Giriş → Çıkış</th><th>Süre</th><th>Yöntem</th><th class="right">Tutar</th></tr></thead>
+                        <tbody id="recordsBody"></tbody>
+                    </table>
+                </div>
+                <div class="pager">
+                    <span id="pagerInfo"></span>
+                    <span class="toolbar">
+                        <button type="button" class="btn btn-secondary" id="pagePrev">Önceki</button>
+                        <button type="button" class="btn btn-secondary" id="pageNext">Sonraki</button>
+                    </span>
                 </div>
             </div>
-        </div>
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-top border-4 border-secondary">
-                <div class="card-body text-center">
-                    <div class="kpi-label mb-2"><i class="fa-solid fa-vault"></i> Yıllık Ciro</div>
-                    <div class="kpi-value text-secondary" id="kpiYearly">₺0</div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <div class="row">
-        <div class="col-lg-6">
-            <div class="card h-100">
-                <div class="card-header"><i class="fa-solid fa-chart-column me-2 text-primary"></i>Araç Tipine Göre Ciro Dağılımı</div>
-                <div class="card-body">
-                    <canvas id="incomeBarChart" height="120"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-6">
-            <div class="card h-100">
-                <div class="card-header"><i class="fa-solid fa-users me-2 text-warning"></i>Aktif Vardiya Durumu (Personel)</div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-borderless mb-0 align-middle">
-                            <thead class="table-dark">
-                            <tr>
-                                <th>Personel</th>
-                                <th>Sorumlu Bölge</th>
-                                <th>Cihaz</th>
-                                <th>Giriş Saati</th>
-                                <th>Kazanılan Ciro</th>
-                                <th>Çalışma Süresi</th>
-                            </tr>
-                            </thead>
-                            <tbody id="shiftsTableBody">
-                            </tbody>
-                        </table>
+            <div class="card danger-card" style="margin-top:16px;">
+                <div class="card-head"><h2>Dönem işlemleri</h2></div>
+                <div class="card-body" style="display:flex; flex-direction:column; gap:12px;">
+                    <div class="muted" id="periodInfo">Bir dönem seçin. Seçili dönem: yok.</div>
+                    <div class="toolbar">
+                        <button type="button" class="btn btn-secondary" onclick="openCreateFiscalYear()"><i class="fa-solid fa-plus" aria-hidden="true"></i>Yeni dönem</button>
+                        <button type="button" id="btnArchive" class="btn btn-warning-outline" onclick="archiveFiscalYear()"><i class="fa-solid fa-box-archive" aria-hidden="true"></i>Dönemi kapat ve arşivle</button>
+                        <button type="button" id="btnDelete" class="btn btn-danger-outline" onclick="deleteFiscalYear()"><i class="fa-solid fa-trash" aria-hidden="true"></i>Dönemi sil</button>
                     </div>
+                    <div class="muted" style="font-size:14px;">Arşivleme kayıtları silmez; Excel indirilir ve dönem arşivlendi olarak işaretlenir. Silme geri alınamaz.</div>
                 </div>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <div class="card mt-2">
-        <div class="card-header d-flex flex-wrap justify-content-between align-items-center py-3 gap-2">
-            <span><i class="fa-solid fa-folder-open me-2"></i>Arşiv ve Dönem Yönetimi</span>
-            <div class="d-flex gap-2 align-items-center flex-wrap">
-                <select id="fiscalYearSelect" class="form-select w-auto" onchange="fetchHistory(); updateArchiveButton()">
-                    <option value="">-- Dönem Seçin --</option>
-                </select>
-                <button class="btn btn-outline-primary btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#createFiscalYearModal"><i class="fa-solid fa-plus me-1"></i>Yeni Dönem</button>
-                <button class="btn btn-success fw-bold" onclick="downloadExcel()"><i class="fa-solid fa-file-excel me-2"></i>Excel İndir</button>
-                <button id="btnArchive" class="btn btn-danger fw-bold" onclick="archiveFiscalYear()"><i class="fa-solid fa-box-archive me-2"></i>Dönemi Kapat & Arşivle</button>
-                <button class="btn btn-outline-danger fw-bold ms-2" onclick="deleteFiscalYear()"><i class="fa-solid fa-trash me-2"></i>Dönemi Sil</button>
-            </div>
-        </div>
-        <div class="card-body">
-
-            <ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active bg-success" id="pills-paid-tab" data-bs-toggle="pill" data-bs-target="#pills-paid" type="button" role="tab">
-                        <i class="fa-solid fa-check-circle me-1"></i> Başarılı Tahsilatlar (<span id="paidCountBadge">0</span>)
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link bg-danger" id="pills-runaway-tab" data-bs-toggle="pill" data-bs-target="#pills-runaway" type="button" role="tab">
-                        <i class="fa-solid fa-triangle-exclamation me-1"></i> Kaçak İhbarları (<span id="runawayCountBadge">0</span>)
-                    </button>
-                </li>
-            </ul>
-
-            <div class="tab-content" id="pills-tabContent">
-
-                <div class="tab-pane fade show active" id="pills-paid" role="tabpanel">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover align-middle">
-                            <thead class="table-dark">
-                            <tr>
-                                <th>Plaka</th>
-                                <th>Cadde</th>
-                                <th>Araç Tipi</th>
-                                <th>Giriş - Çıkış</th>
-                                <th class="text-end">Tahsil Edilen</th>
-                            </tr>
-                            </thead>
-                            <tbody id="paidTableBody">
-                            </tbody>
-                        </table>
-                    </div>
+        <!-- KAÇAKLAR -->
+        <section id="sec-kacaklar" data-sec="kacaklar" hidden>
+            <div class="page-head">
+                <div><h1>Kaçaklar</h1><div class="page-sub">Ödemeden ayrılan araçlar ve açık borçlar</div></div>
+                <div class="toolbar">
+                    <span class="status-pill status-online live-pill"></span>
+                    <span class="search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" id="rPlate" class="input" placeholder="Plaka ara" aria-label="Plaka ara" autocomplete="off"></span>
                 </div>
-
-                <div class="tab-pane fade" id="pills-runaway" role="tabpanel">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover align-middle">
-                            <thead class="table-dark">
-                            <tr>
-                                <th>Plaka</th>
-                                <th>Cadde</th>
-                                <th>Araç Tipi</th>
-                                <th>Giriş - Kaçış Zamanı</th>
-                                <th class="text-end">Kalan Borç</th>
-                            </tr>
-                            </thead>
-                            <tbody id="runawayTableBody">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
             </div>
-        </div>
-    </div>
+            <div class="grid grid-kpi" style="margin-top:16px;">
+                <div class="card kpi kpi-danger"><div class="kpi-label">Açık borç toplamı</div><div class="kpi-value" id="rDebt">₺0,00</div><div class="kpi-note" id="rDebtNote">0 araç</div></div>
+                <div class="card kpi"><div class="kpi-label">Bu dönem kaçak</div><div class="kpi-value" id="rCount">0</div><div class="kpi-note" id="rCountNote">listelenen dönem</div></div>
+            </div>
+            <div class="card" style="margin-top:16px;">
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead><tr><th>Plaka</th><th>Saha</th><th>Giriş → kaçış</th><th>İşaretleyen</th><th>Durum</th><th class="right">Borç</th></tr></thead>
+                        <tbody id="runawayBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
 
+        <!-- VARDİYALAR -->
+        <section id="sec-vardiyalar" data-sec="vardiyalar" hidden>
+            <div class="page-head">
+                <div><h1>Vardiyalar</h1><div class="page-sub">Personelin sahadaki vardiyaları ve cirosu</div></div>
+                <span class="status-pill status-online live-pill"></span>
+            </div>
+            <div class="card" style="margin-top:16px;">
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead><tr><th>Personel</th><th>Saha</th><th>Cihaz</th><th>Başlangıç</th><th>Süre</th><th class="right">Ciro</th><th>Puan</th></tr></thead>
+                        <tbody id="shiftsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <p class="muted" style="font-size:14px;">Puan sütunu personel raporlarıyla dolacak ve yalnızca bu panelde görünür; saha uygulamasında gösterilmez.</p>
+        </section>
+    </main>
+</div>
 </div>
 
-<!-- Yeni Dönem Modal -->
-<div class="modal fade" id="createFiscalYearModal" tabindex="-1" aria-labelledby="createFiscalYearModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content bg-dark text-white">
-      <div class="modal-header border-secondary">
-        <h5 class="modal-title" id="createFiscalYearModalLabel"><i class="fa-solid fa-folder-plus me-2 text-primary"></i>Yeni Dönem Oluştur</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <label for="fyLabel" class="form-label">Dönem Adı</label>
-          <input type="text" class="form-control bg-secondary text-white border-0" id="fyLabel" placeholder="Örn: 2026 Dönemi">
+<!-- Yeni dönem -->
+<dialog id="fyDialog">
+    <form method="dialog" class="dlg-body" id="fyForm" onsubmit="event.preventDefault(); createFiscalYear();">
+        <h2>Yeni dönem oluştur</h2>
+        <label class="field">Dönem adı<input type="text" class="input" id="fyLabel" placeholder="Örn: 2026 Dönemi"></label>
+        <label class="field">Başlangıç tarihi<input type="date" class="input" id="fyStartDate"></label>
+        <label class="field">Bitiş tarihi<input type="date" class="input" id="fyEndDate"></label>
+        <div id="fyError" class="alert alert-danger" role="alert" hidden></div>
+        <div class="dlg-actions">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('fyDialog').close()">Vazgeç</button>
+            <button type="submit" class="btn btn-primary">Oluştur</button>
         </div>
-        <div class="mb-3">
-          <label for="fyStartDate" class="form-label">Başlangıç Tarihi</label>
-          <input type="date" class="form-control bg-secondary text-white border-0" id="fyStartDate">
-        </div>
-        <div class="mb-3">
-          <label for="fyEndDate" class="form-label">Bitiş Tarihi</label>
-          <input type="date" class="form-control bg-secondary text-white border-0" id="fyEndDate">
-        </div>
-      </div>
-      <div class="modal-footer border-secondary">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-        <button type="button" class="btn btn-primary" onclick="createFiscalYear()">Oluştur</button>
-      </div>
-    </div>
-  </div>
-</div>
+    </form>
+</dialog>
 
-</div>
+<!-- Onay -->
+<dialog id="confirmDialog">
+    <form method="dialog" class="dlg-body" id="confirmForm">
+        <h2 id="confirmTitle"></h2>
+        <p id="confirmMessage"></p>
+        <label class="field" id="confirmTypedWrap" hidden><span id="confirmTypedLabel"></span>
+            <input type="text" class="input" id="confirmTyped" autocomplete="off">
+        </label>
+        <div class="dlg-actions">
+            <button type="button" class="btn btn-secondary" id="confirmCancel">Vazgeç</button>
+            <button type="submit" class="btn btn-primary" id="confirmOk">Onayla</button>
+        </div>
+    </form>
+</dialog>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<div class="toast-stack" id="toastStack" role="status" aria-live="polite"></div>
+
 <script src="config.js"></script>
-
 <script>
     const BASE_URL = CONFIG.BASE_URL + "/api/parking";
-
-    let incomeBarChartInstance = null;
-    let globalHistoryData = [];
+    const PAGE_SIZE = 25;
 
     const streetNames = {
         "TEVFIK_BEY": "Tevfik Bey Cad.",
         "ALI_RIZA_OZKAY": "Ali Rıza Özkay Cad.",
         "CUMHURIYET": "Cumhuriyet Cad."
     };
+    const methodNames = { CASH: 'Nakit', CARD: 'Kart', ONLINE: 'Online', SUBSCRIPTION: 'Abonelik', OTHER: 'Diğer' };
 
-    // YENİ: Fetch Helper (Tüm isteklere otomatik Token ekler)
+    let incomeChart = null;
+    let incomeData = null;
+    let globalHistoryData = [];
+    let shiftsData = [];
+    let spotsData = [];
+    let currentPage = 1;
+    let expandedKey = null;
+    let dashboardTimer = null;
+    let lastGoodTime = null;
+
+    // ---- Yardımcılar ----
+    function escapeHtml(v) {
+        return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function $(id) { return document.getElementById(id); }
+    function money(v) {
+        return '₺' + Number(v || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function shortDevice(id) {
+        if (!id) return '-';
+        return id.length > 8 ? id.substring(0, 8) + '…' : id;
+    }
+    function fmtMinutes(m) {
+        m = Math.max(0, Math.round(m || 0));
+        const h = Math.floor(m / 60), r = m % 60;
+        return h > 0 ? `${h} sa ${r} dk` : `${r} dk`;
+    }
+    function fmtDateTime(d) {
+        return new Date(d).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    }
+    function fmtTime(d) {
+        return new Date(d).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    }
+    function zoneOf(r) {
+        return (r.zone && r.zone.zoneName) || r.zoneName || streetNames[r.street] || r.street || '-';
+    }
+    function recKey(r, i) { return r.id != null ? 'id' + r.id : 'k' + r.licensePlate + '|' + r.entryTime; }
+    function vehicleLabel(t) { return t === 'LARGE' ? 'Kamyonet' : 'Otomobil'; }
+    function methodLabel(m) { return methodNames[m] || m || '-'; }
+    // 11KM4471 -> 11 KM 4471 (tabeladaki gibi okunur)
+    function fmtPlate(p) {
+        const s = String(p == null ? '' : p).replace(/\s+/g, '').toUpperCase();
+        const m = s.match(/^(\d{2})([A-Z]{1,3})(\d{2,4})$/);
+        return m ? `${m[1]} ${m[2]} ${m[3]}` : s;
+    }
+    function plateHtml(p) { return `<span class="plate"><span>${escapeHtml(fmtPlate(p))}</span></span>`; }
+
+    function toast(msg, isError) {
+        const el = document.createElement('div');
+        el.className = 'toast' + (isError ? ' toast-error' : '');
+        el.textContent = msg;
+        $('toastStack').appendChild(el);
+        setTimeout(() => el.remove(), isError ? 6000 : 4000);
+    }
+
+    // ---- Tema ----
+    function currentTheme() {
+        const t = document.documentElement.dataset.theme;
+        if (t === 'dark' || t === 'light') return t;
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    function applyStoredTheme() {
+        try {
+            const t = localStorage.getItem('theme');
+            if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t;
+        } catch (e) { /* yok say */ }
+        updateThemeButton();
+    }
+    function updateThemeButton() {
+        const btn = $('btnTheme');
+        if (!btn) return;
+        const dark = currentTheme() === 'dark';
+        btn.innerHTML = `<i class="fa-solid ${dark ? 'fa-sun' : 'fa-moon'}" aria-hidden="true"></i>`;
+        btn.title = dark ? 'Açık temaya geç' : 'Koyu temaya geç';
+    }
+    function toggleTheme() {
+        const next = currentTheme() === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try { localStorage.setItem('theme', next); } catch (e) { /* yok say */ }
+        onThemeChanged();
+    }
+    function onThemeChanged() {
+        updateThemeButton();
+        renderIncomeChart();
+    }
+    function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+    // ---- Fetch ----
     async function fetchWithAuth(url, options = {}) {
         const token = localStorage.getItem('token');
         if (!options.headers) options.headers = {};
@@ -312,7 +425,7 @@
         if (response.status === 401) {
             // Token geçersiz/süresi dolmuş: oturumu kapat, girişe dön
             clearSession();
-            showLogin();
+            showLogin('Oturumunuz sona erdi. Lütfen yeniden giriş yapın.');
             const err = new Error('Oturum sona erdi');
             err.name = 'AuthError';
             throw err;
@@ -320,36 +433,43 @@
         return response;
     }
 
-    // ---- OTURUM / GİRİŞ ----
-    let dashboardTimer = null;
-
+    // ---- Oturum / giriş ----
     function clearSession() {
         localStorage.removeItem('token');
         localStorage.removeItem('username');
     }
 
-    function showLogin() {
+    function showLoginMessage(msg, kind) {
+        const box = $('loginError');
+        if (!msg) { box.hidden = true; return; }
+        box.className = 'alert ' + (kind === 'warning' ? 'alert-warning' : 'alert-danger');
+        box.textContent = msg;
+        box.hidden = false;
+    }
+
+    function showLogin(sessionMsg) {
         if (dashboardTimer) { clearInterval(dashboardTimer); dashboardTimer = null; }
-        document.getElementById('dashboardRoot').style.display = 'none';
-        document.getElementById('loginScreen').style.display = 'flex';
-        document.getElementById('loginPassword').value = '';
+        $('dashboardRoot').style.display = 'none';
+        $('loginScreen').style.display = 'flex';
+        $('loginPassword').value = '';
+        showLoginMessage(sessionMsg || '', 'warning');
     }
 
     function showDashboard() {
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('dashboardRoot').style.display = 'block';
-        document.getElementById('navUsername').innerText = localStorage.getItem('username') || '';
+        $('loginScreen').style.display = 'none';
+        $('dashboardRoot').style.display = 'block';
+        $('navUsername').textContent = localStorage.getItem('username') || '';
+        route();
         updateDashboard();
         if (dashboardTimer) clearInterval(dashboardTimer);
         dashboardTimer = setInterval(updateDashboard, 30000);
     }
 
     async function doLogin() {
-        const username = document.getElementById('loginUsername').value.trim();
-        const password = document.getElementById('loginPassword').value;
-        const errBox = document.getElementById('loginError');
-        const btn = document.getElementById('btnLogin');
-        errBox.style.display = 'none';
+        const username = $('loginUsername').value.trim();
+        const password = $('loginPassword').value;
+        const btn = $('btnLogin');
+        showLoginMessage('');
         btn.disabled = true;
         try {
             const res = await fetch(`${CONFIG.BASE_URL}/api/auth/login`, {
@@ -357,28 +477,15 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
             });
-            if (res.status === 401) {
-                errBox.innerText = 'Kullanıcı adı veya şifre hatalı.';
-                errBox.style.display = 'block';
-                return;
-            }
-            if (!res.ok) {
-                errBox.innerText = 'Giriş yapılamadı (sunucu hatası: ' + res.status + ').';
-                errBox.style.display = 'block';
-                return;
-            }
+            if (res.status === 401) { showLoginMessage('Kullanıcı adı veya şifre hatalı.'); return; }
+            if (!res.ok) { showLoginMessage('Giriş yapılamadı (sunucu hatası: ' + res.status + ').'); return; }
             const data = await res.json();
-            if (data.role !== 'ADMIN') {
-                errBox.innerText = 'Bu panel yalnızca yöneticiler içindir.';
-                errBox.style.display = 'block';
-                return;
-            }
+            if (data.role !== 'ADMIN') { showLoginMessage('Bu panel yalnızca yöneticiler içindir.'); return; }
             localStorage.setItem('token', data.token);
             localStorage.setItem('username', data.username || username);
             showDashboard();
         } catch (e) {
-            errBox.innerText = 'Sunucuya bağlanılamadı. Lütfen bağlantınızı kontrol edin.';
-            errBox.style.display = 'block';
+            showLoginMessage('Sunucuya bağlanılamadı. Lütfen bağlantınızı kontrol edin.');
         } finally {
             btn.disabled = false;
         }
@@ -398,158 +505,311 @@
         }
     }
 
-    // 1. CANLI SAHA VERİLERİ
+    // ---- Yönlendirme ----
+    const SECTIONS = ['genel', 'kayitlar', 'kacaklar', 'vardiyalar'];
+    function route() {
+        let name = (location.hash || '').replace('#', '');
+        if (!SECTIONS.includes(name)) name = 'genel';
+        document.querySelectorAll('[data-sec]').forEach(s => { s.hidden = s.dataset.sec !== name; });
+        document.querySelectorAll('[data-nav]').forEach(a => {
+            const on = a.dataset.nav === name;
+            a.classList.toggle('active', on);
+            if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+        });
+        if (name === 'genel') renderIncomeChart();
+    }
+    window.addEventListener('hashchange', route);
+
+    // ---- Canlı durum ----
+    function setLive(ok) {
+        const now = new Date();
+        if (ok) lastGoodTime = now;
+        const t = lastGoodTime ? lastGoodTime.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+        document.querySelectorAll('.live-pill').forEach(p => {
+            p.className = 'status-pill live-pill ' + (ok ? 'status-online' : 'status-offline');
+            p.innerHTML = ok
+                ? `<span class="live-dot"></span>Canlı · ${t}`
+                : `<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>Bağlantı yok · son veri ${t}`;
+        });
+    }
+
+    // ---- 1. Saha ----
     async function fetchActiveSpots() {
         try {
             const response = await fetchWithAuth(`${BASE_URL}/spots`);
-            const spots = await response.json();
-
-            let total = spots.length;
-            let cTevfik = 0, cCumhuriyet = 0, cAliRiza = 0;
-
-            spots.forEach(spot => {
-                if(spot.street === 'TEVFIK_BEY') cTevfik++;
-                if(spot.street === 'CUMHURIYET') cCumhuriyet++;
-                if(spot.street === 'ALI_RIZA_OZKAY') cAliRiza++;
-            });
-
-            document.getElementById("totalActive").innerText = total;
-            document.getElementById("countTevfik").innerText = cTevfik;
-            document.getElementById("countCumhuriyet").innerText = cCumhuriyet;
-            document.getElementById("countAliRiza").innerText = cAliRiza;
-        } catch (error) { console.error("Saha verisi hatası:", error); }
+            if (!response.ok) return false;
+            spotsData = await response.json();
+            renderSpots();
+            return true;
+        } catch (error) { console.error("Saha verisi hatası:", error); return false; }
     }
 
-    // 2. GRAFİKLER (Pasta yerine okunabilir SÜTUN grafiği)
+    function renderSpots() {
+        $('kpiSpots').textContent = spotsData.length;
+        const perStreet = {};
+        spotsData.forEach(s => { perStreet[s.street] = (perStreet[s.street] || 0) + 1; });
+        const parts = Object.keys(streetNames).map(k => `${streetNames[k].replace(' Cad.', '')} ${perStreet[k] || 0}`);
+        $('kpiSpotsNote').textContent = parts.join(' · ');
+
+        const perZone = {};
+        spotsData.forEach(s => {
+            const n = (s.zone && s.zone.zoneName) || s.zoneName || streetNames[s.street] || s.street || '-';
+            perZone[n] = (perZone[n] || 0) + 1;
+        });
+        const entries = Object.entries(perZone).sort((a, b) => b[1] - a[1]);
+        const max = entries.length ? entries[0][1] : 1;
+        $('zoneBars').innerHTML = entries.length
+            ? entries.map(([n, c]) => `<div class="zone-row"><span>${escapeHtml(n)}</span><div class="zone-bar"><div style="width:${Math.max(4, Math.round(c / max * 100))}%"></div></div><b class="num">${c} araç</b></div>`).join('')
+            : '<div class="muted">Şu anda sahada araç yok.</div>';
+    }
+
+    // ---- 2. Grafik ----
     async function fetchBICharts() {
         try {
-            Chart.defaults.font.family = "'Urbanist', sans-serif";
-            Chart.defaults.color = "#94a3b8";
+            const res = await fetchWithAuth(`${BASE_URL}/bi/income-by-type`);
+            if (!res.ok) return false;
+            incomeData = await res.json();
+            renderIncomeChart();
+            return true;
+        } catch (error) { console.error("Grafik verisi hatası:", error); return false; }
+    }
 
-            const incomeRes = await fetchWithAuth(`${BASE_URL}/bi/income-by-type`);
-            if(!incomeRes.ok) return;
-            const incomeData = await incomeRes.json();
-
-            const incomeCtx = document.getElementById('incomeBarChart').getContext('2d');
-            if(incomeBarChartInstance) incomeBarChartInstance.destroy();
-
-            incomeBarChartInstance = new Chart(incomeCtx, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(incomeData),
-                    datasets: [{
-                        label: 'Elde Edilen Ciro (₺)',
-                        data: Object.values(incomeData),
-                        backgroundColor: ['#3b82f6', '#10b981'],
-                        borderRadius: 6
-                    }]
+    function renderIncomeChart() {
+        if (!incomeData || typeof Chart === 'undefined') return;
+        const canvas = $('incomeBarChart');
+        if (!canvas || canvas.offsetParent === null) return; // gizli bölümde çizme
+        const text2 = cssVar('--text-2');
+        const border = cssVar('--border');
+        Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+        Chart.defaults.color = text2;
+        if (incomeChart) incomeChart.destroy();
+        const keys = Object.keys(incomeData);
+        const colors = [cssVar('--primary'), cssVar('--success'), cssVar('--warning'), cssVar('--sub')];
+        incomeChart = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: keys.map(k => k === 'LARGE' ? 'Kamyonet' : (k === 'SMALL' || k === 'CAR' ? 'Otomobil' : k)),
+                datasets: [{
+                    label: 'Ciro (₺)',
+                    data: Object.values(incomeData),
+                    backgroundColor: keys.map((k, i) => colors[i % colors.length]),
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                // Grafik her yenilemede baştan çizilir; animasyon titreme yapar ve gizli sekmede yarım kalır
+                animation: false,
+                scales: {
+                    x: { beginAtZero: true, grid: { color: border }, ticks: { color: text2 } },
+                    y: { grid: { display: false }, ticks: { color: text2 } }
                 },
-                options: {
-                    scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { display: false } } },
-                    plugins: { legend: { display: false } }
-                }
-            });
-        } catch (error) { console.error("Grafik verisi hatası:", error); }
-    }
-
-    // 3. SEKMELİ TABLOLAR (Ödenenler ve Kaçaklar Ayrıldı)
-    async function fetchHistoryTable() {
-        try {
-            const select = document.getElementById("fiscalYearSelect");
-            let url = `${BASE_URL}/bi/last-records`;
-            
-            if(select && select.value && select.selectedOptions[0]) {
-                const startDate = select.selectedOptions[0].dataset.start;
-                const endDate = select.selectedOptions[0].dataset.end;
-                url += `?start=${startDate}&end=${endDate}`;
+                plugins: { legend: { display: false } }
             }
-
-            const response = await fetchWithAuth(url);
-            if(!response.ok) return;
-            const records = await response.json();
-            globalHistoryData = records;
-
-            let paidHTML = "";
-            let runawayHTML = "";
-            let paidCount = 0;
-            let runawayCount = 0;
-
-            records.forEach(r => {
-                let entryDate = new Date(r.entryTime).toLocaleString('tr-TR', { hour: '2-digit', minute:'2-digit', day:'2-digit', month:'short' });
-                let exitDate = r.exitTime ? new Date(r.exitTime).toLocaleString('tr-TR', { hour: '2-digit', minute:'2-digit' }) : "-";
-                let displayStreet = streetNames[r.street] || r.street;
-                let vType = r.vehicleType === 'LARGE' ? 'Kamyonet 🚐' : 'Otomobil 🚗';
-                let feeText = r.fee ? "₺" + r.fee.toFixed(2) : "₺0.00";
-
-                let rowHTML = `
-                    <tr>
-                        <td><span class="badge border border-secondary text-light fs-6 py-2 px-3">${r.licensePlate}</span></td>
-                        <td class="fw-bold">${displayStreet}</td>
-                        <td class="text-secondary">${vType}</td>
-                        <td class="text-secondary">${entryDate} <i class="fa-solid fa-arrow-right mx-2"></i> ${exitDate}</td>
-                        <td class="fw-bold fs-5 text-end ${r.status === 'PAID' ? 'text-success' : 'text-danger'}">${feeText}</td>
-                    </tr>
-                `;
-
-                if(r.status === 'PAID') {
-                    paidHTML += rowHTML;
-                    paidCount++;
-                } else {
-                    runawayHTML += rowHTML;
-                    runawayCount++;
-                }
-            });
-
-            document.getElementById("paidTableBody").innerHTML = paidHTML || `<tr><td colspan="5" class="text-center py-4 text-secondary">Ödeme kaydı bulunamadı.</td></tr>`;
-            document.getElementById("runawayTableBody").innerHTML = runawayHTML || `<tr><td colspan="5" class="text-center py-4 text-secondary">Kaçak kaydı bulunamadı.</td></tr>`;
-
-            document.getElementById("paidCountBadge").innerText = paidCount;
-            document.getElementById("runawayCountBadge").innerText = runawayCount;
-
-        } catch (error) { console.error("Tablo verisi hatası:", error); }
+        });
     }
 
-    // YENİ: CİRO KPI Verilerini Getir
+    // ---- 3. Ciro KPI ----
+    function selectedPeriodQuery() {
+        const select = $("fiscalYearSelect");
+        if (select && select.value && select.selectedOptions[0]) {
+            const o = select.selectedOptions[0];
+            return `?start=${o.dataset.start}&end=${o.dataset.end}`;
+        }
+        return '';
+    }
+
     async function fetchIncomeKPI() {
         try {
-            const select = document.getElementById("fiscalYearSelect");
-            let url = `${BASE_URL}/bi/income-summary`;
-            
-            if(select && select.value && select.selectedOptions[0]) {
-                const startDate = select.selectedOptions[0].dataset.start;
-                const endDate = select.selectedOptions[0].dataset.end;
-                url += `?start=${startDate}&end=${endDate}`;
-            }
-
-            const res = await fetchWithAuth(url);
-            if (!res.ok) return;
+            const res = await fetchWithAuth(`${BASE_URL}/bi/income-summary${selectedPeriodQuery()}`);
+            if (!res.ok) return false;
             const data = await res.json();
-
-            document.getElementById("kpiDaily").innerText = `₺${data.daily.toFixed(2)}`;
-            document.getElementById("kpiWeekly").innerText = `₺${data.weekly.toFixed(2)}`;
-            document.getElementById("kpiMonthly").innerText = `₺${data.monthly.toFixed(2)}`;
-            document.getElementById("kpiYearly").innerText = `₺${data.yearly.toFixed(2)}`;
-        } catch (error) { console.error("KPI verisi hatası:", error); }
+            $("kpiDaily").textContent = money(data.daily);
+            $("kpiWeekly").textContent = money(data.weekly);
+            $("kpiMonthly").textContent = money(data.monthly);
+            $("kpiYearly").textContent = money(data.yearly);
+            return true;
+        } catch (error) { console.error("KPI verisi hatası:", error); return false; }
     }
 
-    // YENİ: Mali Dönem Yönetimi (Fiscal Years)
+    // ---- 4. Kayıtlar ----
+    async function fetchHistoryTable() {
+        try {
+            const response = await fetchWithAuth(`${BASE_URL}/bi/last-records${selectedPeriodQuery()}`);
+            if (!response.ok) return false;
+            globalHistoryData = await response.json();
+            refreshFilterOptions();
+            renderRecords();
+            renderRunaways();
+            return true;
+        } catch (error) { console.error("Tablo verisi hatası:", error); return false; }
+    }
+
+    function refreshFilterOptions() {
+        const streetSel = $('fStreet'), methodSel = $('fMethod');
+        const prevS = streetSel.value, prevM = methodSel.value;
+        const streets = Array.from(new Set(Object.keys(streetNames).concat(globalHistoryData.map(r => r.street).filter(Boolean))));
+        streetSel.innerHTML = '<option value="">Tümü</option>' + streets.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(streetNames[s] || s)}</option>`).join('');
+        const methods = Array.from(new Set(globalHistoryData.map(r => r.paymentMethod).filter(Boolean)));
+        methodSel.innerHTML = '<option value="">Tümü</option>' + methods.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(methodLabel(m))}</option>`).join('');
+        streetSel.value = prevS; methodSel.value = prevM;
+    }
+
+    function filteredRecords() {
+        const plate = $('fPlate').value.trim().replace(/\s+/g, '').toUpperCase();
+        const street = $('fStreet').value, status = $('fStatus').value, method = $('fMethod').value;
+        const hideSub = $('fHideSub').checked;
+        return globalHistoryData.filter(r => {
+            if (plate && !String(r.licensePlate || '').replace(/\s+/g, '').toUpperCase().includes(plate)) return false;
+            if (street && r.street !== street) return false;
+            if (status && r.status !== status) return false;
+            if (method && r.paymentMethod !== method) return false;
+            if (hideSub && r.paymentMethod === 'SUBSCRIPTION') return false;
+            return true;
+        });
+    }
+
+    function methodBadge(m) {
+        if (!m) return '<span class="muted">-</span>';
+        const cls = m === 'SUBSCRIPTION' ? 'badge-sub' : (m === 'CASH' ? 'badge-success' : 'badge-primary');
+        return `<span class="badge ${cls}">${escapeHtml(methodLabel(m))}</span>`;
+    }
+
+    function breakdownHtml(r) {
+        if (Array.isArray(r.breakdown) && r.breakdown.length) {
+            let paid = 0, free = 0;
+            const rows = r.breakdown.map(b => {
+                paid += b.paidMinutes || 0; free += b.freeMinutes || 0;
+                return `<div class="breakdown-row"><span>${escapeHtml(b.date)}</span><span>${fmtMinutes(b.paidMinutes)}</span><span>${fmtMinutes(b.freeMinutes)}</span></div>`;
+            }).join('');
+            return `<div class="breakdown">
+                <div class="breakdown-row breakdown-head"><span>Gün</span><span>Ücretli</span><span>Ücretsiz</span></div>
+                ${rows}
+                <div class="breakdown-row breakdown-total"><span>Toplam</span><span>${fmtMinutes(paid)}</span><span>${fmtMinutes(free)}</span></div>
+            </div>`;
+        }
+        const total = r.exitTime ? fmtMinutes((new Date(r.exitTime) - new Date(r.entryTime)) / 60000) : '-';
+        return `<div><b>Toplam süre: ${total}</b></div><div class="muted" style="font-size:14px;">Gün gün döküm tarife güncellemesiyle gelecek.</div>`;
+    }
+
+    function renderRecords() {
+        const list = filteredRecords();
+        const pages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+        if (currentPage > pages) currentPage = pages;
+        const start = (currentPage - 1) * PAGE_SIZE;
+        const slice = list.slice(start, start + PAGE_SIZE);
+        let html = '';
+        slice.forEach((r, i) => {
+            const key = recKey(r, start + i);
+            const open = key === expandedKey;
+            const dur = r.exitTime ? fmtMinutes((new Date(r.exitTime) - new Date(r.entryTime)) / 60000) : '-';
+            const amountCls = r.status === 'PAID' ? '' : 'style="color:var(--danger)"';
+            html += `<tr class="clickable${open ? ' selected' : ''}" data-key="${escapeHtml(key)}" tabindex="0" aria-expanded="${open}">
+                <td>${plateHtml(r.licensePlate)}</td>
+                <td>${escapeHtml(zoneOf(r))}</td>
+                <td class="col-muted">${vehicleLabel(r.vehicleType)}</td>
+                <td class="col-muted num">${fmtDateTime(r.entryTime)} → ${r.exitTime ? fmtTime(r.exitTime) : '-'}</td>
+                <td class="num">${dur}</td>
+                <td>${r.status === 'RUNAWAY' ? '<span class="badge badge-danger">Kaçak</span>' : methodBadge(r.paymentMethod)}</td>
+                <td class="right num"><b ${amountCls}>${money(r.fee)}</b></td>
+            </tr>`;
+            if (open) {
+                html += `<tr class="row-detail"><td colspan="7">
+                    <div class="detail-grid">
+                        <dl style="margin:0">
+                            <dt>Personel</dt><dd>${escapeHtml(r.collectedByUsername || '-')}</dd>
+                            <dt>Cihaz</dt><dd>${escapeHtml(r.deviceId || '-')}</dd>
+                        </dl>
+                        <div>${breakdownHtml(r)}</div>
+                    </div></td></tr>`;
+            }
+        });
+        $('recordsBody').innerHTML = html || '<tr><td colspan="7" class="table-empty">Kayıt bulunamadı.</td></tr>';
+        $('pagerInfo').textContent = list.length
+            ? `${start + 1}-${start + slice.length} / ${list.length} kayıt · Sayfa ${currentPage} / ${pages}`
+            : '0 kayıt';
+        $('pagePrev').disabled = currentPage <= 1;
+        $('pageNext').disabled = currentPage >= pages;
+    }
+
+    function toggleRow(tr) {
+        if (!tr || !tr.dataset.key) return;
+        expandedKey = expandedKey === tr.dataset.key ? null : tr.dataset.key;
+        renderRecords();
+    }
+
+    // ---- 5. Kaçaklar ----
+    function renderRunaways() {
+        const all = globalHistoryData.filter(r => r.status === 'RUNAWAY');
+        const open = all.filter(r => !r.debtPaid);
+        const debt = open.reduce((s, r) => s + (r.fee || 0), 0);
+        $('kpiDebt').textContent = money(debt);
+        $('kpiDebtNote').textContent = `${open.length} araç`;
+        $('rDebt').textContent = money(debt);
+        $('rDebtNote').textContent = `${open.length} araç`;
+        $('rCount').textContent = all.length;
+
+        const q = $('rPlate').value.trim().replace(/\s+/g, '').toUpperCase();
+        const list = all.filter(r => !q || String(r.licensePlate || '').replace(/\s+/g, '').toUpperCase().includes(q));
+        $('runawayBody').innerHTML = list.map(r => `<tr>
+            <td>${plateHtml(r.licensePlate)}</td>
+            <td>${escapeHtml(zoneOf(r))}</td>
+            <td class="col-muted num">${fmtDateTime(r.entryTime)} → ${r.exitTime ? fmtTime(r.exitTime) : '-'}</td>
+            <td>${escapeHtml(r.collectedByUsername || '-')}</td>
+            <td>${r.debtPaid ? '<span class="badge badge-success">Tahsil edildi</span>' : '<span class="badge badge-danger">Açık</span>'}</td>
+            <td class="right num"><b>${money(r.fee)}</b></td>
+        </tr>`).join('') || '<tr><td colspan="6" class="table-empty">Kaçak kaydı bulunamadı.</td></tr>';
+    }
+
+    // ---- 6. Vardiyalar ----
+    async function fetchShifts() {
+        try {
+            const res = await fetchWithAuth(`${BASE_URL}/bi/shifts`);
+            if (!res.ok) return false;
+            shiftsData = await res.json();
+            $('kpiStaff').textContent = shiftsData.length;
+
+            $('miniShiftBody').innerHTML = shiftsData.map(s => `<tr>
+                <td>${escapeHtml(s.username)}</td>
+                <td>${escapeHtml(s.zoneName || streetNames[s.street] || '-')}</td>
+                <td class="num">${s.startTime || s.lastLogin ? fmtTime(s.startTime || s.lastLogin) : '-'}</td>
+                <td class="num">${fmtMinutes(s.activeMinutes)}</td>
+                <td class="right num"><b>${money(s.revenue)}</b></td>
+            </tr>`).join('') || '<tr><td colspan="5" class="table-empty">Aktif personel bulunamadı.</td></tr>';
+
+            $('shiftsBody').innerHTML = shiftsData.map(s => `<tr>
+                <td><b>${escapeHtml(s.username)}</b></td>
+                <td>${escapeHtml(s.zoneName || streetNames[s.street] || '-')}</td>
+                <td><code title="${escapeHtml(s.deviceId || '')}">${escapeHtml(shortDevice(s.deviceId))}</code></td>
+                <td class="num">${s.startTime || s.lastLogin ? fmtTime(s.startTime || s.lastLogin) : '-'}</td>
+                <td class="num">${fmtMinutes(s.activeMinutes)}</td>
+                <td class="right num"><b>${money(s.revenue)}</b></td>
+                <td class="col-muted">—</td>
+            </tr>`).join('') || '<tr><td colspan="7" class="table-empty">Aktif vardiya yok.</td></tr>';
+            return true;
+        } catch (error) { console.error("Vardiya verisi hatası:", error); return false; }
+    }
+
+    // ---- 7. Dönemler ----
     async function fetchFiscalYears() {
         try {
             const res = await fetchWithAuth(`${CONFIG.BASE_URL}/api/admin/fiscal-years`);
-            if (!res.ok) return;
+            if (!res.ok) return false;
             const years = await res.json();
 
-            const select = document.getElementById("fiscalYearSelect");
+            const select = $("fiscalYearSelect");
             // Listede değişiklik yoksa select'e dokunma (30 sn'lik yenileme seçimi sıfırlamasın)
             const signature = JSON.stringify(years.map(y => [y.id, y.label, y.startDate, y.endDate, !!y.active, !!y.archived]));
-            if (select.dataset.signature === signature) return;
+            if (select.dataset.signature === signature) return true;
             const previous = select.value;
-            select.innerHTML = '<option value="">-- Dönem Seçin --</option>';
+            select.innerHTML = '<option value="">Tüm kayıtlar</option>';
             years.forEach(y => {
                 const opt = document.createElement("option");
                 opt.value = y.id;
                 opt.dataset.start = y.startDate;
                 opt.dataset.end = y.endDate;
+                opt.dataset.label = y.label;
                 opt.dataset.archived = y.archived ? "true" : "false";
                 const state = y.archived ? ' [Arşivlendi]' : (y.active ? ' [Aktif]' : '');
                 opt.text = `${y.label} (${y.startDate} - ${y.endDate})${state}`;
@@ -558,57 +818,22 @@
             select.dataset.signature = signature;
             if (previous && Array.from(select.options).some(o => o.value === previous)) select.value = previous;
             updateArchiveButton();
-        } catch (error) { console.error("Dönem verisi hatası:", error); }
-    }
-
-
-
-    function escapeHtml(v) {
-        return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    }
-    function shortDevice(id) {
-        if (!id) return '-';
-        return id.length > 8 ? id.substring(0, 8) + '…' : id;
-    }
-
-    // YENİ: Aktif Vardiya (Shift) Verilerini Getir
-    async function fetchShifts() {
-        try {
-            const res = await fetchWithAuth(`${CONFIG.BASE_URL}/api/parking/bi/shifts`);
-            if (!res.ok) return;
-            const shifts = await res.json();
-
-            let html = "";
-            shifts.forEach(s => {
-                const loginDate = new Date(s.startTime || s.lastLogin).toLocaleTimeString('tr-TR', { hour: '2-digit', minute:'2-digit' });
-                const duration = s.activeMinutes;
-                const hours = Math.floor(duration / 60);
-                const mins = duration % 60;
-                const durationText = hours > 0 ? `${hours} Saat ${mins} Dk` : `${mins} Dk`;
-                const badgeClass = s.street === 'TEVFIK_BEY' ? 'bg-primary' : (s.street === 'CUMHURIYET' ? 'bg-info' : 'bg-warning text-dark');
-
-                html += `
-                    <tr>
-                        <td><i class="fa-solid fa-user-tie me-2 text-secondary"></i>${s.username}</td>
-                        <td><span class="badge ${badgeClass}">${s.zoneName}</span></td>
-                        <td><code title="${escapeHtml(s.deviceId || '')}">${escapeHtml(shortDevice(s.deviceId))}</code></td>
-                        <td>${loginDate}</td>
-                        <td class="text-success fw-bold">₺${(s.revenue || 0).toFixed(2)}</td>
-                        <td class="text-primary fw-bold">${durationText}</td>
-                    </tr>
-                `;
-            });
-            
-            document.getElementById("shiftsTableBody").innerHTML = html || `<tr><td colspan="6" class="text-center py-4 text-secondary">Aktif personel bulunamadı.</td></tr>`;
-        } catch (error) { console.error("Vardiya verisi hatası:", error); }
+            return true;
+        } catch (error) { console.error("Dönem verisi hatası:", error); return false; }
     }
 
     function updateArchiveButton() {
-        const select = document.getElementById("fiscalYearSelect");
-        const btn = document.getElementById("btnArchive");
+        const select = $("fiscalYearSelect");
+        const btn = $("btnArchive");
         if (!select || !btn) return;
         const opt = select.selectedOptions[0];
         btn.disabled = !!(opt && opt.dataset.archived === "true");
+        const info = $('periodInfo');
+        if (info) {
+            info.textContent = (select.value && opt)
+                ? `Seçili dönem: ${opt.dataset.label} (${opt.dataset.start} - ${opt.dataset.end})${opt.dataset.archived === 'true' ? ' · arşivlendi' : ''}`
+                : 'Bir dönem seçin. Seçili dönem: yok.';
+        }
     }
 
     function fetchHistory() {
@@ -616,16 +841,16 @@
         fetchHistoryTable();
     }
 
-    // 4. EXCEL İNDİRME
+    // ---- 8. Excel ----
     function downloadExcel() {
-        if(!globalHistoryData || globalHistoryData.length === 0) {
-            alert("İndirilecek veri yok! Lütfen verilerin yüklendiğinden emin olun.");
-            return;
+        if (!globalHistoryData || globalHistoryData.length === 0) {
+            toast("İndirilecek veri yok. Verilerin yüklendiğinden emin olun.", true);
+            return false;
         }
 
         let filteredData = globalHistoryData;
-        const select = document.getElementById("fiscalYearSelect");
-        if(select.value && select.selectedOptions[0]) {
+        const select = $("fiscalYearSelect");
+        if (select.value && select.selectedOptions[0]) {
             // Bitiş günü DAHİL: [start 00:00, end+1 gün 00:00) — hepsi yerel saatle
             const [sy, sm, sd] = select.selectedOptions[0].dataset.start.split('-').map(Number);
             const [ey, em, ed] = select.selectedOptions[0].dataset.end.split('-').map(Number);
@@ -638,108 +863,141 @@
             });
 
             if (filteredData.length === 0) {
-                alert("Seçilen döneme ait veri bulunamadı.");
-                return;
+                toast("Seçilen döneme ait veri bulunamadı.", true);
+                return false;
             }
         }
 
         const excelData = filteredData.map(r => ({
             "Plaka": r.licensePlate,
             "Cadde": streetNames[r.street] || r.street,
-            "Araç Tipi": r.vehicleType === 'LARGE' ? 'Kamyonet' : 'Otomobil',
+            "Saha": zoneOf(r),
+            "Araç Tipi": vehicleLabel(r.vehicleType),
             "Durum": r.status === 'PAID' ? 'ÖDENDİ' : 'KAÇTI',
+            "Yöntem": methodLabel(r.paymentMethod),
             "Tutar (TL)": r.fee || 0,
             "Giriş Zamanı": new Date(r.entryTime).toLocaleString('tr-TR'),
             "Çıkış Zamanı": r.exitTime ? new Date(r.exitTime).toLocaleString('tr-TR') : "-"
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(excelData);
-        worksheet['!cols'] = [ {wch:15}, {wch:20}, {wch:15}, {wch:15}, {wch:15}, {wch:20}, {wch:20} ];
+        worksheet['!cols'] = [ {wch:15}, {wch:20}, {wch:20}, {wch:15}, {wch:15}, {wch:15}, {wch:15}, {wch:20}, {wch:20} ];
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "BilPark Verileri");
-        
+
         const fileName = select.value ? `BilPark_Rapor_${select.options[select.selectedIndex].text.split(' ')[0]}.xlsx` : "BilPark_Rapor_Tumu.xlsx";
         XLSX.writeFile(workbook, fileName);
-    }
-    async function handleApiResponse(res, successMsg, onSuccess) {
-        if (res.ok) {
-            alert(successMsg);
-            if(onSuccess) onSuccess();
-        } else {
-            let data = {};
-            const text = await res.text();
-            try { 
-                if (text) data = JSON.parse(text); 
-            } catch(e) { 
-                console.error("Could not parse JSON:", text); 
-            }
-            alert("Hata: " + (data.error || data.message || `İşlem başarısız. (HTTP ${res.status})`));
-        }
+        toast(`Excel dosyası indirildi (${filteredData.length} kayıt).`);
+        return true;
     }
 
-    // YENİ: DÖNEM OLUŞTUR (Modal üzerinden)
+    // ---- 9. Diyaloglar ----
+    function confirmDialog({ title, message, confirmLabel, danger, typedText }) {
+        return new Promise(resolve => {
+            const dlg = $('confirmDialog');
+            $('confirmTitle').textContent = title;
+            $('confirmMessage').textContent = message;
+            const ok = $('confirmOk');
+            ok.textContent = confirmLabel || 'Onayla';
+            ok.className = 'btn ' + (danger ? 'btn-danger-outline' : 'btn-primary');
+            const wrap = $('confirmTypedWrap'), input = $('confirmTyped');
+            input.value = '';
+            wrap.hidden = !typedText;
+            if (typedText) $('confirmTypedLabel').textContent = `Onaylamak için "${typedText}" yazın`;
+            ok.disabled = !!typedText;
+            let result = false;
+            const onInput = () => { ok.disabled = !!typedText && input.value.trim() !== typedText; };
+            const onSubmit = e => { e.preventDefault(); if (ok.disabled) return; result = true; dlg.close(); };
+            const onCancel = () => dlg.close();
+            const onClose = () => {
+                input.removeEventListener('input', onInput);
+                $('confirmForm').removeEventListener('submit', onSubmit);
+                $('confirmCancel').removeEventListener('click', onCancel);
+                dlg.removeEventListener('close', onClose);
+                resolve(result);
+            };
+            input.addEventListener('input', onInput);
+            $('confirmForm').addEventListener('submit', onSubmit);
+            $('confirmCancel').addEventListener('click', onCancel);
+            dlg.addEventListener('close', onClose);
+            dlg.showModal();
+        });
+    }
+
+    async function handleApiResponse(res, successMsg, onSuccess) {
+        if (res.ok) {
+            toast(successMsg);
+            if (onSuccess) onSuccess();
+            return true;
+        }
+        let data = {};
+        const text = await res.text();
+        try { if (text) data = JSON.parse(text); } catch (e) { console.error("JSON çözülemedi:", text); }
+        toast("Hata: " + (data.error || data.message || `İşlem başarısız. (HTTP ${res.status})`), true);
+        return false;
+    }
+
+    function openCreateFiscalYear() {
+        $('fyError').hidden = true;
+        $('fyDialog').showModal();
+    }
+
     async function createFiscalYear() {
-        const label = document.getElementById("fyLabel").value;
-        const startDateStr = document.getElementById("fyStartDate").value;
-        const endDateStr = document.getElementById("fyEndDate").value;
-        
+        const label = $("fyLabel").value;
+        const startDateStr = $("fyStartDate").value;
+        const endDateStr = $("fyEndDate").value;
+        const err = $('fyError');
         if (!label || label.trim() === "" || !startDateStr || !endDateStr) {
-            alert("Lütfen tüm alanları geçerli şekilde doldurun (Dönem adı boş olamaz).");
+            err.textContent = "Dönem adı, başlangıç ve bitiş tarihi zorunludur.";
+            err.hidden = false;
             return;
         }
-        
+        if (endDateStr < startDateStr) {
+            err.textContent = "Bitiş tarihi başlangıçtan önce olamaz.";
+            err.hidden = false;
+            return;
+        }
+        err.hidden = true;
         try {
             const res = await fetchWithAuth(`${CONFIG.BASE_URL}/api/admin/fiscal-years/create`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    label: label,
-                    startDate: startDateStr,
-                    endDate: endDateStr
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ label: label, startDate: startDateStr, endDate: endDateStr })
             });
-            await handleApiResponse(res, "Yeni dönem başarıyla oluşturuldu.", () => {
-                fetchFiscalYears(); // Dropdown'u yenile
-                // Modalı kapat
-                const modal = bootstrap.Modal.getInstance(document.getElementById('createFiscalYearModal'));
-                if (modal) modal.hide();
-                
-                // Formu temizle
-                document.getElementById("fyLabel").value = "";
-                document.getElementById("fyStartDate").value = "";
-                document.getElementById("fyEndDate").value = "";
+            await handleApiResponse(res, "Yeni dönem oluşturuldu.", () => {
+                $("fiscalYearSelect").dataset.signature = "";
+                fetchFiscalYears();
+                $('fyDialog').close();
+                $("fyLabel").value = "";
+                $("fyStartDate").value = "";
+                $("fyEndDate").value = "";
             });
-        } catch(e) {
-            alert("Sistem hatası: " + e);
+        } catch (e) {
+            if (e.name !== 'AuthError') toast("Sistem hatası: " + e.message, true);
         }
     }
 
-    // 5. YENİ: DÖNEMİ KAPAT & ARŞİVLE
     async function archiveFiscalYear() {
-        const select = document.getElementById("fiscalYearSelect");
-        if (!select.value) {
-            alert("Lütfen arşivlemek istediğiniz dönemi seçin.");
-            return;
-        }
+        const select = $("fiscalYearSelect");
+        if (!select.value) { toast("Önce arşivlenecek dönemi seçin.", true); return; }
+        const opt = select.selectedOptions[0];
+        if (opt.dataset.archived === "true") { toast("Bu dönem zaten arşivlenmiş.", true); return; }
 
-        const confirmArchive = confirm("Seçili dönemdeki kayıtlar Excel olarak indirilecek ve dönem ARŞİVLENDİ olarak işaretlenecek. Kayıtlar silinmez, veritabanında saklanmaya devam eder. Devam edilsin mi?");
-        if (!confirmArchive) return;
-
-        if (select.selectedOptions[0].dataset.archived === "true") {
-            alert("Bu dönem zaten arşivlenmiş.");
-            return;
-        }
+        const ok = await confirmDialog({
+            title: 'Dönemi kapat ve arşivle',
+            message: 'Seçili dönemdeki kayıtlar Excel olarak indirilecek ve dönem arşivlendi olarak işaretlenecek. Kayıtlar silinmez, veritabanında saklanmaya devam eder.',
+            confirmLabel: 'Arşivle',
+            danger: true,
+            typedText: opt.dataset.label
+        });
+        if (!ok) return;
 
         downloadExcel();
 
         try {
             const res = await fetchWithAuth(`${CONFIG.BASE_URL}/api/admin/fiscal-years/${select.value}/archive`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                headers: { 'Content-Type': 'application/json' }
             });
             await handleApiResponse(res, "Dönem arşivlendi olarak işaretlendi. Kayıtlar korunuyor.", () => {
                 select.dataset.signature = ""; // listeyi zorla yenile
@@ -747,47 +1005,75 @@
             });
         } catch (error) {
             console.error(error);
-            alert("Sistem hatası oluştu: " + error);
+            if (error.name !== 'AuthError') toast("Sistem hatası: " + error.message, true);
         }
     }
 
-    // 6. YENİ: DÖNEMİ SİL
     async function deleteFiscalYear() {
-        const select = document.getElementById("fiscalYearSelect");
-        if (!select.value) {
-            alert("Lütfen silmek istediğiniz dönemi seçin.");
-            return;
-        }
+        const select = $("fiscalYearSelect");
+        if (!select.value) { toast("Önce silinecek dönemi seçin.", true); return; }
+        const opt = select.selectedOptions[0];
 
-        const confirmFirst = confirm("DİKKAT: Bu dönemi TAMAMEN siliyorsunuz. Bu işlem geri alınamaz. Emin misiniz?");
-        if (!confirmFirst) return;
+        const ok = await confirmDialog({
+            title: 'Dönemi sil',
+            message: 'Bu dönem tamamen silinecek. Bu işlem geri alınamaz.',
+            confirmLabel: 'Sil',
+            danger: true,
+            typedText: opt.dataset.label
+        });
+        if (!ok) return;
 
         try {
             const res = await fetchWithAuth(`${CONFIG.BASE_URL}/api/admin/fiscal-years/${select.value}`, {
                 method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                headers: { 'Content-Type': 'application/json' }
             });
-            await handleApiResponse(res, "Dönem başarıyla silindi.", () => {
-                select.value = ""; // Seçimi temizle
+            await handleApiResponse(res, "Dönem silindi.", () => {
+                select.value = "";
+                select.dataset.signature = "";
                 updateDashboard();
             });
         } catch (error) {
             console.error(error);
-            alert("Sistem hatası oluştu: " + error);
+            if (error.name !== 'AuthError') toast("Sistem hatası: " + error.message, true);
         }
     }
 
-    function updateDashboard() {
-        fetchActiveSpots();
-        fetchBICharts();
-        fetchIncomeKPI();
-        fetchFiscalYears();
-        fetchHistoryTable();
-        fetchShifts();
+    // ---- Yenileme ----
+    async function updateDashboard() {
+        try {
+            const results = await Promise.all([
+                fetchActiveSpots(),
+                fetchBICharts(),
+                fetchIncomeKPI(),
+                fetchFiscalYears(),
+                fetchHistoryTable(),
+                fetchShifts()
+            ]);
+            setLive(results.every(Boolean));
+        } catch (e) {
+            setLive(false);
+        }
     }
 
+    // ---- Olaylar ----
+    $('btnTheme').addEventListener('click', toggleTheme);
+    try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { updateThemeButton(); renderIncomeChart(); }); } catch (e) { /* eski tarayıcı */ }
+    ['fPlate', 'fStreet', 'fStatus', 'fMethod', 'fHideSub'].forEach(id => {
+        $(id).addEventListener(id === 'fPlate' ? 'input' : 'change', () => { currentPage = 1; expandedKey = null; renderRecords(); });
+    });
+    $('fiscalYearSelect').addEventListener('change', () => { currentPage = 1; expandedKey = null; updateArchiveButton(); fetchHistory(); });
+    $('rPlate').addEventListener('input', renderRunaways);
+    $('pagePrev').addEventListener('click', () => { currentPage--; expandedKey = null; renderRecords(); });
+    $('pageNext').addEventListener('click', () => { currentPage++; expandedKey = null; renderRecords(); });
+    $('recordsBody').addEventListener('click', e => toggleRow(e.target.closest('tr.clickable')));
+    $('recordsBody').addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { const tr = e.target.closest('tr.clickable'); if (tr) { e.preventDefault(); toggleRow(tr); } }
+    });
+
+    applyStoredTheme();
+    setLive(true);
+    document.querySelectorAll('.live-pill').forEach(p => { p.className = 'status-pill live-pill status-offline'; p.textContent = 'Yükleniyor…'; });
     if (localStorage.getItem('token')) {
         showDashboard();
     } else {
