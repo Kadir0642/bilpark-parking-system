@@ -177,6 +177,7 @@ a:hover { color: var(--on-primary-soft); }
 .status-pill { display: inline-flex; align-items: center; gap: var(--s-2); height: 36px; padding: 0 var(--s-3); border-radius: 999px; font-size: 14px; font-weight: 700; }
 .status-online { background: var(--success-soft); color: var(--on-success-soft); }
 .status-offline { background: var(--warning-soft); color: var(--on-warning-soft); }
+.status-danger { background: var(--danger-soft); color: var(--on-danger-soft); }
 
 .toast-stack { position: fixed; right: var(--s-6); bottom: var(--s-6); left: auto; z-index: 1000; display: flex; flex-direction: column; gap: var(--s-2); max-width: min(420px, calc(100vw - 32px)); }
 .toast { display: flex; align-items: center; gap: 10px; padding: var(--s-3) var(--s-4); border-radius: var(--r-md); background: var(--text); color: var(--bg); font-size: 15px; box-shadow: var(--shadow); }
