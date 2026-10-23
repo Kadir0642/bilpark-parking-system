@@ -3,7 +3,11 @@ package com.bilpark.backend.repository;
 import com.bilpark.backend.model.ParkSpot;
 import com.bilpark.backend.model.StreetLocation;
 import com.bilpark.backend.model.ParkingStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -20,9 +24,14 @@ public interface ParkSpotRepository extends JpaRepository<ParkSpot, Long>
     * .findById() -> ID ile bul
     */
 
-    // 1. Plakaya göre sokaktaki aracı bul (Çifte kayıt güvenliği ve Çıkış işlemi için)
-    //Plakaya göre dolu park yerlerini  bul (büyük/küçük fark etmeksizin) | Optional -> (Null kontrolleri daha güvenli ve okunabilir olsun diye)Bir değerin mevcut olup olmadığını belirtmek için kullanılır.
-    Optional<ParkSpot> findByCurrentPlateIgnoreCase(String currentPlate);
+    // 1. Plakaya göre aktif aracı bul. Plaka her zaman PlateNormalizer ile normalize edilmiş gelir.
+    Optional<ParkSpot> findByCurrentPlate(String currentPlate);
+
+    // 1.1 Aynı satırı kilitleyerek oku (SELECT ... FOR UPDATE). Giriş, çıkış ve kaçak işlemleri bunu
+    // @Transactional içinde kullanır; aynı araca gelen ikinci istek ilk işlem bitene kadar bekler.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM ParkSpot p WHERE p.currentPlate = :plate")
+    Optional<ParkSpot> findByPlateForUpdate(@Param("plate") String plate);
 
     // 2. Sadece belirli bir caddedeki aktif araçları getir. (Enum kullanıyoruz !)
     //SELECT * FROM park_spots WHERE street = 'Atatürk Caddesi';

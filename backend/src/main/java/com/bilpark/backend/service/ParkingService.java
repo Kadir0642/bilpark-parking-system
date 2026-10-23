@@ -1,66 +1,80 @@
 package com.bilpark.backend.service;
 
+import com.bilpark.backend.common.ApiException;
+import com.bilpark.backend.common.ErrorCodes;
+import com.bilpark.backend.common.PlateNormalizer;
 import com.bilpark.backend.model.ParkSpot;
 import com.bilpark.backend.model.ParkingRecord;
-import com.bilpark.backend.model.Zone;
-import com.bilpark.backend.model.User;
-import com.bilpark.backend.model.Role;
-import org.springframework.security.access.AccessDeniedException;
-import com.bilpark.backend.model.SubscriptionStatus;
-import com.bilpark.backend.model.VehicleType;
-import com.bilpark.backend.model.StreetLocation;
 import com.bilpark.backend.model.ParkingStatus;
+import com.bilpark.backend.model.PaymentMethod;
+import com.bilpark.backend.model.Role;
+import com.bilpark.backend.model.StreetLocation;
+import com.bilpark.backend.model.Subscription;
+import com.bilpark.backend.model.SubscriptionStatus;
+import com.bilpark.backend.model.User;
+import com.bilpark.backend.model.VehicleType;
+import com.bilpark.backend.model.Zone;
 import com.bilpark.backend.repository.ParkSpotRepository;
 import com.bilpark.backend.repository.ParkingRecordRepository;
-import com.bilpark.backend.repository.ZoneRepository;
 import com.bilpark.backend.repository.SubscriptionRepository;
+import com.bilpark.backend.repository.ZoneRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.Optional;
 
-@Service // İş mantigini yöneten sinif | Uygulama Beyni
+@Service // İş mantığını yöneten sınıf | Uygulama Beyni
 public class ParkingService
 {
-    //yardımcı depo nesnesi olusturuluyor,baska sıniflar kullanmasin ve Degiştirilemez olsun | Güvenlik ve saglamlik
-    private final ParkSpotRepository parkSpotRepository; //1.Depocu : Park yerlerine bakar.
-    private final ParkingRecordRepository parkingRecordRepository; // 2.Depocu: Muhasebe fislerine bakar.
+    private static final Logger log = LoggerFactory.getLogger(ParkingService.class);
+
+    private final ParkSpotRepository parkSpotRepository; // Aktif araçlar
+    private final ParkingRecordRepository parkingRecordRepository; // Muhasebe fişleri
     private final ZoneRepository zoneRepository;
     private final SubscriptionRepository subscriptionRepository;
 
-    //Dependency Injection sağlayan constructer
     public ParkingService(ParkSpotRepository parkSpotRepository,
                           ParkingRecordRepository parkingRecordRepository,
                           ZoneRepository zoneRepository,
                           SubscriptionRepository subscriptionRepository)
     {
-        this.parkSpotRepository=parkSpotRepository; 
-        this.parkingRecordRepository=parkingRecordRepository; 
+        this.parkSpotRepository=parkSpotRepository;
+        this.parkingRecordRepository=parkingRecordRepository;
         this.zoneRepository = zoneRepository;
         this.subscriptionRepository = subscriptionRepository;
     }
 
-    //Bize park yerlerini döndüren fonksiyon | Neon'a gider, sorgu atip sonucu getiricek.
     public List<ParkSpot> getAllSpots()
     {
-        return parkSpotRepository.findAll(); // Buradan gelen listeyi controllera atar
+        return parkSpotRepository.findAll();
     }
 
-    // --- CHECK-IN (Giris islemi ) ---
-    // Otoparka giris olmadan önce calisir. | UPDATE: Artık araç tipinide alıyoruz | spotId yok ve Araç geldikçe yeni kayıt doğar.
+    // --- CHECK-IN ---
+    // Not: self-invocation proxy'yi atladığı için her public aşırı yükleme ayrıca @Transactional.
+    @Transactional
     public ParkSpot checkInVehicle(String licensePlate,String vehicleType,StreetLocation street,String side, Long zoneId)
     {
         return checkInVehicle(licensePlate, vehicleType, street, side, zoneId, null);
     }
 
     // actor != null ise görevli bölge kısıtı uygulanır (ADMIN serbest)
+    @Transactional
     public ParkSpot checkInVehicle(String licensePlate,String vehicleType,StreetLocation street,String side, Long zoneId, User actor)
     {
+        String plate = PlateNormalizer.normalize(licensePlate);
+
         if (isOfficer(actor)) {
             Zone assigned = requireAssignedZone(actor);
             if (zoneId == null) {
@@ -73,15 +87,15 @@ public class ParkingService
             }
         }
 
-        // A. Güvenlik Duvarı: Çifte Kayıt Engelleme (Fail-Fast)
-        Optional<ParkSpot> existingVehicle= parkSpotRepository.findByCurrentPlateIgnoreCase(licensePlate);
-        if(existingVehicle.isPresent()){ // nesnenin mevcut olup olmadığına bakılıyor.
-            throw new RuntimeException("DİKKAT: "+licensePlate.toUpperCase()+ " plakalı araç zaten otoparkta kayıtlı!");
+        // A. Çifte kayıt engeli: aktif plaka TÜM sistemde tekil
+        Optional<ParkSpot> existingVehicle = parkSpotRepository.findByPlateForUpdate(plate);
+        if (existingVehicle.isPresent()) {
+            throw alreadyParked(plate, existingVehicle.get());
         }
 
-        // B. Araç Tipi Belirleme (Enum Dönüşümü)
-        VehicleType type= VehicleType.SMALL; // Default
-        if(vehicleType !=null && !vehicleType.isEmpty()) {
+        // B. Araç tipi
+        VehicleType type = VehicleType.SMALL; // Default
+        if (vehicleType != null && !vehicleType.isEmpty()) {
             try {
                 type = VehicleType.valueOf(vehicleType.toUpperCase());
             } catch (IllegalArgumentException e) {
@@ -91,94 +105,156 @@ public class ParkingService
 
         Zone zone = zoneId != null ? zoneRepository.findById(zoneId).orElse(null) : null;
 
-        // C.Yeni araç Oluşturma (Sınırsız Kapasite Mantığı)
-        // Araç sokağa girdiği an ParkSpot (AKTİF) tablosunu bir satıra eklenir.
-        ParkSpot newSpot = new ParkSpot(licensePlate.toUpperCase(),street,type, "Merkez", "Bilecik",side, zone);
+        ParkSpot newSpot = new ParkSpot(plate, street, type, "Merkez", "Bilecik", side, zone);
 
-        // Calculate runaway debt
-        List<ParkingRecord> unpaidRecords = parkingRecordRepository.findByLicensePlateIgnoreCaseAndStatus(licensePlate, ParkingStatus.RUNAWAY);
-        double totalDebt = unpaidRecords.stream().filter(r -> !r.isDebtPaid()).mapToDouble(ParkingRecord::getFee).sum();
+        // Kaçak borcu
+        List<ParkingRecord> unpaidRecords = parkingRecordRepository.findByLicensePlateAndStatus(plate, ParkingStatus.RUNAWAY);
+        double totalDebt = unpaidRecords.stream()
+                .filter(r -> !r.isDebtPaid())
+                .mapToDouble(r -> r.getFee() != null ? r.getFee() : 0.0)
+                .sum();
         newSpot.setAccumulatedDebt(totalDebt);
 
-        // Check if subscribed
-        boolean isSubscribed = subscriptionRepository.findByLicensePlateIgnoreCaseAndStatus(licensePlate, SubscriptionStatus.ACTIVE).isPresent();
-        newSpot.setHasSubscription(isSubscribed);
+        newSpot.setHasSubscription(hasActiveSubscription(plate));
 
-        // Fişi ŞİMDİ KESMİYORUZ! Fiş sadece araç çıkarken kesilir.
-        return parkSpotRepository.save(newSpot);
+        // Fiş şimdi kesilmez; sadece çıkarken kesilir.
+        try {
+            return parkSpotRepository.saveAndFlush(newSpot);
+        } catch (DataIntegrityViolationException e) {
+            // Eşzamanlı ikinci giriş benzersizlik kısıtına takıldı
+            log.info("Concurrent check-in rejected for plate {}", plate);
+            throw ApiException.conflict(ErrorCodes.ALREADY_PARKED,
+                    plate + " plakalı araç zaten sistemde aktif.");
+        }
     }
 
-
-
-    // --- CHECK-OUT (Cikis İslemi (GERCEK TARİFE ÜZERİNDEN)) ---
-    // Burasi paranin kazanildigi ve hesabin kapatildigi yerdir. | Sadece plaka ile çıkış yapılır.
+    // --- CHECK-OUT ---
+    @Transactional
     public ParkingRecord checkOutVehicle(String plate) {
-        return checkOutVehicle(plate, null);
+        return checkOutVehicle(plate, PaymentMethod.CASH, null, null);
     }
 
+    @Transactional
     public ParkingRecord checkOutVehicle(String plate, User actor) {
-        // A. Araç Kontrolü (Validation)
-        ParkSpot spot = parkSpotRepository.findByCurrentPlateIgnoreCase(plate) // "plate" adina bakiyor.
-                .orElseThrow(() -> new RuntimeException("Hata: " + plate + "plakalı araç aktif otoparkta bulunamadı!")); // yoksa hata firlatiyoruz.
+        return checkOutVehicle(plate, PaymentMethod.CASH, actor, null);
+    }
+
+    @Transactional
+    public ParkingRecord checkOutVehicle(String plate, PaymentMethod method, User actor, String deviceId) {
+        String p = PlateNormalizer.forLookup(plate);
+        PaymentMethod requested = method == null ? PaymentMethod.CASH : method;
+        if (requested == PaymentMethod.ONLINE) {
+            throw ApiException.badRequest(ErrorCodes.INVALID_PAYMENT_METHOD, "Online ödeme henüz kullanılmıyor.");
+        }
+
+        ParkSpot spot = parkSpotRepository.findByPlateForUpdate(p)
+                .orElseThrow(() -> notActive(p));
         checkSpotAccess(actor, spot);
 
-        // B. Ücret Hesabi && Süre Hesabi (Dakika cinsinden) | Zaman formatının orijinali long
-        long totalMinutes = Duration.between(spot.getEntryTime(), LocalDateTime.now()).toMinutes();// Java'da zaman hesaplamaları (Milisaniye, saniye, dakika) endüstri standardı olarak her zaman long ile yapılır
-        boolean isSubscribed = subscriptionRepository.findByLicensePlateIgnoreCaseAndStatus(plate, SubscriptionStatus.ACTIVE).isPresent();
-        double fee = isSubscribed ? 0.0 : calculateFee(spot.getCurrentType(), totalMinutes);
+        PaymentMethod effective;
+        double fee;
+        if (hasActiveSubscription(p)) {
+            effective = PaymentMethod.SUBSCRIPTION;
+            fee = 0.0;
+        } else if (requested == PaymentMethod.SUBSCRIPTION) {
+            throw ApiException.badRequest(ErrorCodes.NO_SUBSCRIPTION,
+                    p + " plakası için aktif abonelik yok; abonelik ile çıkış yapılamaz.");
+        } else {
+            effective = requested;
+            long totalMinutes = Duration.between(spot.getEntryTime(), LocalDateTime.now()).toMinutes();
+            fee = calculateFee(spot.getCurrentType(), totalMinutes);
+        }
 
-        // C. Arşive Aktarma (Muhasebe Fişini Şimdi Kesiyoruz)
+        ParkingRecord record = newRecord(spot);
+        record.setFee(fee);
+        record.setStatus(ParkingStatus.PAID);
+        record.setPaymentMethod(effective);
+        stampCollector(record, actor, deviceId);
+
+        parkingRecordRepository.save(record);
+        parkSpotRepository.delete(spot);
+        parkSpotRepository.flush();
+        return record;
+    }
+
+    // --- KAÇAK ARAÇ BİLDİRİMİ (Runaway) ---
+    @Transactional
+    public ParkingRecord markAsRunaway(String plate){
+        return markAsRunaway(plate, null, null);
+    }
+
+    @Transactional
+    public ParkingRecord markAsRunaway(String plate, User actor){
+        return markAsRunaway(plate, actor, null);
+    }
+
+    @Transactional
+    public ParkingRecord markAsRunaway(String plate, User actor, String deviceId){
+        String p = PlateNormalizer.forLookup(plate);
+        ParkSpot spot = parkSpotRepository.findByPlateForUpdate(p)
+                .orElseThrow(() -> notActive(p));
+        checkSpotAccess(actor, spot);
+
+        long totalMinutes = Duration.between(spot.getEntryTime(),LocalDateTime.now()).toMinutes();
+        double debt = hasActiveSubscription(p) ? 0.0 : calculateFee(spot.getCurrentType(),totalMinutes);
+
+        ParkingRecord record = newRecord(spot);
+        record.setFee(debt); // Ödenmemiş borç
+        record.setStatus(ParkingStatus.RUNAWAY);
+        record.setDebtPaid(false);
+        record.setPaymentMethod(null);
+        stampCollector(record, actor, deviceId);
+
+        parkingRecordRepository.save(record);
+        parkSpotRepository.delete(spot);
+        parkSpotRepository.flush();
+        return record;
+    }
+
+    private ParkingRecord newRecord(ParkSpot spot) {
         ParkingRecord record = new ParkingRecord(
                 spot.getCurrentPlate(), spot.getStreet(), spot.getZone(), spot.getRegion(), spot.getNeighborhood(), spot.getEntryTime()
         );
         record.setExitTime(LocalDateTime.now());
-        record.setFee(fee);
-        record.setStatus(ParkingStatus.PAID); // NORMAL ÇIKIŞ
-        record.setVehicleType(spot.getCurrentType()); // Aktif araçtaki tipi arşive kaydederiz
-
-        parkingRecordRepository.save(record);
-
-        // D. SOKAKTAN SİL (Kapasite açılıyor)
-        parkSpotRepository.delete(spot);
-
+        record.setVehicleType(spot.getCurrentType());
         return record;
     }
 
-    //  ---YENİ: KAÇAK ARAÇ BİLDİRİMİ (Runaway) ---
-    // Görevli "Kaçtı" butonuna bastığında çalışır.
-    public ParkingRecord markAsRunaway(String plate){
-        return markAsRunaway(plate, null);
+    private void stampCollector(ParkingRecord record, User actor, String deviceId) {
+        if (actor != null) {
+            record.setCollectedBy(actor);
+            record.setCollectedByUsername(actor.getUsername());
+        }
+        record.setDeviceId(deviceId);
     }
 
-    @Transactional // birden fazla veritabanı işlemi gerçekleştiren ve bunların hepsinin birlikte başarılı veya başarısız olması gereken yöntemler için
-    public ParkingRecord markAsRunaway(String plate, User actor){
-        // A. Aracı bul
+    private boolean hasActiveSubscription(String plate) {
+        return subscriptionRepository
+                .findFirstByLicensePlateAndStatusOrderByEndDateDesc(plate, SubscriptionStatus.ACTIVE)
+                .filter(Subscription::isCurrentlyActive)
+                .isPresent();
+    }
 
-        ParkSpot spot = parkSpotRepository.findByCurrentPlateIgnoreCase(plate)
-                .orElseThrow(()->new RuntimeException("Hata: Araç Bulunamadı!"));
-        checkSpotAccess(actor, spot);
+    private ApiException alreadyParked(String plate, ParkSpot spot) {
+        String where = spot.getZone() != null ? spot.getZone().getZoneName()
+                : (spot.getStreet() != null ? spot.getStreet().getDisplayName() : "bilinmeyen konum");
+        return ApiException.conflict(ErrorCodes.ALREADY_PARKED,
+                plate + " plakalı araç zaten sistemde aktif (" + where + ").");
+    }
 
-        // B. Mevcut borcunu hesapla (Ceza çarpanı KALDIRILDI)
-        long totalMinutes = Duration.between(spot.getEntryTime(),LocalDateTime.now()).toMinutes();
-        boolean isSubscribed = subscriptionRepository.findByLicensePlateIgnoreCaseAndStatus(plate, SubscriptionStatus.ACTIVE).isPresent();
-        double debt = isSubscribed ? 0.0 : calculateFee(spot.getCurrentType(),totalMinutes);
-
-        // C: Kara Listeye (Arşive) Ekle
-        ParkingRecord record = new ParkingRecord(
-                spot.getCurrentPlate(),spot.getStreet(),spot.getZone(), spot.getRegion(), spot.getNeighborhood(), spot.getEntryTime()
-        );
-        record.setExitTime(LocalDateTime.now());
-        record.setFee(debt); // Ödenmemiş borç
-        record.setStatus(ParkingStatus.RUNAWAY); // KAÇAK DAMGASI VURULDU!
-        record.setVehicleType(spot.getCurrentType()); // Kaçak araçtaki tipi, arşive kaydeder.
-        record.setDebtPaid(false); // Bu borç ödenmedi
-
-        parkingRecordRepository.save(record);
-
-        // D. Sokaktan Sil (Kapasite işgal etmesin)
-        parkSpotRepository.delete(spot);
-
-        return record;
+    // Araç aktif değil: az önce başka bir istek kapattıysa 409, hiç yoksa 404
+    private ApiException notActive(String plate) {
+        Optional<ParkingRecord> last = parkingRecordRepository.findTopByLicensePlateOrderByExitTimeDesc(plate);
+        if (last.isPresent() && last.get().getExitTime() != null
+                && last.get().getExitTime().isAfter(LocalDateTime.now().minusMinutes(10))) {
+            ParkingRecord r = last.get();
+            String what = r.getStatus() == ParkingStatus.RUNAWAY ? "Kaçak" : "Ödendi";
+            String time = r.getExitTime().format(DateTimeFormatter.ofPattern("HH:mm"));
+            return ApiException.conflict(ErrorCodes.ALREADY_PROCESSED,
+                    plate + " az önce başka bir işlemle kapatıldı (" + what + ", " + time + ").");
+        }
+        return ApiException.notFound(ErrorCodes.VEHICLE_NOT_FOUND,
+                plate + " plakalı araç aktif otoparkta bulunamadı.");
     }
 
     // --- Görevli bölge kısıtı (actor null veya ADMIN ise serbest) ---
@@ -219,118 +295,87 @@ public class ParkingService
         double baseFee; // İlk 1 saatin ücreti
         double extraFee; // Sonraki her saatin ücreti
 
-        // Kural 2: Arac Tipine Göre Tarife Belirleme
+        // Kural 2: Araç tipine göre tarife
         if(vehicleType== VehicleType.LARGE){
-            //Büyük Arac tarifesi
             baseFee=50.0;
             extraFee=30.0;
         }else {
-            //Kücük Arac Tarifesi (Default)
             baseFee=25.0;
             extraFee=15.0;
         }
 
-        //Kural 3: Süreye Göre Hesap
+        // Kural 3: Süreye göre hesap
         if(minutes <=60)
         {
-            //İlk 1 saat icinde ise sabit ücret
             return baseFee;
         }else {
-            //1 saati aştıysa
             long extraMinutes =minutes-60;
-
-            //Her başlayan saat icin tam ücret alinir. | 61.dakikada ise 2.saate girmiş demektir ( +15 TL).
-            //Math.ceil() yukari yuvarlar.
+            // Her başlayan saat için tam ücret
             long extraHours = (long) Math.ceil(extraMinutes/ 60.0);
-
             return baseFee + (extraHours*extraFee);
         }
     }
 
-    // --- CİRO HESAPLAMA (INCOME) ---
+    // --- CİRO HESAPLAMA (yalnızca PAID kayıtlar) ---
     public double getTotalIncome()
     {
-        // "Double" içi boş(Null) kalabilen bir Wrapper Class(Sarmalayıcı) ,methodları olan(.toString,.intValue)
-        Double total=parkingRecordRepository.getTotalIncome(); // Veri tabanındaki bütün kayıtların fee sütünları toplanıp, total nesnesine atılır.
-        return (total != null) ? total : 0.0; //Eğer hiç kayıt yoksa "null" gelir, biz 0.0 döndürürüz | veritabanından gelen belirsizliği (null), kullanıcıya gösterilecek net bir bilgiye (0.0) çeviren bir Converter
+        Double total=parkingRecordRepository.getTotalIncome();
+        return (total != null) ? total : 0.0;
     }
 
-    // --- Daily Income ---
     public Double getDailyIncome(){
-        // Gün başlangıcı (00:00)
-        LocalDateTime startOfDay=LocalDateTime.now().toLocalDate().atStartOfDay();//.now ->Şu an zamanı alır | .toLocalDate ->Saati atar,günü alır | .atStartOfDay -> gün başı 00:00 yapar.
-        // Gün bitişi (1 gün eklendi) yarın 00:00 a kadar (00:00 dahil değil).
-        LocalDateTime endOfDay=startOfDay.plusDays(1); // plusDays -> parametre kadar gün ekler.
-
-        Double dailyTotal= parkingRecordRepository.getIncomeByDateRange(startOfDay,endOfDay); // Belirtilen zaman dilimindeki fişlerin fee sütünlarını toplar
-
-        return (dailyTotal !=null) ? dailyTotal : 0.0; // Veritabanı null dönerse 0.0 yapıp programın patlamasını engelleriz.
+        LocalDateTime startOfDay=LocalDate.now().atStartOfDay();
+        LocalDateTime endOfDay=startOfDay.plusDays(1);
+        return getIncomeByDateRange(startOfDay, endOfDay);
     }
 
-    // --- Weekly Income ---
     public Double getWeeklyIncome(){
-        LocalDateTime end=LocalDateTime.now(); // Şu an (bitiş çizgisi)
-        LocalDateTime start= end.minusDays(7); // 7 gün öncesi (Başlangıç)
-
-        Double total=parkingRecordRepository.getIncomeByDateRange(start,end);
-        return (total != null) ? total : 0.0;
+        LocalDateTime end=LocalDateTime.now();
+        return getIncomeByDateRange(end.minusDays(7), end);
     }
 
-    // --- Monthly Income (Ayın 1'inden itibaren)---
+    // Ayın 1'inden itibaren
     public Double getMonthlyIncome(){
-        LocalDateTime end=LocalDateTime.now();// Şu an (bitiş çizgisi)
-        //Ayın ilk gününü bul
-        LocalDateTime start=java.time.LocalDate.now().withDayOfMonth(1).atStartOfDay(); // withDayOfMonth ->gün kısmını 1 yapıp | saati 00:00 yapar.
-
-        Double total=parkingRecordRepository.getIncomeByDateRange(start,end);
-        return (total != null) ? total :0.0;
+        return getIncomeByDateRange(LocalDate.now().withDayOfMonth(1).atStartOfDay(), LocalDateTime.now());
     }
 
-    // --- Yearly Income (Yılın başından itibaren) ---
+    // Yılın başından itibaren
     public Double getYearlyIncome(){
-        LocalDateTime end =LocalDateTime.now();
-        //Yılın ilk gününü bul
-        LocalDateTime start=java.time.LocalDate.now().withDayOfYear(1).atStartOfDay();
-
-        Double total=parkingRecordRepository.getIncomeByDateRange(start,end);
-        return (total != null) ? total : 0.0;
+        return getIncomeByDateRange(LocalDate.now().withDayOfYear(1).atStartOfDay(), LocalDateTime.now());
     }
 
-    // --- Belirli tarih aralığında gelir (Controller'dan çağrılır) ---
     public Double getIncomeByDateRange(LocalDateTime start, LocalDateTime end) {
         Double total = parkingRecordRepository.getIncomeByDateRange(start, end);
         return (total != null) ? total : 0.0;
     }
 
     // --- FİLTRELEME SERVİSLERİ ---
-
-    // Sadece seçilen caddedeki aktif araçları getirir
     public List<ParkSpot> getSpotsByStreet(StreetLocation street){
         return parkSpotRepository.findByStreet(street);
     }
 
-    // --- GEÇMİŞ KAYITLARI GETİR (Enum Filtreli)---
-    // Delegation (Görev devri)
-    public List<ParkingRecord> getHistoryByLocation(StreetLocation street){ // Şu an için tek görevi köprü olmak , repository'i çağırıyor mimari için ilerideki özellik eklemeleri için bu yapı tercih ediliyor.
-        return parkingRecordRepository.findTop50ByStreetOrderByEntryTimeDesc(street); // Sadece cadde adıyla veri kayıtları alıyor.
+    public List<ParkingRecord> getHistoryByLocation(StreetLocation street){
+        return parkingRecordRepository.findTop50ByStreetOrderByEntryTimeDesc(street);
     }
 
-    // Araç Geçmişi Arama filtresi
+    // Plaka arama: doğrulama yok, parça arama
     public List<ParkingRecord> searchHistoryByPlate(String plate){
-        return parkingRecordRepository.findByLicensePlateIgnoreCase(plate);
+        return parkingRecordRepository.findByLicensePlateContainingOrderByEntryTimeDesc(PlateNormalizer.clean(plate));
     }
 
-    // --- YENİ: BORÇ SORGULAMA ---
+    // --- BORÇ SORGULAMA ---
     public Map<String, Object> getDebtByPlate(String plate){
-        ParkSpot spot= parkSpotRepository.findByCurrentPlateIgnoreCase(plate)
-                .orElseThrow(()->new RuntimeException("Bu plakaya ait otoparkta aktif araç bulunamadı: "+plate));
+        String p = PlateNormalizer.normalize(plate);
+        ParkSpot spot= parkSpotRepository.findByCurrentPlate(p)
+                .orElseThrow(()->ApiException.notFound(ErrorCodes.VEHICLE_NOT_FOUND,
+                        p + " plakalı araç aktif otoparkta bulunamadı."));
 
         long minutes=Duration.between(spot.getEntryTime(),LocalDateTime.now()).toMinutes();
-        boolean isSubscribed = subscriptionRepository.findByLicensePlateIgnoreCaseAndStatus(plate, SubscriptionStatus.ACTIVE).isPresent();
+        boolean isSubscribed = hasActiveSubscription(p);
         double fee = isSubscribed ? 0.0 : calculateFee(spot.getCurrentType(),minutes);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("streetName",spot.getStreet().getDisplayName()); //Artık A-6 değil, "Atatürk Caddesi" yazacak
+        response.put("streetName",spot.getStreet().getDisplayName());
         response.put("plate",spot.getCurrentPlate());
         response.put("entryTime",spot.getEntryTime());
         response.put("durationMinutes",minutes);
@@ -340,54 +385,48 @@ public class ParkingService
         return response;
     }
 
-    // --- MÜŞTERİ İÇİN: ÖDEME YAP VE ÇIKIŞI ONAYLA ---
-    public ParkingRecord processPaymentAndCheckout(String plate){
-        // DRY | LOGIC REUSE (DAHA ÖNCE YAZDIĞIMIZ ÇIKIŞ METODUNU ÇAĞIRIRIZ)
-        return checkOutVehicle(plate);
+    // --- ADMIN: ödeme yap ve çıkışı onayla (/pay) ---
+    @Transactional
+    public ParkingRecord processPaymentAndCheckout(String plate, User actor, String deviceId){
+        return checkOutVehicle(plate, PaymentMethod.CASH, actor, deviceId);
     }
 
-    // --- 9. ADMIN PANELİ GRAFİKLERİ VE ANALİZ ---
+    // --- ADMIN PANELİ GRAFİKLERİ VE ANALİZ ---
 
-    //9.1 .Ciro Dağılımı
+    // Ciro dağılımı (SQL toplama; tip null = eski kayıt = Otomobil)
     public Map<String, Double> calculateIncomeByVehicleType(){
-        List<ParkingRecord> allRecords = parkingRecordRepository.findAll();
-        double smallIncome=0;
-        double largeIncome=0;
-
-        for(ParkingRecord record : allRecords){
-            if(record.getStatus() == ParkingStatus.PAID && record.getFee() != null){
-
-                if(record.getVehicleType() == VehicleType.LARGE){
-                    largeIncome+=record.getFee();
-                    }else {
-                        smallIncome+=record.getFee();
-                    }
-                }
-            }
-        return Map.of("Otomobil", smallIncome,"Kamyonet",largeIncome);
-    }
-
-    // 9.2. Operasyonel Başarı (Kaçan/Ödeyen Grafiği)
-    public Map<String, Long> getParkingStatusCounts(){
-        List<ParkingRecord> allRecord= parkingRecordRepository.findAll();
-        long paidCount=0;
-        long runawayCount=0;
-
-        for (ParkingRecord record : allRecord) {
-            if(record.getStatus()==ParkingStatus.PAID) paidCount++;
-            if(record.getStatus()== ParkingStatus.RUNAWAY) runawayCount++;
+        double small = 0, large = 0;
+        for (Object[] row : parkingRecordRepository.sumPaidIncomeByVehicleType()) {
+            double v = row[1] == null ? 0.0 : ((Number) row[1]).doubleValue();
+            if (row[0] == VehicleType.LARGE) large += v; else small += v;
         }
-        return Map.of("Ödenen", paidCount,"Kaçan",runawayCount);
+        Map<String, Double> result = new LinkedHashMap<>();
+        result.put("Otomobil", small);
+        result.put("Kamyonet", large);
+        return result;
     }
 
-    // 9.3 Son Arşiv Kayıtları (Excel Tablosu İçin Sınırsız Cadde)
+    // Operasyonel başarı (Kaçan/Ödenen)
+    public Map<String, Long> getParkingStatusCounts(){
+        long paid = 0, runaway = 0;
+        for (Object[] row : parkingRecordRepository.countByStatus()) {
+            long c = row[1] == null ? 0L : ((Number) row[1]).longValue();
+            if (row[0] == ParkingStatus.PAID) paid += c;
+            else if (row[0] == ParkingStatus.RUNAWAY) runaway += c;
+        }
+        Map<String, Long> result = new LinkedHashMap<>();
+        result.put("Ödenen", paid);
+        result.put("Kaçan", runaway);
+        return result;
+    }
+
+    // Tüm caddelerdeki son 100 işlem
     public List<ParkingRecord> getLast100Records(){
-        //Sadece tek bir caddeyi değil tüm caddelerdeki son 100 işlemi getiriyor
         return parkingRecordRepository.findTop100ByOrderByEntryTimeDesc();
     }
 
-    // 9.4 Tarih Aralığına Göre Arşiv Kayıtları (Excel İndirme ve Filtreleme İçin)
+    // Tarih aralığına göre arşiv kayıtları (start <= entryTime < end)
     public List<ParkingRecord> getRecordsByDateRange(LocalDateTime start, LocalDateTime end) {
-        return parkingRecordRepository.findByEntryTimeBetweenOrderByEntryTimeDesc(start, end);
+        return parkingRecordRepository.findByEntryTimeRange(start, end);
     }
 }

@@ -42,7 +42,8 @@ class SecurityIntegrationTest {
     @Test
     void anonymousPay_is401() throws Exception {
         mvc.perform(post("/api/parking/pay").param("plate", "34PAY001"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
@@ -55,7 +56,8 @@ class SecurityIntegrationTest {
     void officerSubscriptionCreate_is403() throws Exception {
         mvc.perform(post("/api/subscription/create").header("Authorization", officer())
                         .contentType(MediaType.APPLICATION_JSON).content(SUB_JSON))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code").value("FORBIDDEN"));
     }
 
     @Test

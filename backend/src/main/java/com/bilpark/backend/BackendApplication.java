@@ -4,6 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import jakarta.annotation.PostConstruct;
 import java.util.TimeZone;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -19,7 +20,7 @@ public class BackendApplication {
 	@PostConstruct
 	public void init(){
 		TimeZone.setDefault(TimeZone.getTimeZone("Europe/Istanbul"));
-		System.out.println("Sistem Saati Türkiye (UTC+3) Olarak Ayarlandı !");
+		LoggerFactory.getLogger(BackendApplication.class).info("Sistem saati Türkiye (UTC+3) olarak ayarlandı.");
 	}
 
 }

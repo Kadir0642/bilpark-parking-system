@@ -1,5 +1,6 @@
 package com.bilpark.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -40,6 +41,23 @@ public class ParkingRecord {
     private ParkingStatus status;
 
     private boolean debtPaid = true; // By default paid unless it's a RUNAWAY
+
+    // Null for RUNAWAY records and for records created before stage 2
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", length = 20)
+    private PaymentMethod paymentMethod;
+
+    // User who closed the record (collected the fee or flagged the runaway)
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "collected_by_id")
+    private User collectedBy;
+
+    @Column(name = "collected_by_username")
+    private String collectedByUsername; // snapshot, safe to serialize
+
+    @Column(name = "device_id", length = 64)
+    private String deviceId; // X-Device-Id of the device that closed the record
 
     public ParkingRecord(String licensePlate, StreetLocation street, Zone zone,
                          String region, String neighborhood, LocalDateTime entryTime) {

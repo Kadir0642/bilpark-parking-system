@@ -1,5 +1,6 @@
 package com.bilpark.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -22,8 +23,9 @@ public class User {
     @Column(unique = true, nullable = false)
     private String username;
 
+    @JsonIgnore
     @Column(nullable = false)
-    private String password; // BCrypt hashed
+    private String password; // BCrypt hashed, never serialized
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

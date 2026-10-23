@@ -25,8 +25,11 @@ public class Subscription {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
-    private String licensePlate; // Normalized to uppercase
+    // Not unique: a plate keeps its old (EXPIRED/CANCELLED) rows when it renews.
+    // "One ACTIVE subscription per plate" is enforced in SubscriptionService
+    // and by the partial unique index ux_subscriptions_active_plate (Flyway V2).
+    @Column(nullable = false)
+    private String licensePlate; // Normalized by PlateNormalizer
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -49,7 +52,7 @@ public class Subscription {
 
     public Subscription(String licensePlate, VehicleType vehicleType,
                         LocalDate startDate, String ownerName, String ownerPhone) {
-        this.licensePlate = licensePlate.toUpperCase();
+        this.licensePlate = licensePlate;
         this.vehicleType  = vehicleType;
         this.startDate    = startDate;
         this.endDate      = startDate.plusMonths(1);

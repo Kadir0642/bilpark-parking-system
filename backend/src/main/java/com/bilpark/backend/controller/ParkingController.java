@@ -3,7 +3,12 @@ package com.bilpark.backend.controller;
 import com.bilpark.backend.model.ParkSpot;
 import com.bilpark.backend.model.ParkingRecord;
 import com.bilpark.backend.model.StreetLocation;
+import com.bilpark.backend.common.ApiException;
+import com.bilpark.backend.common.DeviceIds;
+import com.bilpark.backend.common.ErrorCodes;
+import com.bilpark.backend.model.PaymentMethod;
 import com.bilpark.backend.service.ParkingService;
+import com.bilpark.backend.service.ShiftService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 
@@ -26,10 +31,13 @@ public class ParkingController {
     private final ParkingService parkingService;
     private final com.bilpark.backend.repository.UserRepository userRepository;
     private final com.bilpark.backend.repository.ParkingRecordRepository parkingRecordRepository;
+    private final ShiftService shiftService;
 
-    public ParkingController(ParkingService parkingService, 
+    public ParkingController(ParkingService parkingService,
                              com.bilpark.backend.repository.UserRepository userRepository,
-                             com.bilpark.backend.repository.ParkingRecordRepository parkingRecordRepository) {
+                             com.bilpark.backend.repository.ParkingRecordRepository parkingRecordRepository,
+                             ShiftService shiftService) {
+        this.shiftService = shiftService;
         this.parkingService = parkingService;
         this.userRepository = userRepository;
         this.parkingRecordRepository = parkingRecordRepository;
@@ -44,35 +52,30 @@ public class ParkingController {
                 .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Kullanıcı bulunamadı."));
     }
 
+    // GET /api/parking/bi/shifts - open shifts (one per officer per device)
     @GetMapping("/bi/shifts")
     public ResponseEntity<?> getActiveShifts() {
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
         java.util.List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
-        
-        java.util.List<com.bilpark.backend.model.User> officers = userRepository.findAll().stream()
-            .filter(u -> u.getRole() == com.bilpark.backend.model.Role.OFFICER && u.getLastLoginTime() != null)
-            .toList();
-            
-        for (com.bilpark.backend.model.User o : officers) {
-            java.util.Map<String, Object> map = new java.util.HashMap<>();
-            map.put("username", o.getUsername());
-            
-            if (o.getAssignedZone() != null) {
-                map.put("zoneName", o.getAssignedZone().getZoneName());
-                map.put("street", o.getAssignedZone().getStreet().name());
-                
-                Double income = parkingRecordRepository.getIncomeByZoneAndDateRange(o.getAssignedZone(), o.getLastLoginTime(), now);
-                map.put("revenue", income != null ? income : 0.0);
+
+        for (com.bilpark.backend.model.Shift sh : shiftService.listOpenShifts()) {
+            java.util.Map<String, Object> map = new java.util.LinkedHashMap<>();
+            map.put("shiftId", sh.getId());
+            map.put("username", sh.getUsername());
+            if (sh.getZone() != null) {
+                map.put("zoneName", sh.getZone().getZoneName());
+                map.put("street", sh.getZone().getStreet().name());
             } else {
                 map.put("zoneName", "Bölge Yok");
                 map.put("street", "Belirsiz");
-                map.put("revenue", 0.0);
             }
-            
-            map.put("lastLogin", o.getLastLoginTime());
-            java.time.Duration duration = java.time.Duration.between(o.getLastLoginTime(), now);
-            map.put("activeMinutes", duration.toMinutes());
-            
+            map.put("deviceId", sh.getDeviceId());
+            map.put("startTime", sh.getStartTime());
+            map.put("lastLogin", sh.getStartTime()); // panel uyumu
+            map.put("activeMinutes", java.time.Duration.between(sh.getStartTime(), now).toMinutes());
+            Double income = parkingRecordRepository.getIncomeByCollectorAndDevice(
+                    sh.getUser(), sh.getDeviceId(), sh.getStartTime(), now);
+            map.put("revenue", income != null ? income : 0.0);
             result.add(map);
         }
         return ResponseEntity.ok(result);
@@ -87,7 +90,7 @@ public class ParkingController {
     // POST /api/parking/check-in?plate=34ABC123&street=TEVFIK_BEY&type=SMALL&side=LEFT&zoneId=1
     @PostMapping("/check-in")
     public ResponseEntity<ParkSpot> checkIn(
-            @RequestParam @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Pattern(regexp = "^[A-Za-z0-9 ]{5,11}$", message = "Invalid plate format") String plate,
+            @RequestParam @jakarta.validation.constraints.NotBlank(message = "Plaka boş olamaz.") String plate,
             @RequestParam StreetLocation street,
             @RequestParam(defaultValue = "SMALL") String type,
             @RequestParam(defaultValue = "LEFT") String side,
@@ -96,21 +99,40 @@ public class ParkingController {
         return ResponseEntity.ok(parkingService.checkInVehicle(plate, type, street, side, zoneId, currentUser(principal)));
     }
 
-    // POST /api/parking/check-out?plate=34ABC123
+    // paymentMethod: CASH (default) | POS | SUBSCRIPTION; ONLINE is reserved
+    private PaymentMethod parsePaymentMethod(String raw) {
+        if (raw == null || raw.isBlank()) return PaymentMethod.CASH;
+        try {
+            PaymentMethod m = PaymentMethod.valueOf(raw.trim().toUpperCase(java.util.Locale.ROOT));
+            if (m == PaymentMethod.ONLINE) {
+                throw ApiException.badRequest(ErrorCodes.INVALID_PAYMENT_METHOD, "Online ödeme henüz kullanılmıyor.");
+            }
+            return m;
+        } catch (IllegalArgumentException e) {
+            throw ApiException.badRequest(ErrorCodes.INVALID_PAYMENT_METHOD,
+                    "Geçersiz ödeme yöntemi: " + raw + ". Geçerli değerler: CASH, POS, SUBSCRIPTION.");
+        }
+    }
+
+    // POST /api/parking/check-out?plate=34ABC123&paymentMethod=POS
     @PostMapping("/check-out")
     public ResponseEntity<ParkingRecord> checkOut(
-            @RequestParam @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Pattern(regexp = "^[A-Za-z0-9 ]{5,11}$", message = "Invalid plate format") String plate,
+            @RequestParam @jakarta.validation.constraints.NotBlank(message = "Plaka boş olamaz.") String plate,
+            @RequestParam(required = false) String paymentMethod,
+            @RequestHeader(value = "X-Device-Id", required = false) String deviceHeader,
             java.security.Principal principal) {
-        return ResponseEntity.ok(parkingService.checkOutVehicle(plate, currentUser(principal)));
+        return ResponseEntity.ok(parkingService.checkOutVehicle(
+                plate, parsePaymentMethod(paymentMethod), currentUser(principal), DeviceIds.sanitize(deviceHeader)));
     }
 
     // POST /api/parking/runaway?plate=34ABC123
     @PostMapping("/runaway")
     public ResponseEntity<Map<String, Object>> markAsRunaway(@RequestParam String plate,
+                                                             @RequestHeader(value = "X-Device-Id", required = false) String deviceHeader,
                                                              java.security.Principal principal) {
-        ParkingRecord record = parkingService.markAsRunaway(plate, currentUser(principal));
+        ParkingRecord record = parkingService.markAsRunaway(plate, currentUser(principal), DeviceIds.sanitize(deviceHeader));
         return ResponseEntity.ok(Map.of(
-                "message", "Vehicle flagged as runaway and added to blacklist.",
+                "message", "Araç kaçak olarak işaretlendi ve kara listeye eklendi.",
                 "debt", record.getFee(),
                 "record", record
         ));
@@ -163,7 +185,8 @@ public class ParkingController {
     public ResponseEntity<?> searchHistory(@RequestParam String plate) {
         List<ParkingRecord> results = parkingService.searchHistoryByPlate(plate);
         if (results.isEmpty()) {
-            return ResponseEntity.status(404).body(Map.of("message", "No history found for this plate."));
+            return ResponseEntity.status(404).body(Map.of(
+                    "error", "Bu plaka için kayıt bulunamadı.", "code", ErrorCodes.NOT_FOUND));
         }
         return ResponseEntity.ok(results);
     }
@@ -176,10 +199,12 @@ public class ParkingController {
 
     // POST /api/parking/pay?plate=34ABC123 — Citizen self-checkout
     @PostMapping("/pay")
-    public ResponseEntity<Map<String, Object>> payAndCheckOut(@RequestParam String plate) {
-        ParkingRecord record = parkingService.processPaymentAndCheckout(plate);
+    public ResponseEntity<Map<String, Object>> payAndCheckOut(@RequestParam String plate,
+                                                              @RequestHeader(value = "X-Device-Id", required = false) String deviceHeader,
+                                                              java.security.Principal principal) {
+        ParkingRecord record = parkingService.processPaymentAndCheckout(plate, currentUser(principal), DeviceIds.sanitize(deviceHeader));
         return ResponseEntity.ok(Map.of(
-                "message", "Payment successful. Vehicle checked out.",
+                "message", "Ödeme alındı. Araç çıkışı yapıldı.",
                 "paidAmount", record.getFee(),
                 "record", record
         ));

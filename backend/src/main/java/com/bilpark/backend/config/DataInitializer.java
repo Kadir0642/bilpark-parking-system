@@ -1,5 +1,7 @@
 package com.bilpark.backend.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.bilpark.backend.model.Role;
 import com.bilpark.backend.model.StreetLocation;
 import com.bilpark.backend.model.User;
@@ -14,6 +16,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
 public class DataInitializer {
+
+    private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
 
     @Bean
     public CommandLineRunner initData(UserRepository userRepository,
@@ -56,7 +60,7 @@ public class DataInitializer {
                         "[Sol Landmark - Güncelleyin]",
                         "[Sağ Landmark - Güncelleyin]"));
 
-                System.out.println("[DataInitializer] 6 working zones created.");
+                log.info("6 working zones created.");
             }
 
             // --- Seed Users (only once) ---
@@ -85,7 +89,7 @@ public class DataInitializer {
                         officerZone
                 ));
 
-                System.out.println("[DataInitializer] Default users (admin, tevfik) created.");
+                log.info("Default users (admin, tevfik) created.");
             }
         };
     }

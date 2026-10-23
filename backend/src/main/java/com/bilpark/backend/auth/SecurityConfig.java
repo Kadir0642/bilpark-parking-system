@@ -1,7 +1,9 @@
 package com.bilpark.backend.auth;
 
 import org.springframework.context.annotation.Bean;
-import org.springframework.http.HttpStatus;
+import com.bilpark.backend.common.ErrorCodes;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -15,7 +17,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -65,7 +66,10 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(e -> e
-                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)) // 401, not 403
+                        .authenticationEntryPoint((req, res, ex) -> writeJson(res, 401, ErrorCodes.UNAUTHORIZED,
+                                "Oturum gerekli veya süresi doldu. Lütfen tekrar giriş yapın.")) // 401, not 403
+                        .accessDeniedHandler((req, res, ex) -> writeJson(res, 403, ErrorCodes.FORBIDDEN,
+                                "Bu işlem için yetkiniz yok."))
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -76,13 +80,20 @@ public class SecurityConfig {
         return http.build();
     }
 
+    private static void writeJson(HttpServletResponse res, int status, String code, String message) throws IOException {
+        res.setStatus(status);
+        res.setContentType("application/json;charset=UTF-8");
+        res.setCharacterEncoding("UTF-8");
+        res.getWriter().write("{\"error\":\"" + message + "\",\"code\":\"" + code + "\"}");
+    }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         // In a real production app, restrict these to actual frontend domains
         configuration.setAllowedOrigins(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Device-Id"));
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
