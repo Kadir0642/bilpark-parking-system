@@ -7,6 +7,12 @@ import com.bilpark.backend.model.VehicleType;
 import com.bilpark.backend.model.ParkingStatus;
 import com.bilpark.backend.repository.ParkSpotRepository;
 import com.bilpark.backend.repository.ParkingRecordRepository;
+import com.bilpark.backend.repository.ZoneRepository;
+import com.bilpark.backend.repository.SubscriptionRepository;
+import com.bilpark.backend.model.Role;
+import com.bilpark.backend.model.User;
+import com.bilpark.backend.model.Zone;
+import org.springframework.security.access.AccessDeniedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -27,6 +33,12 @@ public class ParkingServiceTest {
 
     @Mock
     private ParkingRecordRepository parkingRecordRepository;
+
+    @Mock
+    private ZoneRepository zoneRepository;
+
+    @Mock
+    private SubscriptionRepository subscriptionRepository;
 
     @InjectMocks
     private ParkingService parkingService;
@@ -114,5 +126,86 @@ public class ParkingServiceTest {
         });
 
         assertTrue(exception.getMessage().contains("bulunamadı"));
+    }
+
+    // --- Officer zone restriction ---
+
+    private Zone zone(long id, StreetLocation street, int no) {
+        Zone z = new Zone(street, no, "Z" + id, "l", "r");
+        z.setId(id);
+        return z;
+    }
+
+    private User officer(Zone z) {
+        return new User("off", "x", Role.OFFICER, z);
+    }
+
+    @Test
+    void testOfficerCheckIn_WrongZone_Denied() {
+        User off = officer(zone(1, StreetLocation.TEVFIK_BEY, 1));
+        assertThrows(AccessDeniedException.class, () ->
+                parkingService.checkInVehicle("34ABC123", "SMALL", StreetLocation.TEVFIK_BEY, "LEFT", 2L, off));
+        verify(parkSpotRepository, never()).save(any(ParkSpot.class));
+    }
+
+    @Test
+    void testOfficerCheckIn_WrongStreet_Denied() {
+        User off = officer(zone(1, StreetLocation.TEVFIK_BEY, 1));
+        assertThrows(AccessDeniedException.class, () ->
+                parkingService.checkInVehicle("34ABC123", "SMALL", StreetLocation.CUMHURIYET, "LEFT", 1L, off));
+    }
+
+    @Test
+    void testOfficerCheckIn_NullZoneUsesAssigned() {
+        Zone z = zone(1, StreetLocation.TEVFIK_BEY, 1);
+        when(zoneRepository.findById(1L)).thenReturn(Optional.of(z));
+        when(parkSpotRepository.findByCurrentPlateIgnoreCase("34ABC123")).thenReturn(Optional.empty());
+        when(parkSpotRepository.save(any(ParkSpot.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        ParkSpot spot = parkingService.checkInVehicle("34ABC123", "SMALL", StreetLocation.TEVFIK_BEY, "LEFT", null, officer(z));
+
+        assertEquals(z, spot.getZone());
+    }
+
+    @Test
+    void testOfficerWithoutZone_Denied() {
+        User off = officer(null);
+        assertThrows(AccessDeniedException.class, () ->
+                parkingService.checkInVehicle("34ABC123", "SMALL", StreetLocation.TEVFIK_BEY, "LEFT", null, off));
+    }
+
+    @Test
+    void testOfficerCheckOut_OtherZone_Denied() {
+        Zone other = zone(2, StreetLocation.TEVFIK_BEY, 2);
+        ParkSpot spot = new ParkSpot("34XYZ789", StreetLocation.TEVFIK_BEY, VehicleType.SMALL, "Merkez", "Bilecik", "LEFT", other);
+        spot.setEntryTime(LocalDateTime.now());
+        when(parkSpotRepository.findByCurrentPlateIgnoreCase("34XYZ789")).thenReturn(Optional.of(spot));
+
+        User off = officer(zone(1, StreetLocation.TEVFIK_BEY, 1));
+        assertThrows(AccessDeniedException.class, () -> parkingService.checkOutVehicle("34XYZ789", off));
+        assertThrows(AccessDeniedException.class, () -> parkingService.markAsRunaway("34XYZ789", off));
+        verify(parkSpotRepository, never()).delete(any(ParkSpot.class));
+    }
+
+    @Test
+    void testOfficerCheckOut_LegacySpotWithoutZone_ChecksStreet() {
+        ParkSpot spot = new ParkSpot("34XYZ789", StreetLocation.CUMHURIYET, VehicleType.SMALL, "Merkez", "Bilecik", "LEFT", null);
+        spot.setEntryTime(LocalDateTime.now());
+        when(parkSpotRepository.findByCurrentPlateIgnoreCase("34XYZ789")).thenReturn(Optional.of(spot));
+
+        User off = officer(zone(1, StreetLocation.TEVFIK_BEY, 1));
+        assertThrows(AccessDeniedException.class, () -> parkingService.checkOutVehicle("34XYZ789", off));
+    }
+
+    @Test
+    void testAdmin_Unrestricted() {
+        Zone other = zone(2, StreetLocation.TEVFIK_BEY, 2);
+        ParkSpot spot = new ParkSpot("34XYZ789", StreetLocation.TEVFIK_BEY, VehicleType.SMALL, "Merkez", "Bilecik", "LEFT", other);
+        spot.setEntryTime(LocalDateTime.now());
+        when(parkSpotRepository.findByCurrentPlateIgnoreCase("34XYZ789")).thenReturn(Optional.of(spot));
+        when(parkingRecordRepository.save(any(ParkingRecord.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        User admin = new User("admin", "x", Role.ADMIN, null);
+        assertNotNull(parkingService.checkOutVehicle("34XYZ789", admin));
     }
 }

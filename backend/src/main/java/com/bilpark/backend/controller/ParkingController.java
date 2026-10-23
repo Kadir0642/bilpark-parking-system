@@ -35,6 +35,15 @@ public class ParkingController {
         this.parkingRecordRepository = parkingRecordRepository;
     }
 
+    // Token sahibi kullanıcıyı bulur (bölge kısıtı için)
+    private com.bilpark.backend.model.User currentUser(java.security.Principal principal) {
+        if (principal == null) {
+            throw new org.springframework.security.access.AccessDeniedException("Oturum bulunamadı.");
+        }
+        return userRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Kullanıcı bulunamadı."));
+    }
+
     @GetMapping("/bi/shifts")
     public ResponseEntity<?> getActiveShifts() {
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
@@ -82,21 +91,24 @@ public class ParkingController {
             @RequestParam StreetLocation street,
             @RequestParam(defaultValue = "SMALL") String type,
             @RequestParam(defaultValue = "LEFT") String side,
-            @RequestParam(required = false) Long zoneId) {
-        return ResponseEntity.ok(parkingService.checkInVehicle(plate, type, street, side, zoneId));
+            @RequestParam(required = false) Long zoneId,
+            java.security.Principal principal) {
+        return ResponseEntity.ok(parkingService.checkInVehicle(plate, type, street, side, zoneId, currentUser(principal)));
     }
 
     // POST /api/parking/check-out?plate=34ABC123
     @PostMapping("/check-out")
     public ResponseEntity<ParkingRecord> checkOut(
-            @RequestParam @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Pattern(regexp = "^[A-Za-z0-9 ]{5,11}$", message = "Invalid plate format") String plate) {
-        return ResponseEntity.ok(parkingService.checkOutVehicle(plate));
+            @RequestParam @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Pattern(regexp = "^[A-Za-z0-9 ]{5,11}$", message = "Invalid plate format") String plate,
+            java.security.Principal principal) {
+        return ResponseEntity.ok(parkingService.checkOutVehicle(plate, currentUser(principal)));
     }
 
     // POST /api/parking/runaway?plate=34ABC123
     @PostMapping("/runaway")
-    public ResponseEntity<Map<String, Object>> markAsRunaway(@RequestParam String plate) {
-        ParkingRecord record = parkingService.markAsRunaway(plate);
+    public ResponseEntity<Map<String, Object>> markAsRunaway(@RequestParam String plate,
+                                                             java.security.Principal principal) {
+        ParkingRecord record = parkingService.markAsRunaway(plate, currentUser(principal));
         return ResponseEntity.ok(Map.of(
                 "message", "Vehicle flagged as runaway and added to blacklist.",
                 "debt", record.getFee(),

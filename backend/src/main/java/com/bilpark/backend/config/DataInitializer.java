@@ -6,6 +6,7 @@ import com.bilpark.backend.model.User;
 import com.bilpark.backend.model.Zone;
 import com.bilpark.backend.repository.UserRepository;
 import com.bilpark.backend.repository.ZoneRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,7 +18,9 @@ public class DataInitializer {
     @Bean
     public CommandLineRunner initData(UserRepository userRepository,
                                       ZoneRepository zoneRepository,
-                                      PasswordEncoder passwordEncoder) {
+                                      PasswordEncoder passwordEncoder,
+                                      @Value("${bilpark.seed.admin-password:}") String adminPassword,
+                                      @Value("${bilpark.seed.officer-password:}") String officerPassword) {
         return args -> {
 
             // --- Seed Zones (only once) ---
@@ -58,10 +61,16 @@ public class DataInitializer {
 
             // --- Seed Users (only once) ---
             if (userRepository.count() == 0) {
+                if (adminPassword == null || adminPassword.isBlank()) {
+                    throw new IllegalStateException("ADMIN_PASSWORD env var is required to seed the admin user.");
+                }
+                if (officerPassword == null || officerPassword.isBlank()) {
+                    throw new IllegalStateException("OFFICER_PASSWORD env var is required to seed the officer user.");
+                }
                 // Admin — no zone assignment
                 userRepository.save(new User(
                         "admin",
-                        passwordEncoder.encode("admin123"),
+                        passwordEncoder.encode(adminPassword),
                         Role.ADMIN,
                         null
                 ));
@@ -71,7 +80,7 @@ public class DataInitializer {
                 Zone officerZone = zoneRepository.findByStreetAndZoneNumber(StreetLocation.TEVFIK_BEY, 1).orElse(null);
                 userRepository.save(new User(
                         "tevfik",
-                        passwordEncoder.encode("1234"),
+                        passwordEncoder.encode(officerPassword),
                         Role.OFFICER,
                         officerZone
                 ));

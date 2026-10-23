@@ -41,6 +41,14 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", errorMessage));
     }
 
+    // Spring Security denials (incl. @PreAuthorize) must stay 403, not be swallowed by RuntimeException
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> handleAccessDenied(org.springframework.security.access.AccessDeniedException ex) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", String.valueOf(ex.getMessage())));
+    }
+
     // Handles known business logic errors (e.g. "vehicle not found", "duplicate plate")
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException ex) {

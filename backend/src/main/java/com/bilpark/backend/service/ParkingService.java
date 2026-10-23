@@ -3,6 +3,9 @@ package com.bilpark.backend.service;
 import com.bilpark.backend.model.ParkSpot;
 import com.bilpark.backend.model.ParkingRecord;
 import com.bilpark.backend.model.Zone;
+import com.bilpark.backend.model.User;
+import com.bilpark.backend.model.Role;
+import org.springframework.security.access.AccessDeniedException;
 import com.bilpark.backend.model.SubscriptionStatus;
 import com.bilpark.backend.model.VehicleType;
 import com.bilpark.backend.model.StreetLocation;
@@ -52,6 +55,24 @@ public class ParkingService
     // Otoparka giris olmadan önce calisir. | UPDATE: Artık araç tipinide alıyoruz | spotId yok ve Araç geldikçe yeni kayıt doğar.
     public ParkSpot checkInVehicle(String licensePlate,String vehicleType,StreetLocation street,String side, Long zoneId)
     {
+        return checkInVehicle(licensePlate, vehicleType, street, side, zoneId, null);
+    }
+
+    // actor != null ise görevli bölge kısıtı uygulanır (ADMIN serbest)
+    public ParkSpot checkInVehicle(String licensePlate,String vehicleType,StreetLocation street,String side, Long zoneId, User actor)
+    {
+        if (isOfficer(actor)) {
+            Zone assigned = requireAssignedZone(actor);
+            if (zoneId == null) {
+                zoneId = assigned.getId();
+            } else if (!zoneId.equals(assigned.getId())) {
+                throw denied();
+            }
+            if (street != assigned.getStreet()) {
+                throw denied();
+            }
+        }
+
         // A. Güvenlik Duvarı: Çifte Kayıt Engelleme (Fail-Fast)
         Optional<ParkSpot> existingVehicle= parkSpotRepository.findByCurrentPlateIgnoreCase(licensePlate);
         if(existingVehicle.isPresent()){ // nesnenin mevcut olup olmadığına bakılıyor.
@@ -92,9 +113,14 @@ public class ParkingService
     // --- CHECK-OUT (Cikis İslemi (GERCEK TARİFE ÜZERİNDEN)) ---
     // Burasi paranin kazanildigi ve hesabin kapatildigi yerdir. | Sadece plaka ile çıkış yapılır.
     public ParkingRecord checkOutVehicle(String plate) {
+        return checkOutVehicle(plate, null);
+    }
+
+    public ParkingRecord checkOutVehicle(String plate, User actor) {
         // A. Araç Kontrolü (Validation)
         ParkSpot spot = parkSpotRepository.findByCurrentPlateIgnoreCase(plate) // "plate" adina bakiyor.
                 .orElseThrow(() -> new RuntimeException("Hata: " + plate + "plakalı araç aktif otoparkta bulunamadı!")); // yoksa hata firlatiyoruz.
+        checkSpotAccess(actor, spot);
 
         // B. Ücret Hesabi && Süre Hesabi (Dakika cinsinden) | Zaman formatının orijinali long
         long totalMinutes = Duration.between(spot.getEntryTime(), LocalDateTime.now()).toMinutes();// Java'da zaman hesaplamaları (Milisaniye, saniye, dakika) endüstri standardı olarak her zaman long ile yapılır
@@ -120,12 +146,17 @@ public class ParkingService
 
     //  ---YENİ: KAÇAK ARAÇ BİLDİRİMİ (Runaway) ---
     // Görevli "Kaçtı" butonuna bastığında çalışır.
-    @Transactional // birden fazla veritabanı işlemi gerçekleştiren ve bunların hepsinin birlikte başarılı veya başarısız olması gereken yöntemler için
     public ParkingRecord markAsRunaway(String plate){
+        return markAsRunaway(plate, null);
+    }
+
+    @Transactional // birden fazla veritabanı işlemi gerçekleştiren ve bunların hepsinin birlikte başarılı veya başarısız olması gereken yöntemler için
+    public ParkingRecord markAsRunaway(String plate, User actor){
         // A. Aracı bul
 
         ParkSpot spot = parkSpotRepository.findByCurrentPlateIgnoreCase(plate)
                 .orElseThrow(()->new RuntimeException("Hata: Araç Bulunamadı!"));
+        checkSpotAccess(actor, spot);
 
         // B. Mevcut borcunu hesapla (Ceza çarpanı KALDIRILDI)
         long totalMinutes = Duration.between(spot.getEntryTime(),LocalDateTime.now()).toMinutes();
@@ -148,6 +179,32 @@ public class ParkingService
         parkSpotRepository.delete(spot);
 
         return record;
+    }
+
+    // --- Görevli bölge kısıtı (actor null veya ADMIN ise serbest) ---
+    private boolean isOfficer(User actor) {
+        return actor != null && actor.getRole() == Role.OFFICER;
+    }
+
+    private Zone requireAssignedZone(User actor) {
+        if (actor.getAssignedZone() == null) {
+            throw denied();
+        }
+        return actor.getAssignedZone();
+    }
+
+    private AccessDeniedException denied() {
+        return new AccessDeniedException("Bu bölgede işlem yetkiniz yok.");
+    }
+
+    private void checkSpotAccess(User actor, ParkSpot spot) {
+        if (!isOfficer(actor)) return;
+        Zone assigned = requireAssignedZone(actor);
+        if (spot.getZone() != null) {
+            if (!spot.getZone().getId().equals(assigned.getId())) throw denied();
+        } else if (spot.getStreet() != assigned.getStreet()) { // eski kayıtlar: zone yok
+            throw denied();
+        }
     }
 
     // Ücret Hesaplama Motoru
