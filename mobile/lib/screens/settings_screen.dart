@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
 import '../core/format.dart' as fmt;
+import '../core/live_sync.dart';
 import '../core/theme.dart';
 import '../main.dart'; // themeNotifier, setThemeMode
 import '../widgets/bp_header.dart';
@@ -12,9 +13,8 @@ import '../widgets/status_badge.dart';
 class SettingsScreen extends StatefulWidget {
   final String? street;
   final String? zoneName;
-  final bool? online;
 
-  const SettingsScreen({super.key, this.street, this.zoneName, this.online});
+  const SettingsScreen({super.key, this.street, this.zoneName});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -32,6 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       // 401 zaten girişe yönlendirir; diğer hatalarda yerel çıkış yine de yapılır ama kullanıcı bilgilendirilir
       if (!e.isUnauthorized) warning = 'Vardiya sunucuda kapatılamadı: ${e.message}';
     }
+    await liveSync.stop();
     await ApiClient.clearToken();
     AppConstants.clearAuth();
     final prefs = await SharedPreferences.getInstance();
@@ -134,23 +135,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 20),
                 _sectionTitle(c, 'CİHAZ VE BAĞLANTI'),
                 _card(c, [
-                  if (widget.online != null)
-                    _row(
-                      c,
-                      'Sunucu',
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(color: widget.online! ? c.success : c.danger, shape: BoxShape.circle)),
-                          const SizedBox(width: 8),
-                          Text(widget.online! ? 'Bağlı' : 'Bağlantı yok',
-                              style: TextStyle(fontWeight: FontWeight.w700, color: widget.online! ? c.success : c.danger)),
-                        ],
-                      ),
+                  _row(
+                    c,
+                    'Sunucu',
+                    ValueListenableBuilder<LiveStatus>(
+                      valueListenable: liveSync.status,
+                      builder: (_, st, _) {
+                        final (Color col, String label) = switch (st) {
+                          LiveStatus.online => (c.success, 'Bağlı'),
+                          LiveStatus.connecting => (c.text2, 'Bağlanılıyor…'),
+                          LiveStatus.reconnecting => (c.warning, 'Yeniden bağlanıyor…'),
+                          LiveStatus.offline => (c.danger, 'Bağlantı yok'),
+                        };
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(width: 10, height: 10, decoration: BoxDecoration(color: col, shape: BoxShape.circle)),
+                            const SizedBox(width: 8),
+                            Text(label, style: TextStyle(fontWeight: FontWeight.w700, color: col)),
+                          ],
+                        );
+                      },
                     ),
+                  ),
                   _row(
                     c,
                     'Cihaz kimliği',

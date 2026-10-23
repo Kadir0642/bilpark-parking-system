@@ -25,5 +25,5 @@ COPY --from=build /app/target/*.jar app.jar
 # 1.aşamadaki tüm kaynak kodlar ve Maven araçları çöpe gitti (final imajında yer kaplamayacak)
 EXPOSE 8080
 # 8080 portunda çalışacak.
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Duser.language=en", "-Duser.country=US", "-jar", "app.jar"]
 # Konteynar(Run ettiğimiz canlı hali) ayağa kalktığında anda ilk ve tek çalışacak komut javayı ve bu JAR dosyasını çalıştır olucak.

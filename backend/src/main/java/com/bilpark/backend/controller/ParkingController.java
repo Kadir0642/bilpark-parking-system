@@ -130,11 +130,14 @@ public class ParkingController {
     public ResponseEntity<Map<String, Object>> markAsRunaway(@RequestParam String plate,
                                                              @RequestHeader(value = "X-Device-Id", required = false) String deviceHeader,
                                                              java.security.Principal principal) {
-        ParkingRecord record = parkingService.markAsRunaway(plate, currentUser(principal), DeviceIds.sanitize(deviceHeader));
+        ParkingService.RunawayResult result = parkingService.markAsRunawayDetailed(
+                plate, currentUser(principal), DeviceIds.sanitize(deviceHeader));
+        ParkingRecord record = result.record();
         return ResponseEntity.ok(Map.of(
                 "message", "Araç kaçak olarak işaretlendi ve kara listeye eklendi.",
                 "debt", record.getFee(),
-                "record", record
+                "record", record,
+                "segments", com.bilpark.backend.fee.DaySegment.toMaps(result.segments())
         ));
     }
 
@@ -195,6 +198,13 @@ public class ParkingController {
     @GetMapping("/debt")
     public ResponseEntity<Map<String, Object>> getDebt(@RequestParam String plate) {
         return ResponseEntity.ok(parkingService.getDebtByPlate(plate));
+    }
+
+    // GET /api/parking/fee-preview?plate=34ABC123 — officer: live fee of a parked vehicle in own zone
+    @GetMapping("/fee-preview")
+    public ResponseEntity<Map<String, Object>> feePreview(@RequestParam String plate,
+                                                          java.security.Principal principal) {
+        return ResponseEntity.ok(parkingService.getFeePreview(plate, currentUser(principal)));
     }
 
     // POST /api/parking/pay?plate=34ABC123 — Citizen self-checkout

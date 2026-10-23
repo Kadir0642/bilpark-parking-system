@@ -36,6 +36,9 @@
         .tariff .th { font-size: 13px; font-weight: 600; color: var(--text-2); }
         .tariff .num { text-align: right; font-weight: 700; }
         .tariff-note { font-size: 14px; color: var(--text-2); margin: 0; }
+        #tariffBody { display: flex; flex-direction: column; gap: var(--s-3); }
+        .breakdown-ranges { padding: 0 var(--s-3) var(--s-2); display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-3); font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+        .breakdown-ranges b { color: var(--text); font-weight: 600; }
 
         .spinner { display: none; width: 20px; height: 20px; border: 3px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
         [aria-busy="true"] .spinner { display: inline-block; }
@@ -89,19 +92,6 @@
                     </button>
                 </form>
             </div>
-
-            <section class="card" aria-labelledby="tariffTitle">
-                <div class="card-body">
-                    <h2 id="tariffTitle">Tarife</h2>
-                    <div class="tariff">
-                        <span class="th">Araç</span><span class="th num">İlk saat</span><span class="th num">Sonraki saat</span>
-                        <span>Otomobil</span><span class="num">₺25</span><span class="num">₺15</span>
-                        <span>Kamyonet</span><span class="num">₺50</span><span class="num">₺30</span>
-                    </div>
-                    <p class="tariff-note">İlk 5 dakika ücretsizdir. Aboneler ücret ödemez.</p>
-                    <p class="tariff-note" id="paidHoursNote" hidden></p>
-                </div>
-            </section>
         </section>
 
         <!-- Görünüm 2: sonuç -->
@@ -132,7 +122,14 @@
                 <div class="card-body">
                     <h2 id="breakdownTitle">Süre dökümü</h2>
                     <div class="breakdown" id="breakdown"></div>
-                    <p class="tariff-note" id="breakdownNote" hidden>Gün gün ücretli/ücretsiz döküm tarife güncellemesiyle gelecek.</p>
+                    <p class="tariff-note" id="tariffNote" hidden>Tutar önceki tarifeyle hesaplandı.</p>
+                </div>
+            </section>
+
+            <section class="card" id="tariffCard" aria-labelledby="tariffTitle" hidden>
+                <div class="card-body">
+                    <h2 id="tariffTitle">Tarife</h2>
+                    <div id="tariffBody"></div>
                 </div>
             </section>
 
@@ -202,12 +199,6 @@
         const time = d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', hour12: false });
         return day + ' ' + time;
     }
-    function fmtDay(s) {
-        const d = new Date(String(s).length <= 10 ? s + 'T00:00:00' : s);
-        if (isNaN(d)) return String(s);
-        return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' });
-    }
-
     // 11KM4471 -> 11 KM 4471 (tabeladaki gibi okunur)
     function fmtPlate(p) {
         const s = String(p || '').replace(/\s+/g, '').toUpperCase();
@@ -222,29 +213,101 @@
         return r;
     }
 
+    // Sunucu saatleri Europe/Istanbul yerel saatidir (saat dilimi eki yok); dönüşüm yapılmaz, metinden okunur.
+    function hhmm(iso) { return String(iso).slice(11, 16); }
+    function dayOf(iso) { return String(iso).slice(0, 10); }
+    // Ertesi günün 00:00'ı aralık sonunda 24:00 yazılır
+    function endLabel(seg) {
+        const t = hhmm(seg.end);
+        return (t === '00:00' && dayOf(seg.end) > String(seg.date)) ? '24:00' : t;
+    }
+    function fmtDate(iso) {
+        const p = String(iso).split(/[-T:]/).map(Number);
+        const MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+        return p.length >= 3 && p[1] ? p[2] + ' ' + MONTHS[p[1] - 1] : '';
+    }
+
+    // Gün gün döküm: segments gün (date) bazında gruplanır
     function renderBreakdown(data) {
         const box = $('breakdown');
         box.textContent = '';
-        const note = $('breakdownNote');
-        if (Array.isArray(data.breakdown) && data.breakdown.length) {
-            note.hidden = true;
-            box.appendChild(row('breakdown-head', ['Gün', 'Ücretli', 'Ücretsiz']));
-            let paid = 0, free = 0;
-            data.breakdown.forEach(b => {
-                paid += Number(b.paidMinutes) || 0;
-                free += Number(b.freeMinutes) || 0;
-                box.appendChild(row('', [fmtDay(b.date), fmtDuration(b.paidMinutes), fmtDuration(b.freeMinutes)]));
-            });
-            box.appendChild(row('breakdown-total', ['Toplam', fmtDuration(paid), fmtDuration(free)]));
-        } else {
-            note.hidden = false;
+        const segs = Array.isArray(data.segments) ? data.segments : [];
+        if (!segs.length) {
             const total = row('breakdown-total', ['Toplam süre', fmtDuration(data.durationMinutes)]);
             total.style.gridTemplateColumns = '1fr auto';
             box.appendChild(total);
+            return;
+        }
+        const days = [];
+        const byDate = {};
+        segs.forEach(sg => {
+            let d = byDate[sg.date];
+            if (!d) { d = byDate[sg.date] = { date: sg.date, paid: 0, free: 0, list: [] }; days.push(d); }
+            if (sg.paid) d.paid += Number(sg.minutes) || 0; else d.free += Number(sg.minutes) || 0;
+            d.list.push(sg);
+        });
+        box.appendChild(row('breakdown-head', ['Gün', 'Ücretli', 'Ücretsiz']));
+        let paid = 0, free = 0;
+        days.forEach(d => {
+            paid += d.paid; free += d.free;
+            box.appendChild(row('', [fmtDate(d.date), fmtDuration(d.paid), fmtDuration(d.free)]));
+            const rg = document.createElement('div');
+            rg.className = 'breakdown-ranges';
+            d.list.forEach(sg => {
+                const it = document.createElement('span');
+                const b = document.createElement('b');
+                b.textContent = hhmm(sg.start) + '–' + endLabel(sg);
+                it.appendChild(b);
+                it.appendChild(document.createTextNode(sg.paid ? ' ücretli' : ' ücretsiz'));
+                rg.appendChild(it);
+            });
+            box.appendChild(rg);
+        });
+        // Sunucunun toplamları varsa onlar kullanılır
+        if (data.paidMinutes != null) paid = Number(data.paidMinutes);
+        if (data.freeMinutes != null) free = Number(data.freeMinutes);
+        box.appendChild(row('breakdown-total', ['Toplam', fmtDuration(paid), fmtDuration(free)]));
+    }
+
+    // Tarife özeti; hata/eksik veri durumunda kart sessizce gizlenir
+    function tariffText(t) {
+        return 'Otomobil: ilk saat ' + fmtMoney(t.small.firstHour) + ', sonraki her saat ' + fmtMoney(t.small.extraHour)
+            + ' · Kamyonet: ilk saat ' + fmtMoney(t.large.firstHour) + ', sonraki her saat ' + fmtMoney(t.large.extraHour);
+    }
+    function renderTariff(t, tariffId) {
+        const card = $('tariffCard'), body = $('tariffBody');
+        body.textContent = '';
+        $('tariffNote').hidden = true;
+        try {
+            if (!t || !t.small || !t.large) throw new Error('tarife yok');
+            // Tutar farklı bir tarife sürümüyle hesaplandıysa özet gösterilmez
+            if (tariffId != null && t.id != null && tariffId !== t.id) {
+                $('tariffNote').hidden = false;
+                throw new Error('tarife sürümü farklı');
+            }
+            const p1 = document.createElement('p');
+            p1.className = 'tariff-note';
+            p1.textContent = tariffText(t);
+            const p2 = document.createElement('p');
+            p2.className = 'tariff-note';
+            const ps = t.paidStart || '08:00', pe = t.paidEnd || '22:00';
+            p2.textContent = 'İlk ' + (t.freeMinutes != null ? t.freeMinutes : 5) + ' dakika ücretsiz · Ücretli saatler ' + ps + '–' + (pe === '00:00' ? '24:00' : pe) + ', dışında ücretsiz. Aboneler ücret ödemez.';
+            body.appendChild(p1);
+            body.appendChild(p2);
+            const u = t.upcoming;
+            if (u && u.small && u.large && u.effectiveFrom) {
+                const p3 = document.createElement('p');
+                p3.className = 'alert alert-info';
+                p3.textContent = fmtDate(u.effectiveFrom) + ' ' + hhmm(u.effectiveFrom) + ' itibarıyla yeni tarife: ' + tariffText(u);
+                body.appendChild(p3);
+            }
+            card.hidden = false;
+        } catch (e) {
+            card.hidden = true;
         }
     }
 
-    function renderResult(data) {
+    function renderResult(data, tariff) {
         $('resPlate').textContent = fmtPlate(data.plate || lastPlate);
         $('resStreet').textContent = data.streetName || '';
         const sub = !!data.hasSubscription;
@@ -255,11 +318,31 @@
         $('resEntry').textContent = (entry ? 'Giriş ' + entry + ' · ' : '') + 'toplam ' + fmtDuration(data.durationMinutes);
         $('resAsOf').textContent = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' itibarıyla';
         renderBreakdown(data);
-        if (data.paidHours) {
-            $('paidHoursNote').textContent = 'Ücretli saatler 08:00–22:00. Gece ücretsizdir.';
-            $('paidHoursNote').hidden = false;
-        }
+        renderTariff(tariff, data.tariffId);
         showView('view-result');
+    }
+
+    // Tarife sayfa ömrü boyunca bir kez başarıyla alınırsa önbellekte tutulur
+    let tariffCache = null;
+    async function fetchTariff() {
+        if (tariffCache) return tariffCache;
+        try {
+            const r = await fetch(CONFIG.BASE_URL + '/api/tariff/current');
+            if (!r.ok) return null;
+            tariffCache = await r.json();
+            return tariffCache;
+        } catch (e) { return null; }
+    }
+    async function fetchDebt(plate) {
+        const response = await fetch(API + '/debt?plate=' + encodeURIComponent(plate));
+        let data = {};
+        const ct = response.headers.get('content-type');
+        if (ct && ct.includes('application/json')) {
+            data = await response.json();
+        } else if (response.ok) {
+            data = { error: 'Beklenmeyen bir sunucu yanıtı alındı.' };
+        }
+        return { ok: response.ok, data };
     }
 
     async function queryDebt(fromRefresh) {
@@ -277,16 +360,12 @@
         setBusy(true);
 
         try {
-            const response = await fetch(API + '/debt?plate=' + encodeURIComponent(plate));
-            let data = {};
-            const ct = response.headers.get('content-type');
-            if (ct && ct.includes('application/json')) {
-                data = await response.json();
-            } else if (response.ok) {
-                data = { error: 'Beklenmeyen bir sunucu yanıtı alındı.' };
-            }
-            if (response.ok && !data.error) {
-                renderResult(data);
+            // Borç ve tarife paralel istenir; tarife hatası tutarı etkilemez
+            const [debt, tariff] = await Promise.all([fetchDebt(plate), fetchTariff()]);
+            const data = debt.data;
+            if (debt.ok && !data.error) {
+                // Borç yanıtı kendi tarifesini taşıyorsa o kullanılır
+                renderResult(data, (data.tariff && data.tariff.small) ? data.tariff : tariff);
             } else {
                 showView('view-search');
                 showError(data.error || 'Bu plakaya ait aktif park kaydı bulunamadı.');

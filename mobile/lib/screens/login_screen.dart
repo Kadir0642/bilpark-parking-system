@@ -1,43 +1,41 @@
 import 'package:flutter/material.dart';
 import '../core/api_client.dart';
-import '../core/constants.dart';
+import '../core/streets.dart';
 import '../core/theme.dart';
 import '../main.dart';
 import '../widgets/bp_header.dart';
 
 /// Saha (cadde + bölüm) seçimi: tüm sahalar tek ekranda büyük kartlar olarak listelenir.
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  /// Cadde listesini getirir (testlerde ağsız değiştirilebilir). Varsayılan: GET /streets.
+  final Future<List<StreetInfo>> Function({bool force})? loader;
+
+  const LoginScreen({super.key, this.loader});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _ZoneChoice {
-  final String street; // görünen cadde adı
-  final dynamic zone; // null: bölümsüz (tüm cadde)
+  final StreetInfo street;
+  final ZoneInfo? zone; // null: bölümsüz (tüm cadde)
   const _ZoneChoice(this.street, this.zone);
 
-  String get title {
-    final z = zone == null ? 'Tüm cadde' : (zone['zoneName'] ?? 'Bölüm').toString();
-    return z;
-  }
+  String get title => zone == null ? 'Tüm cadde' : (zone!.zoneName.isEmpty ? 'Bölüm' : zone!.zoneName);
 
-  String get fullTitle => '${street.replaceAll(' Caddesi', '')} — $title';
+  String get fullTitle => '${street.displayName.replaceAll(' Caddesi', '')} — $title';
+
+  /// Tohum verideki "[Sol Landmark - Güncelleyin]" gibi yer tutucular gizlenir.
   String? get landmark {
-    final l = zone == null ? null : zone['landmarkNames'];
-    return l is String && l.isNotEmpty ? l : null;
+    final l = zone?.landmarks;
+    return l == null || l.startsWith('[') ? null : l;
   }
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  static const String _region = 'Bilecik';
-  static const String _neighborhood = 'Merkez';
-  // BİLPARK 2.0 gerçek veritabanı haritası
-  static const List<String> _streets = ['Tevfik Bey Caddesi', 'Ali Rıza Özkay Caddesi', 'Cumhuriyet Caddesi'];
-
-  final Map<String, List<_ZoneChoice>> _choices = {};
-  final Map<String, String> _errors = {};
+  List<_ZoneChoice> _flat = const [];
+  List<StreetInfo> _streets = const [];
+  String? _error;
   bool _loading = true;
   _ZoneChoice? _selected;
 
@@ -47,29 +45,35 @@ class _LoginScreenState extends State<LoginScreen> {
     _loadAll();
   }
 
-  Future<void> _loadAll() async {
+  Future<void> _loadAll({bool force = false}) async {
     setState(() {
       _loading = true;
       _selected = null;
-      _errors.clear();
-      _choices.clear();
+      _error = null;
     });
-    await Future.wait(_streets.map(_loadStreet));
-    if (!mounted) return;
-    setState(() => _loading = false);
-  }
-
-  Future<void> _loadStreet(String street) async {
+    List<StreetInfo> list;
     try {
-      final data = await ApiClient.get('/zones/by-street', query: {'street': AppConstants.toBackendEnum(street)});
-      final zones = data is List ? data : <dynamic>[];
-      _choices[street] = zones.isEmpty ? [_ZoneChoice(street, null)] : zones.map((z) => _ZoneChoice(street, z)).toList();
+      list = await (widget.loader ?? StreetStore.load)(force: force);
     } on ApiException catch (e) {
-      _errors[street] = e.message;
+      list = const [];
+      _error = e.message;
+    } catch (_) {
+      list = const [];
     }
+    if (!mounted) return;
+    final sorted = [...list]..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    setState(() {
+      _streets = sorted;
+      _flat = [
+        for (final st in sorted)
+          if (st.zones.isEmpty) _ZoneChoice(st, null) else for (final z in st.zones) _ZoneChoice(st, z),
+      ];
+      if (sorted.isEmpty) _error ??= 'Saha listesi alınamadı. Bağlantınızı kontrol edin.';
+      _loading = false;
+    });
   }
 
-  int get _zoneCount => _choices.values.fold(0, (a, l) => a + l.length);
+  List<_ZoneChoice> _choicesOf(StreetInfo st) => [for (final ch in _flat) if (ch.street.id == st.id && ch.street.code == st.code) ch];
 
   void _start() {
     final s = _selected;
@@ -78,11 +82,10 @@ class _LoginScreenState extends State<LoginScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => MainContainer(
-          region: _region,
-          neighborhood: _neighborhood,
-          street: s.street,
-          zoneId: s.zone != null ? s.zone['id'] : null,
-          zoneName: s.zone != null ? s.zone['zoneName'] : null,
+          streetCode: s.street.code,
+          streetName: s.street.displayName,
+          zoneId: s.zone?.id,
+          zoneName: s.zone?.zoneName,
         ),
       ),
     );
@@ -106,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     Icon(Icons.location_on_outlined, size: 18, color: c.text2),
                     const SizedBox(width: 6),
-                    Text(_loading ? '$_region · $_neighborhood' : '$_region · $_neighborhood · $_zoneCount saha',
+                    Text(_loading ? 'Sahalar yükleniyor' : '${_flat.length} saha',
                         style: TextStyle(fontSize: 15, color: c.text2)),
                   ],
                 ),
@@ -116,23 +119,23 @@ class _LoginScreenState extends State<LoginScreen> {
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
-                : ListView(
-                    padding: const EdgeInsets.all(BpSize.screenPad),
-                    children: [
-                      for (final street in _streets) ...[
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Text(street, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: c.text2)),
-                        ),
-                        if (_errors.containsKey(street))
-                          _errorCard(c, _errors[street]!)
-                        else
-                          for (final choice in _choices[street] ?? const <_ZoneChoice>[])
-                            Padding(padding: const EdgeInsets.only(bottom: 8), child: _zoneCard(c, choice)),
-                        const SizedBox(height: 12),
-                      ],
-                    ],
-                  ),
+                : _error != null
+                    ? ListView(padding: const EdgeInsets.all(BpSize.screenPad), children: [_errorCard(c, _error!)])
+                    : ListView(
+                        padding: const EdgeInsets.all(BpSize.screenPad),
+                        children: [
+                          for (final st in _streets) ...[
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Text(st.displayName,
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: c.text2)),
+                            ),
+                            for (final choice in _choicesOf(st))
+                              Padding(padding: const EdgeInsets.only(bottom: 8), child: _zoneCard(c, choice)),
+                            const SizedBox(height: 12),
+                          ],
+                        ],
+                      ),
           ),
           Container(
             decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
@@ -173,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
           Icon(Icons.error_outline, color: c.onDangerSoft),
           const SizedBox(width: 10),
           Expanded(child: Text(message, style: TextStyle(fontSize: 14, color: c.onDangerSoft))),
-          TextButton(onPressed: _loadAll, child: const Text('Tekrar dene')),
+          TextButton(onPressed: () => _loadAll(force: true), child: const Text('Tekrar dene')),
         ],
       ),
     );

@@ -57,6 +57,11 @@ public interface ParkingRecordRepository extends JpaRepository<ParkingRecord, Lo
     // Bu sayede bir araç caddeye girdiğinde "Geçmişten kaçak borcu var mı? " diye sorabileceğiz.!
     List<ParkingRecord> findByLicensePlateAndStatus(String licensePlate, ParkingStatus status);
 
+    // 4.1 Ödenmemiş kaçak borç toplamı, plaka başına tek sorguda: [String plate, Double debt] satırları
+    @Query("SELECT r.licensePlate, COALESCE(SUM(r.fee), 0) FROM ParkingRecord r WHERE r.licensePlate IN :plates "
+            + "AND r.status = com.bilpark.backend.model.ParkingStatus.RUNAWAY AND r.debtPaid = false GROUP BY r.licensePlate")
+    List<Object[]> sumUnpaidRunawayDebtByPlate(@Param("plates") java.util.Collection<String> plates);
+
     // 5. Plakaya göre geçmiş fişleri getir. (Arama çubuğu için; temizlenmiş plaka veya parçası)
     List<ParkingRecord> findByLicensePlateContainingOrderByEntryTimeDesc(String platePart);
 

@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import '../core/format.dart';
+import '../core/live_sync.dart';
 import '../core/theme.dart';
 
-/// Bağlantı durumu bandı. [online] null ise ilk yanıt bekleniyor demektir.
+/// Bağlantı durumu bandı (canlı senkron durumuna göre renk ve metin).
 class ConnectionBanner extends StatelessWidget {
-  final bool? online;
-  final DateTime? lastUpdate;
+  final LiveStatus status;
+  final DateTime? lastSync;
   final int pending;
 
-  const ConnectionBanner({super.key, required this.online, this.lastUpdate, this.pending = 0});
+  const ConnectionBanner({super.key, required this.status, this.lastSync, this.pending = 0});
 
   @override
   Widget build(BuildContext context) {
@@ -17,21 +18,28 @@ class ConnectionBanner extends StatelessWidget {
     final Color fg;
     final Color dot;
     final String text;
-    if (online == null) {
-      bg = c.surface2;
-      fg = c.text2;
-      dot = c.borderStrong;
-      text = 'Bağlanılıyor…';
-    } else if (online == true) {
-      bg = c.successSoft;
-      fg = c.onSuccessSoft;
-      dot = c.success;
-      text = lastUpdate != null ? 'Çevrimiçi · ${formatHm(lastUpdate!)} güncellendi' : 'Çevrimiçi';
-    } else {
-      bg = c.dangerSoft;
-      fg = c.onDangerSoft;
-      dot = c.danger;
-      text = lastUpdate != null ? 'Bağlantı yok · son veri ${formatHm(lastUpdate!)}' : 'Bağlantı yok';
+    final sync = lastSync != null ? ' · son senkron ${formatHm(lastSync!)}' : '';
+    switch (status) {
+      case LiveStatus.connecting:
+        bg = c.surface2;
+        fg = c.text2;
+        dot = c.borderStrong;
+        text = 'Bağlanılıyor…';
+      case LiveStatus.online:
+        bg = c.successSoft;
+        fg = c.onSuccessSoft;
+        dot = c.success;
+        text = 'Çevrimiçi$sync';
+      case LiveStatus.reconnecting:
+        bg = c.warningSoft;
+        fg = c.onWarningSoft;
+        dot = c.warning;
+        text = 'Yeniden bağlanıyor…$sync';
+      case LiveStatus.offline:
+        bg = c.dangerSoft;
+        fg = c.onDangerSoft;
+        dot = c.danger;
+        text = 'Çevrimdışı$sync';
     }
     return Semantics(
       liveRegion: true,
@@ -48,6 +56,26 @@ class ConnectionBanner extends StatelessWidget {
               Text('$pending işlem bekliyor', style: TextStyle(color: fg, fontSize: 14, fontWeight: FontWeight.w600)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Global (veya verilen) [LiveSync] durumunu dinleyen bant.
+class LiveConnectionBanner extends StatelessWidget {
+  final int pending;
+  final LiveSync? sync;
+
+  const LiveConnectionBanner({super.key, this.pending = 0, this.sync});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = sync ?? liveSync;
+    return ValueListenableBuilder<LiveStatus>(
+      valueListenable: s.status,
+      builder: (_, st, _) => ValueListenableBuilder<DateTime?>(
+        valueListenable: s.lastSync,
+        builder: (_, ls, _) => ConnectionBanner(status: st, lastSync: ls, pending: pending),
       ),
     );
   }

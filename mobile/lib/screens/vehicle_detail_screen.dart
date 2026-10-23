@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import '../core/constants.dart';
+import '../core/api_client.dart';
 import '../core/format.dart';
+import '../core/tariff.dart';
 import '../core/theme.dart';
 import '../widgets/bp_header.dart';
+import '../widgets/bp_snack.dart';
 import '../widgets/day_breakdown.dart';
 import '../widgets/plate_badge.dart';
 import '../widgets/status_badge.dart';
@@ -15,21 +17,19 @@ import '../widgets/toggle_tile.dart';
 class VehicleDetailScreen extends StatefulWidget {
   final dynamic vehicle;
 
-  /// Sunucu aboneliği bildirmediyse çağrılır (`/subscription/check`). true/false; belirlenemezse null.
-  final Future<bool?> Function() loadHasSubscription;
-
-  /// Canlı ücret (sunucu mantığının aynısı).
-  final double Function(String type, DateTime entry) feeOf;
-  final void Function(String method) onPay;
+  /// Ödeme yöntemi ve sunucu tutarıyla çağrılır (abonelikte tutar 0).
+  final void Function(String method, double amount) onPay;
   final VoidCallback onRunaway;
+
+  /// Ücret önizlemesi (GET /parking/fee-preview). Testte değiştirilebilir.
+  final Future<Map<String, dynamic>> Function(String plate)? loadPreview;
 
   const VehicleDetailScreen({
     super.key,
     required this.vehicle,
-    required this.loadHasSubscription,
-    required this.feeOf,
     required this.onPay,
     required this.onRunaway,
+    this.loadPreview,
   });
 
   @override
@@ -45,7 +45,25 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
   bool _picked = false;
   Timer? _ticker;
 
+  // Sunucu ücret önizlemesi
+  FeeResult? _result;
+  bool _loading = true;
+  bool _fetching = false;
+  String? _error;
+  DateTime? _lastFetch;
+  double? _estAtFetch; // son istekteki yerel tahmin: aynı tahmin için tekrar istek atılmaz
+
   bool get _isLarge => _type == 'LARGE';
+
+  Future<Map<String, dynamic>> _defaultPreview(String plate) async {
+    final data = await ApiClient.get('/parking/fee-preview', query: {'plate': plate});
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  double? _estimateNow() {
+    final t = TariffStore.current.value;
+    return t == null ? null : estimateFee(t, _type, _entry, DateTime.now()).fee;
+  }
 
   @override
   void initState() {
@@ -53,26 +71,86 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     final known = widget.vehicle['hasSubscription'];
     _hasSub = known is bool ? known : null;
     _method = _hasSub == true ? 'SUBSCRIPTION' : 'CASH';
-    if (_hasSub == null) {
-      widget.loadHasSubscription().then((v) {
-        if (!mounted) return;
-        setState(() {
-          _hasSub = v;
-          if (!_picked && v == true) _method = 'SUBSCRIPTION';
-          if (v == false && _method == 'SUBSCRIPTION') _method = 'CASH';
-        });
-      });
-    }
-    // Her saniye yalnızca bu sayfa yenilenir
+    TariffStore.current.addListener(_onTariff);
+    _fetch();
+    // Her saniye yalnızca "İçeride" saati yenilenir; ağ isteği ancak saat sınırı aşılınca atılır
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      setState(() {});
+      _maybeRefresh();
     });
   }
 
   @override
   void dispose() {
     _ticker?.cancel();
+    TariffStore.current.removeListener(_onTariff);
     super.dispose();
+  }
+
+  void _onTariff() {
+    if (mounted) _fetch(silent: true);
+  }
+
+  /// Yerel tahmin son sunucu tutarından ayrıldıysa (saat/ücretli pencere sınırı) en çok 30 sn'de bir yeniler.
+  void _maybeRefresh() {
+    final res = _result;
+    final est = _estimateNow();
+    if (_fetching || res == null || est == null) return;
+    if (est == res.fee || est == _estAtFetch) return;
+    final last = _lastFetch;
+    if (last != null && DateTime.now().difference(last) < const Duration(seconds: 30)) return;
+    _fetch(silent: true);
+  }
+
+  Future<void> _fetch({bool silent = false}) async {
+    if (_fetching) return;
+    _fetching = true;
+    _lastFetch = DateTime.now();
+    _estAtFetch = _estimateNow();
+    if (!silent || _result == null) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+    try {
+      final json = await (widget.loadPreview ?? _defaultPreview)(_plate);
+      if (!mounted) return;
+      final res = FeeResult.fromJson(json);
+      final sub = json['hasSubscription'];
+      setState(() {
+        _result = res;
+        _loading = false;
+        _error = null;
+        if (sub is bool) {
+          _hasSub = sub;
+          if (!_picked && sub) _method = 'SUBSCRIPTION';
+          if (!sub && _method == 'SUBSCRIPTION') _method = 'CASH';
+        }
+      });
+    } on ApiException catch (e) {
+      if (!mounted || e.isUnauthorized) return;
+      if (e.code == 'VEHICLE_NOT_FOUND' || e.statusCode == 404) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            bpSnackBar(context, '${formatPlate(_plate)} artık içeride değil.', tone: BadgeTone.warning));
+        Navigator.of(context).maybePop();
+        return;
+      }
+      _onError(e.message);
+    } catch (_) {
+      if (mounted) _onError('Ücret hesabı alınamadı.');
+    } finally {
+      _fetching = false;
+    }
+  }
+
+  void _onError(String msg) {
+    setState(() {
+      _loading = false;
+      // Eldeki sunucu sonucu varsa korunur; sessiz yenileme hatası ekranı bozmaz
+      if (_result == null) _error = msg;
+    });
   }
 
   void _pick(String m) => setState(() {
@@ -80,9 +158,9 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
         _picked = true;
       });
 
-  void _pay() {
+  void _pay(double amount) {
     Navigator.pop(context);
-    widget.onPay(_method);
+    widget.onPay(_method, amount);
   }
 
   void _runaway() {
@@ -119,11 +197,16 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     final c = context.bp;
     final now = DateTime.now();
     final diff = now.difference(_entry);
-    final fee = widget.feeOf(_type, _entry);
-    final amount = _method == 'SUBSCRIPTION' ? 0.0 : fee;
+    final tariff = TariffStore.current.value;
+    final res = _result;
+    final isSubPay = _method == 'SUBSCRIPTION';
+    // Sunucu tutarı; önizleme alınamadıysa tahmin (düğmede "tahmini" yazar)
+    final double? serverFee = res?.fee;
+    final double? estFee = _estimateNow();
+    final bool isEstimate = serverFee == null && !_loading;
+    final double? payable = isSubPay ? 0.0 : (serverFee ?? (isEstimate ? estFee : null));
+    final amountText = payable == null ? '—' : formatMoney(payable);
     final debt = widget.vehicle['accumulatedDebt'];
-    final base = _isLarge ? AppConstants.largeBaseFee : AppConstants.smallBaseFee;
-    final extra = _isLarge ? AppConstants.largeExtraFee : AppConstants.smallExtraFee;
     final side = widget.vehicle['side'] == 'RIGHT' ? 'Sağ kaldırım' : 'Sol kaldırım';
     final subAvailable = _hasSub != false;
 
@@ -175,17 +258,19 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: _tile(c, 'Ödenecek tutar', formatMoney(amount),
+                        child: _tile(c, 'Ödenecek tutar', amountText,
                             bg: c.successSoft, fg: c.onSuccessSoft, border: c.success),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   DayBreakdown(
-                    total: diff,
-                    breakdown: widget.vehicle['breakdown'] is List ? widget.vehicle['breakdown'] as List : null,
-                    footnote:
-                        'Tarife: ilk saat ${formatMoney(base)}, sonraki her saat ${formatMoney(extra)} · ilk ${AppConstants.gracePeriodSeconds ~/ 60} dk ücretsiz',
+                    segments: res?.segments,
+                    fee: serverFee,
+                    loading: _loading && res == null,
+                    error: res == null ? _error : null,
+                    onRetry: () => _fetch(),
+                    footnote: tariff == null ? null : tariffSummary(tariff, _type),
                   ),
                   const SizedBox(height: 16),
                   const Text('Ödeme yöntemi', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
@@ -235,8 +320,8 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                 children: [
                   FilledButton(
                     style: FilledButton.styleFrom(backgroundColor: c.success, foregroundColor: c.onSuccess),
-                    onPressed: _pay,
-                    child: Text('Ödemeyi al · ${formatMoney(amount)} ${methodLabel(_method)}',
+                    onPressed: payable == null ? null : () => _pay(payable),
+                    child: Text('Ödemeyi al · $amountText ${methodLabel(_method)}${isEstimate && !isSubPay ? ' (tahmini)' : ''}',
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                   ),
                   const SizedBox(height: 10),

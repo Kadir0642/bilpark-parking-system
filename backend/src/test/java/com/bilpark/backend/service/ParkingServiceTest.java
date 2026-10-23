@@ -9,6 +9,10 @@ import com.bilpark.backend.model.PaymentMethod;
 import com.bilpark.backend.model.Role;
 import com.bilpark.backend.model.StreetLocation;
 import com.bilpark.backend.model.Subscription;
+import com.bilpark.backend.model.SyncEventType;
+import com.bilpark.backend.model.Tariff;
+import com.bilpark.backend.model.TariffStatus;
+import com.bilpark.backend.sync.ChangePublisher;
 import com.bilpark.backend.model.SubscriptionStatus;
 import com.bilpark.backend.model.User;
 import com.bilpark.backend.model.VehicleType;
@@ -19,14 +23,16 @@ import com.bilpark.backend.repository.SubscriptionRepository;
 import com.bilpark.backend.repository.ZoneRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +40,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 public class ParkingServiceTest {
@@ -50,17 +58,43 @@ public class ParkingServiceTest {
     @Mock
     private SubscriptionRepository subscriptionRepository;
 
-    @InjectMocks
+    @Mock
+    private TariffService tariffService;
+
+    @Mock
+    private ChangePublisher changePublisher;
+
+    // Wednesday 2026-10-21 14:00 Europe/Istanbul
+    private static final ZoneId ISTANBUL = ZoneId.of("Europe/Istanbul");
+    private final Clock clock = fixedClock(LocalDateTime.of(2026, 10, 21, 14, 0));
+
     private ParkingService parkingService;
+
+    private static Clock fixedClock(LocalDateTime at) {
+        return Clock.fixed(at.atZone(ISTANBUL).toInstant(), ISTANBUL);
+    }
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        Tariff t = new Tariff();
+        t.setId(7L);
+        t.setStatus(TariffStatus.ACTIVE);
+        t.setSmallFirstHour(25.0);
+        t.setSmallExtraHour(15.0);
+        t.setLargeFirstHour(50.0);
+        t.setLargeExtraHour(30.0);
+        t.setFreeMinutes(5);
+        t.setPaidStart(LocalTime.of(8, 0));
+        t.setPaidEnd(LocalTime.of(22, 0));
+        when(tariffService.current()).thenReturn(t);
+        parkingService = new ParkingService(parkSpotRepository, parkingRecordRepository, zoneRepository,
+                subscriptionRepository, tariffService, changePublisher, clock);
     }
 
     private ParkSpot spot(String plate, VehicleType type, Zone zone, int minutesAgo) {
         ParkSpot s = new ParkSpot(plate, StreetLocation.CUMHURIYET, type, "Merkez", "Bilecik", "RIGHT", zone);
-        s.setEntryTime(LocalDateTime.now().minusMinutes(minutesAgo));
+        s.setEntryTime(LocalDateTime.now(clock).minusMinutes(minutesAgo));
         return s;
     }
 
@@ -233,7 +267,7 @@ public class ParkingServiceTest {
     void testCheckOut_SpotMissingButRecentRecord_409() {
         ParkingRecord last = new ParkingRecord();
         last.setStatus(ParkingStatus.PAID);
-        last.setExitTime(LocalDateTime.now().minusMinutes(1));
+        last.setExitTime(LocalDateTime.now(clock).minusMinutes(1));
         when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.empty());
         when(parkingRecordRepository.findTopByLicensePlateOrderByExitTimeDesc("34XYZ789")).thenReturn(Optional.of(last));
 
@@ -249,7 +283,7 @@ public class ParkingServiceTest {
     void testCheckOut_SpotMissingOldRecord_404() {
         ParkingRecord last = new ParkingRecord();
         last.setStatus(ParkingStatus.PAID);
-        last.setExitTime(LocalDateTime.now().minusHours(3));
+        last.setExitTime(LocalDateTime.now(clock).minusHours(3));
         when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.empty());
         when(parkingRecordRepository.findTopByLicensePlateOrderByExitTimeDesc("34XYZ789")).thenReturn(Optional.of(last));
 
@@ -292,13 +326,127 @@ public class ParkingServiceTest {
     void testRunaway_SpotMissingRecentRecord_409() {
         ParkingRecord last = new ParkingRecord();
         last.setStatus(ParkingStatus.RUNAWAY);
-        last.setExitTime(LocalDateTime.now().minusMinutes(2));
+        last.setExitTime(LocalDateTime.now(clock).minusMinutes(2));
         when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.empty());
         when(parkingRecordRepository.findTopByLicensePlateOrderByExitTimeDesc("34XYZ789")).thenReturn(Optional.of(last));
 
         ApiException ex = thrown(() -> parkingService.markAsRunaway("34XYZ789", admin(), "d"));
         assertEquals(ErrorCodes.ALREADY_PROCESSED, ex.getCode());
         assertTrue(ex.getMessage().contains("Kaçak"));
+    }
+
+    @Test
+    void testCheckOut_OvernightCarriesPaidMinutes() {
+        // clock 09:00 next morning: yesterday 21:00-22:00 (60) + today 08:00-09:00 (60) = 120 paid minutes
+        ParkingService svc = new ParkingService(parkSpotRepository, parkingRecordRepository, zoneRepository,
+                subscriptionRepository, tariffService, changePublisher, fixedClock(LocalDateTime.of(2026, 10, 21, 9, 0)));
+        ParkSpot s = new ParkSpot("34NGT003", StreetLocation.CUMHURIYET, VehicleType.SMALL, "Merkez", "Bilecik", "LEFT", null);
+        s.setEntryTime(LocalDateTime.of(2026, 10, 20, 21, 0));
+        when(parkSpotRepository.findByPlateForUpdate("34NGT003")).thenReturn(Optional.of(s));
+        when(parkingRecordRepository.save(any(ParkingRecord.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        ParkingRecord r = svc.checkOutVehicle("34NGT003");
+
+        assertEquals(120, r.getPaidMinutes());
+        assertEquals(40.0, r.getFee());
+        assertEquals(7L, r.getTariffId());
+        assertEquals(LocalDateTime.of(2026, 10, 21, 9, 0), r.getExitTime());
+    }
+
+    @Test
+    void testCheckOut_NightMinutesAreFree() {
+        // entry 07:00 (one free hour before the window), clock 14:00 => 360 paid minutes
+        ParkSpot s = new ParkSpot("34NGT002", StreetLocation.CUMHURIYET, VehicleType.SMALL, "Merkez", "Bilecik", "LEFT", null);
+        s.setEntryTime(LocalDateTime.of(2026, 10, 21, 7, 0));
+        when(parkSpotRepository.findByPlateForUpdate("34NGT002")).thenReturn(Optional.of(s));
+        when(parkingRecordRepository.save(any(ParkingRecord.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        ParkingRecord r = parkingService.checkOutVehicle("34NGT002");
+
+        assertEquals(360, r.getPaidMinutes());
+        assertEquals(25.0 + 5 * 15.0, r.getFee());
+    }
+
+    @Test
+    void testCheckOut_SubscriptionStoresTariffAndPaidMinutes() {
+        ParkSpot s = spot("34XYZ789", VehicleType.SMALL, null, 120);
+        when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.of(s));
+        when(subscriptionRepository.findFirstByLicensePlateAndStatusOrderByEndDateDesc("34XYZ789", SubscriptionStatus.ACTIVE))
+                .thenReturn(Optional.of(activeSub("34XYZ789")));
+        when(parkingRecordRepository.save(any(ParkingRecord.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        ParkingRecord r = parkingService.checkOutVehicle("34XYZ789", PaymentMethod.CASH, admin(), "d");
+
+        assertEquals(0.0, r.getFee());
+        assertEquals(120, r.getPaidMinutes());
+        assertEquals(7L, r.getTariffId());
+    }
+
+    @Test
+    void testPublishesEvents() {
+        when(parkSpotRepository.findByPlateForUpdate("34ABC123")).thenReturn(Optional.empty());
+        when(parkSpotRepository.saveAndFlush(any(ParkSpot.class))).thenAnswer(i -> i.getArguments()[0]);
+        ParkSpot in = parkingService.checkInVehicle("34ABC123", "SMALL", StreetLocation.TEVFIK_BEY, "LEFT", null);
+        assertEquals(LocalDateTime.now(clock), in.getEntryTime());
+        verify(changePublisher).zoneEvent(eq(SyncEventType.VEHICLE_ENTERED), any(), eq(StreetLocation.TEVFIK_BEY), argThat(m ->
+                "34ABC123".equals(m.get("plate")) && "SMALL".equals(m.get("vehicleType"))
+                        && "TEVFIK_BEY".equals(m.get("street")) && Boolean.FALSE.equals(m.get("hasSubscription"))));
+
+        ParkSpot spot = spot("34XYZ789", VehicleType.SMALL, null, 70);
+        when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.of(spot));
+        when(parkingRecordRepository.save(any(ParkingRecord.class))).thenAnswer(i -> i.getArguments()[0]);
+        parkingService.checkOutVehicle("34XYZ789", PaymentMethod.POS, admin(), "d");
+        verify(changePublisher).zoneEvent(eq(SyncEventType.VEHICLE_EXITED), any(), any(), argThat(m ->
+                "34XYZ789".equals(m.get("plate")) && Double.valueOf(40.0).equals(m.get("fee"))
+                        && "POS".equals(m.get("paymentMethod"))));
+
+        ParkSpot spot2 = spot("34RUN001", VehicleType.SMALL, null, 70);
+        when(parkSpotRepository.findByPlateForUpdate("34RUN001")).thenReturn(Optional.of(spot2));
+        parkingService.markAsRunaway("34RUN001", admin(), "d");
+        verify(changePublisher).zoneEvent(eq(SyncEventType.VEHICLE_RUNAWAY), any(), any(), argThat(m ->
+                "34RUN001".equals(m.get("plate")) && Double.valueOf(40.0).equals(m.get("debt"))));
+    }
+
+    @Test
+    void testRunaway_StoresTariffAndPaidMinutes() {
+        ParkSpot spot = spot("34XYZ789", VehicleType.SMALL, null, 70);
+        when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.of(spot));
+        when(parkingRecordRepository.save(any(ParkingRecord.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        ParkingService.RunawayResult res = parkingService.markAsRunawayDetailed("34XYZ789", admin(), "d");
+
+        assertEquals(70, res.record().getPaidMinutes());
+        assertEquals(7L, res.record().getTariffId());
+        assertEquals(1, res.segments().size());
+    }
+
+    @Test
+    void testDebtContainsSegmentsAndKeepsOldKeys() {
+        ParkSpot s = spot("34ABC123", VehicleType.SMALL, null, 90);
+        when(parkSpotRepository.findByCurrentPlate("34ABC123")).thenReturn(Optional.of(s));
+
+        Map<String, Object> d = parkingService.getDebtByPlate("34 abc 123");
+
+        for (String k : List.of("streetName", "plate", "entryTime", "durationMinutes", "fee", "hasSubscription",
+                "paidMinutes", "freeMinutes", "tariffId", "segments")) {
+            assertTrue(d.containsKey(k), k);
+        }
+        assertEquals(40.0, d.get("fee"));
+        assertEquals(90L, d.get("durationMinutes"));
+        assertEquals(1, ((List<?>) d.get("segments")).size());
+    }
+
+    @Test
+    void testFeePreview_OfficerOtherZone_Denied() {
+        Zone other = zone(2, StreetLocation.TEVFIK_BEY, 2);
+        ParkSpot s = spot("34ABC123", VehicleType.SMALL, other, 30);
+        when(parkSpotRepository.findByCurrentPlate("34ABC123")).thenReturn(Optional.of(s));
+        User off = officer(zone(1, StreetLocation.TEVFIK_BEY, 1));
+
+        assertThrows(AccessDeniedException.class, () -> parkingService.getFeePreview("34ABC123", off));
+        Map<String, Object> ok = parkingService.getFeePreview("34ABC123", admin());
+        assertEquals("SMALL", ok.get("vehicleType"));
+        assertEquals(2L, ok.get("zoneId"));
     }
 
     // --- BI ---
@@ -395,7 +543,7 @@ public class ParkingServiceTest {
     void testOfficerCheckOut_OtherZone_Denied() {
         Zone other = zone(2, StreetLocation.TEVFIK_BEY, 2);
         ParkSpot spot = new ParkSpot("34XYZ789", StreetLocation.TEVFIK_BEY, VehicleType.SMALL, "Merkez", "Bilecik", "LEFT", other);
-        spot.setEntryTime(LocalDateTime.now());
+        spot.setEntryTime(LocalDateTime.now(clock));
         when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.of(spot));
 
         User off = officer(zone(1, StreetLocation.TEVFIK_BEY, 1));
@@ -407,7 +555,7 @@ public class ParkingServiceTest {
     @Test
     void testOfficerCheckOut_LegacySpotWithoutZone_ChecksStreet() {
         ParkSpot spot = new ParkSpot("34XYZ789", StreetLocation.CUMHURIYET, VehicleType.SMALL, "Merkez", "Bilecik", "LEFT", null);
-        spot.setEntryTime(LocalDateTime.now());
+        spot.setEntryTime(LocalDateTime.now(clock));
         when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.of(spot));
 
         User off = officer(zone(1, StreetLocation.TEVFIK_BEY, 1));
@@ -418,10 +566,45 @@ public class ParkingServiceTest {
     void testAdmin_Unrestricted() {
         Zone other = zone(2, StreetLocation.TEVFIK_BEY, 2);
         ParkSpot spot = new ParkSpot("34XYZ789", StreetLocation.TEVFIK_BEY, VehicleType.SMALL, "Merkez", "Bilecik", "LEFT", other);
-        spot.setEntryTime(LocalDateTime.now());
+        spot.setEntryTime(LocalDateTime.now(clock));
         when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.of(spot));
         when(parkingRecordRepository.save(any(ParkingRecord.class))).thenAnswer(i -> i.getArguments()[0]);
 
         assertNotNull(parkingService.checkOutVehicle("34XYZ789", admin()));
+    }
+
+    // --- spot lists: subscription + runaway debt filled with one batch query each (no N+1) ---
+    @Test
+    void testGetAllSpots_FillsSubscriptionAndDebtInBatch() {
+        ParkSpot a = spot("34AAA001", VehicleType.SMALL, null, 10);
+        ParkSpot b = spot("34BBB002", VehicleType.SMALL, null, 10);
+        ParkSpot c = spot("34CCC003", VehicleType.LARGE, null, 10);
+        when(parkSpotRepository.findAll()).thenReturn(List.of(a, b, c));
+        when(subscriptionRepository.findCurrentlyActivePlates(any(), eq(LocalDate.of(2026, 10, 21))))
+                .thenReturn(List.of("34BBB002"));
+        when(parkingRecordRepository.sumUnpaidRunawayDebtByPlate(any()))
+                .thenReturn(List.<Object[]>of(new Object[]{"34CCC003", 70.0}));
+
+        List<ParkSpot> spots = parkingService.getAllSpots();
+
+        assertEquals(3, spots.size());
+        assertFalse(a.getHasSubscription());
+        assertEquals(0.0, a.getAccumulatedDebt());
+        assertTrue(b.getHasSubscription());
+        assertEquals(0.0, b.getAccumulatedDebt());
+        assertFalse(c.getHasSubscription());
+        assertEquals(70.0, c.getAccumulatedDebt());
+        verify(subscriptionRepository, times(1)).findCurrentlyActivePlates(any(), any());
+        verify(parkingRecordRepository, times(1)).sumUnpaidRunawayDebtByPlate(any());
+        verify(subscriptionRepository, never()).findFirstByLicensePlateAndStatusOrderByEndDateDesc(any(), any());
+        verify(parkingRecordRepository, never()).findByLicensePlateAndStatus(any(), any());
+    }
+
+    @Test
+    void testGetSpotsByStreet_EmptyListSkipsQueries() {
+        when(parkSpotRepository.findByStreet(StreetLocation.CUMHURIYET)).thenReturn(List.of());
+        assertTrue(parkingService.getSpotsByStreet(StreetLocation.CUMHURIYET).isEmpty());
+        verifyNoInteractions(subscriptionRepository);
+        verify(parkingRecordRepository, never()).sumUnpaidRunawayDebtByPlate(any());
     }
 }

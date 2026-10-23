@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../core/api_client.dart';
-import '../core/constants.dart';
 import '../core/format.dart';
 import '../core/theme.dart';
 import '../widgets/bp_header.dart';
@@ -9,16 +8,14 @@ import '../widgets/search_field.dart';
 import '../widgets/status_badge.dart';
 
 class HistoryScreen extends StatefulWidget {
-  final String region;
-  final String neighborhood;
-  final String street;
+  final String streetCode; // sunucudaki cadde kodu
+  final String streetName; // görünen cadde adı
   final bool showOnlyRunaways; // DRY PRENSİBİ: Bu sayfa Kaçaklar için mi açıldı?
 
   const HistoryScreen({
     super.key,
-    required this.region,
-    required this.neighborhood,
-    required this.street,
+    required this.streetCode,
+    required this.streetName,
     required this.showOnlyRunaways,
   });
 
@@ -37,9 +34,6 @@ class HistoryScreenState extends State<HistoryScreen> {
   List<dynamic> historyRecords = [];
   bool isLoading = true;
   final TextEditingController searchController = TextEditingController();
-
-  // Türkçe caddeleri Backend Enum'una çeviren akıllı köprü
-  String get _backendStreetEnum => AppConstants.toBackendEnum(widget.street);
 
   @override
   void initState() {
@@ -64,7 +58,7 @@ class HistoryScreenState extends State<HistoryScreen> {
     setState(() => isLoading = true);
 
     try {
-      final data = await ApiClient.get('/parking/history', query: {'street': _backendStreetEnum});
+      final data = await ApiClient.get('/parking/history', query: {'street': widget.streetCode});
       if (!mounted) return;
       setState(() {
         historyRecords = _filterByMode(data is List ? data : []);
@@ -171,7 +165,7 @@ class HistoryScreenState extends State<HistoryScreen> {
                   children: [
                     Text(runaways ? 'Kaçaklar' : 'Geçmiş', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
                     Flexible(
-                      child: Text(widget.street, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, color: c.text2)),
+                      child: Text(widget.streetName, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, color: c.text2)),
                     ),
                   ],
                 ),
@@ -294,6 +288,7 @@ class HistoryScreenState extends State<HistoryScreen> {
     final range = '${entry != null ? formatHm(entry) : '-'} – ${exit != null ? formatHm(exit) : '-'}';
     final dur = (entry != null && exit != null) ? ' · ${formatDurationText(exit.difference(entry))}' : '';
     final method = r['paymentMethod'] as String?;
+    final paidMin = r['paidMinutes'] is num ? (r['paidMinutes'] as num).toInt() : null;
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 68),
       child: Padding(
@@ -308,6 +303,9 @@ class HistoryScreenState extends State<HistoryScreen> {
                       style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
                   const SizedBox(height: 4),
                   Text('$range$dur', style: TextStyle(fontSize: 14, color: c.text2)),
+                  if (paidMin != null)
+                    Text('Ücretli süre: ${formatDurationText(Duration(minutes: paidMin))}',
+                        style: TextStyle(fontSize: 14, color: c.text2)),
                 ],
               ),
             ),

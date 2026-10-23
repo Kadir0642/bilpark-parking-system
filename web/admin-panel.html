@@ -86,6 +86,27 @@
         .dlg-body p { margin: 0; color: var(--text-2); }
         .dlg-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--s-2); }
         .toast-stack { z-index: 2000; }
+        .live-wrap { display: inline-flex; align-items: center; gap: var(--s-2); }
+        .stepper { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); list-style: none; margin: 0; padding: var(--s-4); border-bottom: 1px solid var(--border); }
+        .step { flex: 1 1 120px; display: flex; align-items: center; gap: var(--s-2); font-size: 14px; font-weight: 600; color: var(--text-2); }
+        .step-num { width: 28px; height: 28px; flex: none; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--border-strong); font-size: 13px; font-weight: 800; }
+        .step.active { color: var(--text); }
+        .step.active .step-num { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+        .step.done .step-num { background: var(--success); color: var(--on-success); border-color: var(--success); }
+        .wiz-body { padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-4); }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: var(--s-4); }
+        .form-wide { grid-column: 1 / -1; }
+        .wiz-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); }
+        .tar-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--s-3); margin: 0; }
+        .tar-item dt { font-size: 13px; color: var(--text-2); font-weight: 600; }
+        .tar-item dd { margin: 2px 0 0; font-weight: 700; font-size: 17px; }
+        .sub-h { margin: 0; font-size: 15px; font-weight: 700; }
+        .diff-up { color: var(--warning); font-weight: 700; }
+        .diff-down { color: var(--success); font-weight: 700; }
+        .diff-same { color: var(--text-2); }
+        .link-btn { background: none; border: 0; padding: 0; min-height: var(--tap); display: inline-flex; align-items: center; gap: var(--s-2); color: var(--text); font: 600 15px var(--font); cursor: pointer; text-align: left; }
+        .link-btn:hover { color: var(--primary); }
+        .seg-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
         .live-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
         @media (max-width: 600px) { .page-head h1 { font-size: 22px; } .kpi-value { font-size: 28px; } }
     </style>
@@ -125,12 +146,12 @@
             <a href="#kayitlar" data-nav="kayitlar"><i class="fa-solid fa-list" aria-hidden="true"></i>Kayıtlar</a>
             <a href="#kacaklar" data-nav="kacaklar"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>Kaçaklar</a>
             <a href="#vardiyalar" data-nav="vardiyalar"><i class="fa-solid fa-users" aria-hidden="true"></i>Vardiyalar</a>
+            <a href="#tarife" data-nav="tarife"><i class="fa-solid fa-tags" aria-hidden="true"></i>Tarife</a>
         </nav>
         <div>
             <div class="soon-title">SONRAKİ AŞAMALAR</div>
             <div class="soon-list">
                 <span class="soon-item" aria-disabled="true">Aboneler <span class="badge badge-neutral">Yakında</span></span>
-                <span class="soon-item" aria-disabled="true">Tarife <span class="badge badge-neutral">Yakında</span></span>
                 <span class="soon-item" aria-disabled="true">Personel raporları <span class="badge badge-neutral">Yakında</span></span>
             </div>
         </div>
@@ -147,7 +168,7 @@
         <section id="sec-genel" data-sec="genel" hidden>
             <div class="page-head">
                 <div><h1>Genel bakış</h1><div class="page-sub">Sahadaki anlık durum ve ciro özeti</div></div>
-                <span class="status-pill status-online live-pill"></span>
+                <span class="live-wrap"><span class="status-pill status-online live-pill"></span><button type="button" class="btn btn-secondary btn-icon btn-refresh" aria-label="Yenile" title="Verileri yenile" onclick="manualRefresh()"><i class="fa-solid fa-rotate" aria-hidden="true"></i></button></span>
             </div>
             <div class="grid grid-kpi" style="margin-top:16px;">
                 <div class="card kpi"><div class="kpi-label">Sahadaki araç</div><div class="kpi-value" id="kpiSpots">0</div><div class="kpi-note" id="kpiSpotsNote">-</div></div>
@@ -184,7 +205,7 @@
             <div class="page-head">
                 <div><h1>Kayıtlar</h1><div class="page-sub">Tüm giriş, çıkış ve ödeme kayıtları</div></div>
                 <div class="toolbar">
-                    <span class="status-pill status-online live-pill"></span>
+                    <span class="live-wrap"><span class="status-pill status-online live-pill"></span><button type="button" class="btn btn-secondary btn-icon btn-refresh" aria-label="Yenile" title="Verileri yenile" onclick="manualRefresh()"><i class="fa-solid fa-rotate" aria-hidden="true"></i></button></span>
                     <button type="button" class="btn btn-success" onclick="downloadExcel()"><i class="fa-solid fa-file-excel" aria-hidden="true"></i>Excel indir</button>
                 </div>
             </div>
@@ -247,7 +268,7 @@
             <div class="page-head">
                 <div><h1>Kaçaklar</h1><div class="page-sub">Ödemeden ayrılan araçlar ve açık borçlar</div></div>
                 <div class="toolbar">
-                    <span class="status-pill status-online live-pill"></span>
+                    <span class="live-wrap"><span class="status-pill status-online live-pill"></span><button type="button" class="btn btn-secondary btn-icon btn-refresh" aria-label="Yenile" title="Verileri yenile" onclick="manualRefresh()"><i class="fa-solid fa-rotate" aria-hidden="true"></i></button></span>
                     <span class="search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" id="rPlate" class="input" placeholder="Plaka ara" aria-label="Plaka ara" autocomplete="off"></span>
                 </div>
             </div>
@@ -269,7 +290,7 @@
         <section id="sec-vardiyalar" data-sec="vardiyalar" hidden>
             <div class="page-head">
                 <div><h1>Vardiyalar</h1><div class="page-sub">Personelin sahadaki vardiyaları ve cirosu</div></div>
-                <span class="status-pill status-online live-pill"></span>
+                <span class="live-wrap"><span class="status-pill status-online live-pill"></span><button type="button" class="btn btn-secondary btn-icon btn-refresh" aria-label="Yenile" title="Verileri yenile" onclick="manualRefresh()"><i class="fa-solid fa-rotate" aria-hidden="true"></i></button></span>
             </div>
             <div class="card" style="margin-top:16px;">
                 <div class="table-wrap">
@@ -279,7 +300,44 @@
                     </table>
                 </div>
             </div>
+            <div class="card" style="margin-top:16px;">
+                <div class="card-head"><h2>Personel</h2><span class="muted" style="font-size:14px;">Pasife alınan kişi oturumdan atılır ve giriş yapamaz</span></div>
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead><tr><th>Kullanıcı</th><th>Rol</th><th>Saha</th><th>Son giriş</th><th>Durum</th></tr></thead>
+                        <tbody id="usersBody"></tbody>
+                    </table>
+                </div>
+            </div>
             <p class="muted" style="font-size:14px;">Puan sütunu personel raporlarıyla dolacak ve yalnızca bu panelde görünür; saha uygulamasında gösterilmez.</p>
+        </section>
+
+        <!-- TARİFE -->
+        <section id="sec-tarife" data-sec="tarife" hidden>
+            <div class="page-head">
+                <div><h1>Tarife</h1><div class="page-sub">Yürürlükteki tarife, yeni tarife planlama ve geçmiş</div></div>
+                <span class="live-wrap"><span class="status-pill status-online live-pill"></span><button type="button" class="btn btn-secondary btn-icon btn-refresh" aria-label="Yenile" title="Verileri yenile" onclick="manualRefresh()"><i class="fa-solid fa-rotate" aria-hidden="true"></i></button></span>
+            </div>
+            <div id="tarClick">
+                <div class="grid grid-2" style="margin-top:16px;">
+                    <div class="card" id="tarCurrent"></div>
+                    <div class="card" id="tarUpcoming" hidden></div>
+                </div>
+                <div class="card" id="wizCard" style="margin-top:16px;">
+                    <div class="card-head"><h2>Yeni tarife</h2></div>
+                    <ol class="stepper" id="wizSteps" aria-label="Tarife adımları"></ol>
+                    <div class="wiz-body" id="wizBody"></div>
+                </div>
+                <div class="card" style="margin-top:16px;">
+                    <div class="card-head"><h2>Tarife geçmişi</h2></div>
+                    <div class="table-wrap">
+                        <table class="table">
+                            <thead><tr><th>Sürüm</th><th>Durum</th><th>Otomobil (ilk / ek)</th><th>Kamyonet (ilk / ek)</th><th>Ücretli saat</th><th>Yürürlük</th><th>Etkinleşme</th><th>Arşiv</th><th>Oluşturan</th><th>Not</th><th></th></tr></thead>
+                            <tbody id="tarHistoryBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </section>
     </main>
 </div>
@@ -322,11 +380,13 @@
     const BASE_URL = CONFIG.BASE_URL + "/api/parking";
     const PAGE_SIZE = 25;
 
-    const streetNames = {
+    // Yedek harita; asıl liste GET /api/streets ile gelir
+    const STREET_FALLBACK = {
         "TEVFIK_BEY": "Tevfik Bey Cad.",
         "ALI_RIZA_OZKAY": "Ali Rıza Özkay Cad.",
         "CUMHURIYET": "Cumhuriyet Cad."
     };
+    let streetNames = Object.assign({}, STREET_FALLBACK);
     const methodNames = { CASH: 'Nakit', CARD: 'Kart', ONLINE: 'Online', SUBSCRIPTION: 'Abonelik', OTHER: 'Diğer' };
 
     let incomeChart = null;
@@ -336,7 +396,6 @@
     let spotsData = [];
     let currentPage = 1;
     let expandedKey = null;
-    let dashboardTimer = null;
     let lastGoodTime = null;
 
     // ---- Yardımcılar ----
@@ -448,7 +507,8 @@
     }
 
     function showLogin(sessionMsg) {
-        if (dashboardTimer) { clearInterval(dashboardTimer); dashboardTimer = null; }
+        liveStop();
+        wiz = newWiz();
         $('dashboardRoot').style.display = 'none';
         $('loginScreen').style.display = 'flex';
         $('loginPassword').value = '';
@@ -460,9 +520,7 @@
         $('dashboardRoot').style.display = 'block';
         $('navUsername').textContent = localStorage.getItem('username') || '';
         route();
-        updateDashboard();
-        if (dashboardTimer) clearInterval(dashboardTimer);
-        dashboardTimer = setInterval(updateDashboard, 30000);
+        startSession();
     }
 
     async function doLogin() {
@@ -506,7 +564,7 @@
     }
 
     // ---- Yönlendirme ----
-    const SECTIONS = ['genel', 'kayitlar', 'kacaklar', 'vardiyalar'];
+    const SECTIONS = ['genel', 'kayitlar', 'kacaklar', 'vardiyalar', 'tarife'];
     function route() {
         let name = (location.hash || '').replace('#', '');
         if (!SECTIONS.includes(name)) name = 'genel';
@@ -521,15 +579,25 @@
     window.addEventListener('hashchange', route);
 
     // ---- Canlı durum ----
-    function setLive(ok) {
-        const now = new Date();
-        if (ok) lastGoodTime = now;
+    // mode: 'online' | 'reconnecting' | 'offline'
+    function setLive(mode) {
+        live.state = mode;
+        if (mode === 'online' && !lastGoodTime) lastGoodTime = new Date();
         const t = lastGoodTime ? lastGoodTime.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+        let cls, html;
+        if (mode === 'online') {
+            cls = 'status-online';
+            html = `<span class="live-dot"></span>Canlı · ${t}`;
+        } else if (mode === 'reconnecting') {
+            cls = 'status-offline';
+            html = '<i class="fa-solid fa-rotate fa-spin" aria-hidden="true"></i>Yeniden bağlanıyor…';
+        } else {
+            cls = 'status-danger';
+            html = `<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>Bağlantı yok · son veri ${t}`;
+        }
         document.querySelectorAll('.live-pill').forEach(p => {
-            p.className = 'status-pill live-pill ' + (ok ? 'status-online' : 'status-offline');
-            p.innerHTML = ok
-                ? `<span class="live-dot"></span>Canlı · ${t}`
-                : `<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>Bağlantı yok · son veri ${t}`;
+            p.className = 'status-pill live-pill ' + cls;
+            p.innerHTML = html;
         });
     }
 
@@ -548,7 +616,7 @@
         $('kpiSpots').textContent = spotsData.length;
         const perStreet = {};
         spotsData.forEach(s => { perStreet[s.street] = (perStreet[s.street] || 0) + 1; });
-        const parts = Object.keys(streetNames).map(k => `${streetNames[k].replace(' Cad.', '')} ${perStreet[k] || 0}`);
+        const parts = Object.keys(streetNames).map(k => `${streetNames[k].replace(/ (Cad\.|Caddesi)$/, '')} ${perStreet[k] || 0}`);
         $('kpiSpotsNote').textContent = parts.join(' · ');
 
         const perZone = {};
@@ -690,7 +758,8 @@
             </div>`;
         }
         const total = r.exitTime ? fmtMinutes((new Date(r.exitTime) - new Date(r.entryTime)) / 60000) : '-';
-        return `<div><b>Toplam süre: ${total}</b></div><div class="muted" style="font-size:14px;">Gün gün döküm tarife güncellemesiyle gelecek.</div>`;
+        const paidNote = r.paidMinutes != null ? `<div class="muted" style="font-size:14px;">Ücretli süre: ${fmtMinutes(r.paidMinutes)}${r.tariffId != null ? ' · Tarife #' + escapeHtml(r.tariffId) : ''}</div>` : '';
+        return `<div><b>Toplam süre: ${total}</b></div>${paidNote}`;
     }
 
     function renderRecords() {
@@ -1048,12 +1117,681 @@
                 fetchIncomeKPI(),
                 fetchFiscalYears(),
                 fetchHistoryTable(),
-                fetchShifts()
+                fetchShifts(),
+                loadTariffs(),
+                fetchUsers()
             ]);
-            setLive(results.every(Boolean));
+            if (results.every(Boolean)) {
+                lastGoodTime = new Date();
+                if (live.state !== 'reconnecting' && live.state !== 'offline') setLive('online');
+            } else if (live.state === 'idle' || live.state === 'online') {
+                setLive('offline');
+            }
         } catch (e) {
-            setLive(false);
+            if (e.name !== 'AuthError') setLive('offline');
         }
+    }
+
+    // ---- 10. API yardımcıları (JSON gövde + {error, code} çözümleme) ----
+    // fetchWithAuth yalnızca 401'de oturumu kapatır; 403 PASSWORD_MISMATCH gibi hatalar oturumu bozmaz.
+    async function apiJson(method, path, body) {
+        const opts = { method, headers: {} };
+        if (body !== undefined) {
+            opts.headers['Content-Type'] = 'application/json';
+            opts.body = JSON.stringify(body);
+        }
+        const res = await fetchWithAuth(CONFIG.BASE_URL + path, opts);
+        const text = await res.text();
+        let data = null;
+        try { if (text) data = JSON.parse(text); } catch (e) { /* JSON değil */ }
+        if (!res.ok) {
+            const err = new Error((data && (data.error || data.message)) || `İşlem başarısız. (HTTP ${res.status})`);
+            err.name = 'ApiError';
+            err.status = res.status;
+            err.code = data && data.code;
+            throw err;
+        }
+        return data;
+    }
+
+    function fmtFull(d) {
+        const x = new Date(d);
+        return isNaN(x) ? '-' : x.toLocaleString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+    // Sunucu yerel ISO metninden saat okur (saat dilimi dönüşümü yapılmaz)
+    function hhmm(iso) { return String(iso).slice(11, 16); }
+    function pad2(n) { return String(n).padStart(2, '0'); }
+    function toLocalInput(d) {
+        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    }
+    function endLabel(startIso, endIso) {
+        const t = hhmm(endIso);
+        return (t === '00:00' && String(endIso).slice(0, 10) > String(startIso).slice(0, 10)) ? '24:00' : t;
+    }
+    function paidRange(t) { return `${t.paidStart}–${t.paidEnd === '00:00' ? '24:00' : t.paidEnd}`; }
+
+    // ---- 11. Streetler (herkese açık) ----
+    let streetsLoaded = false;
+    async function loadStreets() {
+        if (streetsLoaded) return;
+        try {
+            const res = await fetch(CONFIG.BASE_URL + '/api/streets');
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const list = await res.json();
+            const map = {};
+            list.forEach(s => { if (s.code) map[s.code] = s.displayName || s.code; });
+            if (Object.keys(map).length) { streetNames = map; streetsLoaded = true; }
+        } catch (e) {
+            console.error('Cadde listesi alınamadı, varsayılan kullanılıyor:', e);
+        }
+        refreshFilterOptions();
+    }
+
+    // ---- 12. Tarife bölümü ----
+    const STATUS_BADGE = {
+        DRAFT: ['badge-neutral', 'Taslak'], SCHEDULED: ['badge-warning', 'Zamanlandı'],
+        ACTIVE: ['badge-success', 'Yürürlükte'], ARCHIVED: ['badge-neutral', 'Arşiv']
+    };
+    const TF_FIELDS = [
+        ['smallFirstHour', 'Otomobil · ilk saat (₺)', 'num'], ['smallExtraHour', 'Otomobil · sonraki saat (₺)', 'num'],
+        ['largeFirstHour', 'Kamyonet · ilk saat (₺)', 'num'], ['largeExtraHour', 'Kamyonet · sonraki saat (₺)', 'num'],
+        ['freeMinutes', 'Ücretsiz süre (dk)', 'int'],
+        ['paidStart', 'Ücretli saat başlangıcı', 'time'], ['paidEnd', 'Ücretli saat bitişi', 'time'],
+        ['subscriptionSmallMonthly', 'Aylık abonelik · otomobil (₺)', 'num'], ['subscriptionLargeMonthly', 'Aylık abonelik · kamyonet (₺)', 'num']
+    ];
+    let tariffCurrent = null;
+    let tariffList = [];
+    let wiz = newWiz();
+
+    function newWiz() {
+        return { step: 1, id: null, form: null, fieldErrs: {}, preview: null, eff: '', dirty: false, err: '', pwErr: '', open: {} };
+    }
+    function formFromTariff(t) {
+        return {
+            smallFirstHour: t.small.firstHour, smallExtraHour: t.small.extraHour,
+            largeFirstHour: t.large.firstHour, largeExtraHour: t.large.extraHour,
+            freeMinutes: t.freeMinutes, paidStart: t.paidStart, paidEnd: t.paidEnd,
+            subscriptionSmallMonthly: t.subscription.small, subscriptionLargeMonthly: t.subscription.large,
+            note: t.note || ''
+        };
+    }
+    function tariffUpcoming() {
+        return tariffList.find(t => t.status === 'SCHEDULED') || (tariffCurrent && tariffCurrent.upcoming) || null;
+    }
+    function statusBadge(s) {
+        const b = STATUS_BADGE[s] || ['badge-neutral', s || '-'];
+        return `<span class="badge ${b[0]}">${escapeHtml(b[1])}</span>`;
+    }
+    function tariffItems(t) {
+        return [
+            ['Otomobil · ilk saat', money(t.small.firstHour)], ['Otomobil · sonraki saat', money(t.small.extraHour)],
+            ['Kamyonet · ilk saat', money(t.large.firstHour)], ['Kamyonet · sonraki saat', money(t.large.extraHour)],
+            ['Ücretsiz süre', `${t.freeMinutes} dk`], ['Ücretli saatler', paidRange(t)],
+            ['Abonelik · otomobil', money(t.subscription.small) + ' / ay'], ['Abonelik · kamyonet', money(t.subscription.large) + ' / ay']
+        ];
+    }
+    function tariffGrid(t) {
+        return '<dl class="tar-grid">' + tariffItems(t).map(([k, v]) => `<div class="tar-item"><dt>${escapeHtml(k)}</dt><dd class="num">${escapeHtml(v)}</dd></div>`).join('') + '</dl>';
+    }
+
+    function renderTariffCards() {
+        const cur = $('tarCurrent');
+        if (tariffCurrent && tariffCurrent.small) {
+            cur.innerHTML = `<div class="card-head"><h2>Yürürlükteki tarife</h2>${statusBadge('ACTIVE')}</div>
+                <div class="card-body">${tariffGrid(tariffCurrent)}
+                <div class="muted" style="margin-top:12px;font-size:14px;">Yürürlük başlangıcı: <b>${escapeHtml(fmtFull(tariffCurrent.effectiveFrom))}</b></div></div>`;
+        } else {
+            cur.innerHTML = '<div class="card-head"><h2>Yürürlükteki tarife</h2></div><div class="card-body muted">Tarife bilgisi alınamadı.</div>';
+        }
+        const up = tariffUpcoming();
+        const box = $('tarUpcoming');
+        if (up && up.small) {
+            box.hidden = false;
+            box.innerHTML = `<div class="card-head"><h2>Zamanlanmış tarife</h2>${statusBadge('SCHEDULED')}</div>
+                <div class="card-body" style="display:flex;flex-direction:column;gap:12px;">
+                <div class="alert alert-info"><b>${escapeHtml(fmtFull(up.effectiveFrom))}</b> tarihinde otomatik yürürlüğe girecek.</div>
+                ${tariffGrid(up)}
+                ${up.id != null ? `<div><button type="button" class="btn btn-danger-outline" data-act="cancel" data-id="${up.id}" data-kind="SCHEDULED"><i class="fa-solid fa-ban" aria-hidden="true"></i>Zamanlamayı iptal et</button></div>` : ''}
+                </div>`;
+        } else {
+            box.hidden = true;
+            box.innerHTML = '';
+        }
+    }
+
+    function renderTariffHistory() {
+        const rows = tariffList.map(t => {
+            const acts = [];
+            if (t.status === 'DRAFT') {
+                acts.push(`<button type="button" class="btn btn-secondary" data-act="continue" data-id="${t.id}">Devam et</button>`);
+                acts.push(`<button type="button" class="btn btn-danger-outline" data-act="cancel" data-id="${t.id}" data-kind="DRAFT">Sil</button>`);
+            } else if (t.status === 'SCHEDULED') {
+                acts.push(`<button type="button" class="btn btn-danger-outline" data-act="cancel" data-id="${t.id}" data-kind="SCHEDULED">İptal et</button>`);
+            }
+            return `<tr>
+                <td class="num"><b>#${t.id}</b></td>
+                <td>${statusBadge(t.status)}</td>
+                <td class="num">${money(t.small.firstHour)} / ${money(t.small.extraHour)}</td>
+                <td class="num">${money(t.large.firstHour)} / ${money(t.large.extraHour)}</td>
+                <td class="num">${escapeHtml(paidRange(t))}</td>
+                <td class="num col-muted">${t.effectiveFrom ? escapeHtml(fmtFull(t.effectiveFrom)) : '-'}</td>
+                <td class="num col-muted">${t.activatedAt ? escapeHtml(fmtFull(t.activatedAt)) : '-'}</td>
+                <td class="num col-muted">${t.archivedAt ? escapeHtml(fmtFull(t.archivedAt)) : '-'}</td>
+                <td>${escapeHtml(t.createdByUsername || '-')}</td>
+                <td class="col-muted">${escapeHtml(t.note || '')}</td>
+                <td><span class="toolbar">${acts.join('')}</span></td>
+            </tr>`;
+        }).join('');
+        $('tarHistoryBody').innerHTML = rows || '<tr><td colspan="11" class="table-empty">Tarife kaydı yok.</td></tr>';
+    }
+
+    async function loadTariffs() {
+        try {
+            const [cur, list] = await Promise.all([
+                fetch(CONFIG.BASE_URL + '/api/tariff/current').then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))),
+                apiJson('GET', '/api/admin/tariffs')
+            ]);
+            tariffCurrent = cur;
+            tariffList = Array.isArray(list) ? list : [];
+            applyTariffUi();
+            return true;
+        } catch (e) {
+            if (e.name !== 'AuthError') console.error('Tarife verisi hatası:', e);
+            return false;
+        }
+    }
+    // Tarife verisi değişince kartlar, geçmiş ve (dokunulmamışsa) taslak formu tazelenir
+    function applyTariffUi() {
+        renderTariffCards();
+        renderTariffHistory();
+        if (wiz.step === 1 && !wiz.id && !wiz.dirty && tariffCurrent && tariffCurrent.small) {
+            wiz.form = formFromTariff(tariffCurrent);
+        }
+        renderWizard();
+    }
+
+    // -- Sihirbaz çizimi --
+    function renderStepper() {
+        const names = ['Taslak', 'Önizleme', 'Yürürlük', 'Onay'];
+        $('wizSteps').innerHTML = names.map((n, i) => {
+            const k = i + 1, cls = k === wiz.step ? 'active' : (k < wiz.step ? 'done' : '');
+            return `<li class="step ${cls}"${k === wiz.step ? ' aria-current="step"' : ''}><span class="step-num">${k < wiz.step ? '<i class="fa-solid fa-check" aria-hidden="true"></i>' : k}</span>${n}</li>`;
+        }).join('');
+    }
+
+    function errBox() { return wiz.err ? `<div class="alert alert-danger" role="alert">${escapeHtml(wiz.err)}</div>` : ''; }
+    function discardBtn() {
+        return wiz.id ? '<button type="button" class="btn btn-danger-outline" data-act="discard"><i class="fa-solid fa-trash" aria-hidden="true"></i>Taslağı sil</button>' : '';
+    }
+
+    function renderWizard() {
+        if (!$('wizBody')) return;
+        renderStepper();
+        let html = '';
+        if (wiz.step === 1) html = wizStep1();
+        else if (wiz.step === 2) html = wizStep2();
+        else if (wiz.step === 3) html = wizStep3();
+        else html = wizStep4();
+        $('wizBody').innerHTML = html;
+    }
+
+    function wizStep1() {
+        if (!wiz.form) return '<div class="muted">Mevcut tarife yükleniyor…</div>';
+        const f = wiz.form;
+        const fields = TF_FIELDS.map(([k, label, kind]) => {
+            const err = wiz.fieldErrs[k];
+            const v = f[k] == null ? '' : f[k];
+            const attrs = kind === 'time' ? 'type="time"' : (kind === 'int' ? 'type="number" inputmode="numeric" step="1" min="0" max="120"' : 'type="number" inputmode="decimal" step="0.01" min="0"');
+            return `<div class="field"><label for="tf_${k}">${escapeHtml(label)}</label>
+                <input id="tf_${k}" class="input" ${attrs} value="${escapeHtml(v)}"${err ? ' aria-invalid="true"' : ''} aria-describedby="tfe_${k}">
+                <div class="field-error" id="tfe_${k}" ${err ? '' : 'hidden'}>${escapeHtml(err || '')}</div></div>`;
+        }).join('');
+        return `${errBox()}
+            <div class="form-grid">${fields}
+                <div class="field form-wide"><label for="tf_note">Not (isteğe bağlı)</label>
+                <input id="tf_note" class="input" type="text" maxlength="200" value="${escapeHtml(f.note)}" placeholder="Örn: 2027 tarifesi"></div>
+            </div>
+            <div class="muted" style="font-size:14px;margin-top:8px;">Ücretli saat bitişi 00:00 ise gece yarısı sayılır. Abonelik fiyatı yeni abonelikler içindir.</div>
+            <div class="wiz-actions"><span class="toolbar">${discardBtn()}</span>
+                <button type="button" class="btn btn-primary" data-act="save">Kaydet ve önizle<i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>`;
+    }
+
+    function diffHtml(cur, prop) {
+        const d = Math.round((Number(prop) - Number(cur)) * 100) / 100;
+        if (!d) return '<span class="diff-same">Değişmedi</span>';
+        const abs = money(Math.abs(d));
+        return d > 0
+            ? `<span class="diff-up">▲ +${abs}<span class="visually-hidden"> artış</span></span>`
+            : `<span class="diff-down">▼ −${abs}<span class="visually-hidden"> azalış</span></span>`;
+    }
+    function segmentsHtml(row) {
+        const segs = (row.proposed && row.proposed.segments) || [];
+        if (!segs.length) return '<span class="muted">Döküm yok.</span>';
+        return '<ul class="seg-list">' + segs.map(s => {
+            const day = `${String(s.date).slice(8, 10)}.${String(s.date).slice(5, 7)}`;
+            return `<li><span class="num">${day} ${hhmm(s.start)}–${endLabel(s.start, s.end)}</span> <span class="badge ${s.paid ? 'badge-primary' : 'badge-neutral'}">${s.paid ? 'Ücretli' : 'Ücretsiz'}</span> <span class="muted num">${fmtMinutes(s.minutes)}</span></li>`;
+        }).join('') + '</ul>';
+    }
+
+    function wizStep2() {
+        const p = wiz.preview;
+        if (!p) return `${errBox()}<div class="muted">Önizleme yüklenemedi.</div><div class="wiz-actions"><button type="button" class="btn btn-secondary" data-act="back">Geri</button></div>`;
+        const c = p.current, n = p.proposed;
+        const cmp = [
+            ['Otomobil · ilk saat', c.small.firstHour, n.small.firstHour, 'money'], ['Otomobil · sonraki saat', c.small.extraHour, n.small.extraHour, 'money'],
+            ['Kamyonet · ilk saat', c.large.firstHour, n.large.firstHour, 'money'], ['Kamyonet · sonraki saat', c.large.extraHour, n.large.extraHour, 'money'],
+            ['Ücretsiz süre', c.freeMinutes, n.freeMinutes, 'min'], ['Ücretli saatler', paidRange(c), paidRange(n), 'text'],
+            ['Abonelik · otomobil', c.subscription.small, n.subscription.small, 'money'], ['Abonelik · kamyonet', c.subscription.large, n.subscription.large, 'money']
+        ].map(([label, a, b, kind]) => {
+            const fa = kind === 'money' ? money(a) : (kind === 'min' ? a + ' dk' : a);
+            const fb = kind === 'money' ? money(b) : (kind === 'min' ? b + ' dk' : b);
+            const diff = kind === 'money' ? diffHtml(a, b) : (a === b ? '<span class="diff-same">Değişmedi</span>' : '<span class="diff-up">Değişti</span>');
+            return `<tr><td>${escapeHtml(label)}</td><td class="num">${escapeHtml(fa)}</td><td class="num">${escapeHtml(fb)}</td><td>${diff}</td></tr>`;
+        }).join('');
+        const rows = (p.rows || []).map((r, i) => {
+            const open = !!wiz.open[i];
+            const detail = open ? `<tr class="row-detail"><td colspan="5">
+                <div class="muted" style="font-size:13px;margin-bottom:6px;">Giriş ${escapeHtml(fmtDateTime(r.entry))} · Çıkış ${escapeHtml(fmtDateTime(r.exit))} · Ücretli süre ${fmtMinutes(r.proposed.paidMinutes)}</div>
+                ${segmentsHtml(r)}</td></tr>` : '';
+            return `<tr>
+                <td><button type="button" class="link-btn" data-act="toggleRow" data-i="${i}" aria-expanded="${open}"><i class="fa-solid ${open ? 'fa-chevron-down' : 'fa-chevron-right'}" aria-hidden="true"></i>${escapeHtml(r.label)}</button></td>
+                <td class="col-muted">${vehicleLabel(r.vehicleType)}</td>
+                <td class="right num">${money(r.current.fee)}</td>
+                <td class="right num"><b>${money(r.proposed.fee)}</b></td>
+                <td class="right num">${diffHtml(r.current.fee, r.proposed.fee)}</td>
+            </tr>${detail}`;
+        }).join('');
+        return `${errBox()}
+            <h3 class="sub-h">Tarife değerleri</h3>
+            <div class="table-wrap"><table class="table"><thead><tr><th>Kalem</th><th>Yürürlükteki</th><th>Önerilen</th><th>Fark</th></tr></thead><tbody>${cmp}</tbody></table></div>
+            <h3 class="sub-h">Örnek ücretler</h3>
+            <div class="table-wrap"><table class="table"><thead><tr><th>Örnek (satıra tıklayın)</th><th>Araç</th><th class="right">Yürürlükteki</th><th class="right">Önerilen</th><th class="right">Fark</th></tr></thead><tbody>${rows}</tbody></table></div>
+            <div class="wiz-actions"><span class="toolbar"><button type="button" class="btn btn-secondary" data-act="back">Geri</button>${discardBtn()}</span>
+                <button type="button" class="btn btn-primary" data-act="toStep3">Devam<i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>`;
+    }
+
+    function defaultEffective() {
+        const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(0, 0, 0, 0);
+        return toLocalInput(d);
+    }
+    function wizStep3() {
+        if (!wiz.eff) wiz.eff = defaultEffective();
+        const min = toLocalInput(new Date(Date.now() + 60000));
+        const up = tariffUpcoming();
+        return `${errBox()}
+            ${up ? `<div class="alert alert-warning"><b>Zaten zamanlanmış bir tarife var</b> (${escapeHtml(fmtFull(up.effectiveFrom))}). Yeni tarifeyi zamanlamadan önce mevcut zamanlamayı iptal etmeniz gerekir.</div>` : ''}
+            <div class="field" style="max-width:320px;"><label for="wizEff">Yürürlük tarihi ve saati (Türkiye saati)</label>
+                <input id="wizEff" class="input" type="datetime-local" min="${min}" value="${escapeHtml(wiz.eff)}"></div>
+            <div class="toolbar">
+                <button type="button" class="btn btn-secondary" data-act="quickTomorrow">Yarın 00:00</button>
+                <button type="button" class="btn btn-secondary" data-act="quickMonth">Ayın 1'i 00:00</button>
+            </div>
+            <div class="muted" style="font-size:14px;">Tarife seçilen anda otomatik olarak yürürlüğe girer. O ana kadar yürürlükteki tarife geçerlidir.</div>
+            <div class="wiz-actions"><span class="toolbar"><button type="button" class="btn btn-secondary" data-act="back">Geri</button>${discardBtn()}</span>
+                <button type="button" class="btn btn-primary" data-act="toStep4">Devam<i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>`;
+    }
+
+    function wizStep4() {
+        const n = wiz.preview && wiz.preview.proposed;
+        const up = tariffUpcoming();
+        return `${errBox()}
+            ${up ? `<div class="alert alert-warning">Zamanlanmış başka bir tarife var; işlem reddedilirse önce onu iptal edin.</div>` : ''}
+            <div class="alert alert-info">Yeni tarife <b>${escapeHtml(fmtFull(wiz.eff))}</b> tarihinde yürürlüğe girecek.</div>
+            ${n ? tariffGrid(n) : ''}
+            ${wiz.form && wiz.form.note ? `<div class="muted">Not: ${escapeHtml(wiz.form.note)}</div>` : ''}
+            <div class="field" style="max-width:320px;"><label for="wizPw">Onay için şifrenizi girin</label>
+                <input id="wizPw" class="input" type="password" autocomplete="current-password"${wiz.pwErr ? ' aria-invalid="true"' : ''} aria-describedby="wizPwErr">
+                <div class="field-error" id="wizPwErr" ${wiz.pwErr ? '' : 'hidden'}>${escapeHtml(wiz.pwErr)}</div></div>
+            <div class="wiz-actions"><span class="toolbar"><button type="button" class="btn btn-secondary" data-act="back">Geri</button>${discardBtn()}</span>
+                <button type="button" class="btn btn-success" data-act="schedule"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i>Tarifeyi zamanla</button></div>`;
+    }
+
+    // -- Sihirbaz eylemleri --
+    function readForm() {
+        const f = {};
+        TF_FIELDS.forEach(([k, , kind]) => {
+            const v = $('tf_' + k).value.trim();
+            f[k] = kind === 'time' ? v : (v === '' ? NaN : Number(v));
+        });
+        f.note = $('tf_note').value.trim();
+        return f;
+    }
+    function validateForm(f) {
+        const e = {};
+        ['smallFirstHour', 'largeFirstHour', 'subscriptionSmallMonthly', 'subscriptionLargeMonthly'].forEach(k => { if (!(f[k] > 0)) e[k] = "0'dan büyük olmalı."; });
+        ['smallExtraHour', 'largeExtraHour'].forEach(k => { if (!(f[k] >= 0)) e[k] = '0 veya daha büyük olmalı.'; });
+        if (!(Number.isInteger(f.freeMinutes) && f.freeMinutes >= 0 && f.freeMinutes <= 120)) e.freeMinutes = '0 ile 120 arasında tam sayı olmalı.';
+        if (!f.paidStart) e.paidStart = 'Saat seçin.';
+        if (!f.paidEnd) e.paidEnd = 'Saat seçin.';
+        else if (f.paidStart && f.paidEnd !== '00:00' && !(f.paidStart < f.paidEnd)) e.paidEnd = 'Başlangıç, bitişten önce olmalı (bitiş 00:00 ise gece yarısı sayılır).';
+        return e;
+    }
+
+    async function saveDraft(btn) {
+        const f = readForm();
+        wiz.form = f; wiz.dirty = true; wiz.err = '';
+        wiz.fieldErrs = validateForm(f);
+        if (Object.keys(wiz.fieldErrs).length) {
+            renderWizard();
+            const first = TF_FIELDS.find(([k]) => wiz.fieldErrs[k]);
+            if (first) $('tf_' + first[0]).focus();
+            return;
+        }
+        const body = Object.assign({}, f);
+        if (!body.note) delete body.note;
+        btn.disabled = true;
+        try {
+            const draft = wiz.id
+                ? await apiJson('PUT', `/api/admin/tariffs/${wiz.id}`, body)
+                : await apiJson('POST', '/api/admin/tariffs', body);
+            wiz.id = draft.id;
+            wiz.preview = await apiJson('POST', `/api/admin/tariffs/${wiz.id}/preview`);
+            wiz.open = {};
+            wiz.step = 2;
+            loadTariffs();
+        } catch (e) {
+            if (e.name === 'AuthError') return;
+            wiz.err = e.message;
+            if (e.code === 'TARIFF_STATE') { wiz.id = null; }
+        }
+        renderWizard();
+    }
+
+    async function doSchedule(btn) {
+        const pw = $('wizPw').value;
+        wiz.pwErr = ''; wiz.err = '';
+        if (!pw) { wiz.pwErr = 'Şifrenizi girin.'; renderWizard(); $('wizPw').focus(); return; }
+        btn.disabled = true;
+        try {
+            await apiJson('POST', `/api/admin/tariffs/${wiz.id}/schedule`, { effectiveFrom: wiz.eff + ':00', password: pw });
+            toast('Tarife zamanlandı.');
+            wiz = newWiz();
+            await loadTariffs();
+            return;
+        } catch (e) {
+            if (e.name === 'AuthError') return;
+            if (e.status === 403 && e.code === 'PASSWORD_MISMATCH') {
+                wiz.pwErr = 'Şifre hatalı';
+                renderWizard();
+                $('wizPw').focus();
+                return;
+            }
+            if (e.code === 'TARIFF_STATE') {
+                wiz.err = e.message + (tariffUpcoming() ? ' Önce mevcut zamanlamayı iptal edin.' : '');
+            } else if (e.code === 'INVALID_TARIFF') {
+                wiz.err = e.message;
+                wiz.step = 3;
+            } else {
+                wiz.err = e.message;
+            }
+        }
+        renderWizard();
+    }
+
+    async function cancelTariff(id, kind) {
+        const draft = kind === 'DRAFT';
+        const ok = await confirmDialog({
+            title: draft ? 'Taslağı sil' : 'Zamanlamayı iptal et',
+            message: draft ? 'Bu taslak silinecek (arşivlenecek).' : 'Zamanlanmış tarife iptal edilecek; yürürlükteki tarife değişmeden devam edecek.',
+            confirmLabel: draft ? 'Sil' : 'Zamanlamayı iptal et',
+            danger: true
+        });
+        if (!ok) return;
+        try {
+            await apiJson('POST', `/api/admin/tariffs/${id}/cancel`);
+            toast(draft ? 'Taslak silindi.' : 'Zamanlama iptal edildi.');
+            if (wiz.id === id) wiz = newWiz();
+            await loadTariffs();
+        } catch (e) {
+            if (e.name !== 'AuthError') toast('Hata: ' + e.message, true);
+        }
+    }
+
+    function continueDraft(id) {
+        const t = tariffList.find(x => x.id === id);
+        if (!t) return;
+        wiz = newWiz();
+        wiz.id = t.id; wiz.form = formFromTariff(t); wiz.dirty = true;
+        renderWizard();
+        $('wizCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function onTariffClick(e) {
+        const el = e.target.closest('[data-act]');
+        if (!el) return;
+        const act = el.dataset.act;
+        if (act === 'save') saveDraft(el);
+        else if (act === 'schedule') doSchedule(el);
+        else if (act === 'back') { wiz.step = Math.max(1, wiz.step - 1); wiz.err = ''; wiz.pwErr = ''; renderWizard(); }
+        else if (act === 'toStep3') { wiz.step = 3; wiz.err = ''; renderWizard(); }
+        else if (act === 'toStep4') {
+            const v = $('wizEff').value;
+            const d = new Date(v);
+            if (!v || isNaN(d) || d.getTime() <= Date.now()) { wiz.err = 'Yürürlük zamanı gelecekte olmalı.'; renderWizard(); return; }
+            wiz.eff = v; wiz.err = ''; wiz.pwErr = ''; wiz.step = 4; renderWizard();
+        }
+        else if (act === 'quickTomorrow') { wiz.eff = defaultEffective(); renderWizard(); }
+        else if (act === 'quickMonth') {
+            const d = new Date(); d.setMonth(d.getMonth() + 1, 1); d.setHours(0, 0, 0, 0);
+            wiz.eff = toLocalInput(d); renderWizard();
+        }
+        else if (act === 'toggleRow') { const i = el.dataset.i; wiz.open[i] = !wiz.open[i]; renderWizard(); }
+        else if (act === 'discard') cancelTariff(wiz.id, 'DRAFT');
+        else if (act === 'cancel') cancelTariff(Number(el.dataset.id), el.dataset.kind);
+        else if (act === 'continue') continueDraft(Number(el.dataset.id));
+    }
+
+    // ---- 13. Personel (aktif/pasif) ----
+    let usersData = [];
+    const ROLE_NAMES = { ADMIN: 'Yönetici', OFFICER: 'Memur' };
+    async function fetchUsers() {
+        try {
+            usersData = await apiJson('GET', '/api/admin/users');
+            renderUsers();
+            return true;
+        } catch (e) { if (e.name !== 'AuthError') console.error('Personel listesi hatası:', e); return false; }
+    }
+    function renderUsers() {
+        const me = localStorage.getItem('username');
+        $('usersBody').innerHTML = usersData.map(u => `<tr>
+            <td><b>${escapeHtml(u.username)}</b></td>
+            <td>${escapeHtml(ROLE_NAMES[u.role] || u.role)}</td>
+            <td>${escapeHtml(u.zoneName || '-')}</td>
+            <td class="num col-muted">${u.lastLoginTime ? escapeHtml(fmtDateTime(u.lastLoginTime)) : '-'}</td>
+            <td><label class="check"><input type="checkbox" role="switch" data-uid="${u.id}" ${u.active ? 'checked' : ''} ${u.username === me ? 'disabled title="Kendi hesabınızı pasife alamazsınız"' : ''}> ${u.active ? 'Aktif' : 'Pasif'}</label></td>
+        </tr>`).join('') || '<tr><td colspan="5" class="table-empty">Kullanıcı bulunamadı.</td></tr>';
+    }
+    async function onUserToggle(e) {
+        const cb = e.target.closest('input[data-uid]');
+        if (!cb) return;
+        const want = cb.checked;
+        cb.checked = !want; // onaylanana kadar eski durum görünür
+        const u = usersData.find(x => String(x.id) === cb.dataset.uid);
+        if (!u) return;
+        const ok = await confirmDialog({
+            title: want ? 'Personeli aktifleştir' : 'Personeli pasife al',
+            message: want ? `${u.username} yeniden giriş yapabilecek.` : `${u.username} oturumdan atılacak, açık vardiyaları kapanacak ve yeniden giriş yapamayacak.`,
+            confirmLabel: want ? 'Aktifleştir' : 'Pasife al',
+            danger: !want
+        });
+        if (!ok) return;
+        try {
+            await apiJson('PUT', `/api/admin/users/${u.id}/active`, { active: want });
+            toast(want ? 'Personel aktifleştirildi.' : 'Personel pasife alındı.');
+        } catch (err) {
+            if (err.name !== 'AuthError') toast('Hata: ' + err.message, true);
+        }
+        fetchUsers();
+    }
+
+    // ---- 14. Canlı akış (SSE) ----
+    const LIVE_EVENTS = ['HELLO', 'HEARTBEAT', 'RESET', 'VEHICLE_ENTERED', 'VEHICLE_EXITED', 'VEHICLE_RUNAWAY', 'TARIFF_UPDATED', 'USER_DEACTIVATED'];
+    const WATCHDOG_MS = 60000;
+    const live = { gen: 0, stopped: true, es: null, version: 0, userId: null, state: 'idle', retry: 0, fails: 0, watchdog: null, reconnect: null, vehicleTimer: null, catching: false };
+
+    function liveStop() {
+        live.gen++;
+        live.stopped = true;
+        closeStream();
+        clearTimeout(live.reconnect); live.reconnect = null;
+        clearTimeout(live.vehicleTimer); live.vehicleTimer = null;
+        live.state = 'idle';
+    }
+    function closeStream() {
+        clearTimeout(live.watchdog); live.watchdog = null;
+        if (live.es) { try { live.es.close(); } catch (e) { /* yok say */ } live.es = null; }
+    }
+
+    async function syncVersion() {
+        try {
+            const res = await fetchWithAuth(`${CONFIG.BASE_URL}/api/sync`);
+            if (res.ok) { const d = await res.json(); if (d && d.version != null) live.version = d.version; }
+        } catch (e) { if (e.name === 'AuthError') throw e; }
+    }
+
+    // Oturum başlangıcı: sürümü al, tüm veriyi bir kez yükle, sonra akışı aç
+    async function startSession() {
+        liveStop();
+        const gen = live.gen;
+        live.stopped = false;
+        wiz = newWiz();
+        try {
+            await syncVersion();
+            await loadStreets();
+            await updateDashboard();
+        } catch (e) { return; }
+        if (gen !== live.gen || live.stopped) return;
+        liveConnect();
+    }
+
+    async function fullReload() {
+        try { await syncVersion(); } catch (e) { return; }
+        await updateDashboard();
+    }
+    async function manualRefresh() {
+        document.querySelectorAll('.btn-refresh').forEach(b => { b.disabled = true; });
+        await fullReload();
+        document.querySelectorAll('.btn-refresh').forEach(b => { b.disabled = false; });
+        toast('Veriler yenilendi.');
+    }
+
+    function armWatchdog() {
+        clearTimeout(live.watchdog);
+        live.watchdog = setTimeout(() => liveFail(), WATCHDOG_MS);
+    }
+
+    async function liveConnect() {
+        if (live.stopped) return;
+        const gen = live.gen;
+        closeStream();
+        let ticket;
+        try {
+            const res = await fetchWithAuth(`${CONFIG.BASE_URL}/api/events/ticket`, { method: 'POST' });
+            if (!res.ok) throw new Error('Bilet alınamadı: ' + res.status);
+            ticket = (await res.json()).ticket;
+        } catch (e) {
+            if (e.name === 'AuthError' || gen !== live.gen) return;
+            liveFail();
+            return;
+        }
+        if (gen !== live.gen || live.stopped) return;
+        let url = `${CONFIG.BASE_URL}/api/events?ticket=${encodeURIComponent(ticket)}`;
+        if (live.version > 0) url += `&since=${live.version}`;
+        const es = new EventSource(url);
+        live.es = es;
+        LIVE_EVENTS.forEach(name => es.addEventListener(name, ev => { if (live.es === es) onFrame(name, ev); }));
+        // Bilet tek kullanımlık: EventSource'un kendi yeniden bağlanması yerine kapatıp yeni biletle açılır
+        es.onerror = () => { if (live.es === es) liveFail(); };
+        armWatchdog();
+    }
+
+    // Bağlantı hatası / watchdog: üstel bekleme (1,2,4,...,30 sn) ile yeni biletle yeniden bağlan
+    function liveFail() {
+        if (live.stopped) return;
+        closeStream();
+        live.fails++;
+        setLive(live.fails >= 3 ? 'offline' : 'reconnecting');
+        const delay = Math.min(30000, 1000 * Math.pow(2, live.retry));
+        live.retry++;
+        clearTimeout(live.reconnect);
+        live.reconnect = setTimeout(liveConnect, delay);
+    }
+
+    function onFrame(name, ev) {
+        armWatchdog();
+        live.retry = 0; live.fails = 0;
+        lastGoodTime = new Date();
+        setLive('online');
+        let d = {};
+        try { d = ev.data ? JSON.parse(ev.data) : {}; } catch (e) { return; }
+        if (name === 'HELLO') {
+            if (d.userId != null) live.userId = d.userId;
+            if (!live.version && d.version) live.version = d.version;
+        } else if (name === 'HEARTBEAT') {
+            if (d.version > live.version) catchUp(); // kaçan olay olabilir
+        } else if (name === 'RESET') {
+            fullReload();
+        } else {
+            applyEvent(d);
+        }
+    }
+
+    function applyEvent(d) {
+        if (d.version != null) {
+            if (d.version <= live.version) return;
+            live.version = d.version;
+        }
+        const p = d.payload || {};
+        switch (d.type) {
+            case 'VEHICLE_ENTERED':
+            case 'VEHICLE_EXITED':
+            case 'VEHICLE_RUNAWAY':
+                scheduleVehicleRefresh();
+                break;
+            case 'TARIFF_UPDATED':
+                if (p && p.small) { tariffCurrent = p; renderTariffCards(); }
+                loadTariffs();
+                break;
+            case 'USER_DEACTIVATED': {
+                const mine = (live.userId != null && (p.userId === live.userId || d.targetUserId === live.userId))
+                    || (p.username && p.username === localStorage.getItem('username'));
+                if (mine) {
+                    clearSession();
+                    showLogin('Hesabınız pasife alındı. Oturum kapatıldı.');
+                } else {
+                    fetchUsers();
+                }
+                break;
+            }
+        }
+    }
+
+    // Kaçırılan olaylar /api/sync ile tamamlanır
+    async function catchUp() {
+        if (live.catching) return;
+        live.catching = true;
+        const gen = live.gen;
+        try {
+            for (let i = 0; i < 10 && gen === live.gen; i++) {
+                const res = await fetchWithAuth(`${CONFIG.BASE_URL}/api/sync?since=${live.version}`);
+                if (!res.ok) break;
+                const d = await res.json();
+                if (d.resetRequired) { await fullReload(); break; }
+                (d.events || []).forEach(applyEvent);
+                if (!d.hasMore) { if (d.version > live.version) live.version = d.version; break; }
+            }
+        } catch (e) { /* bir sonraki sinyalde tekrar denenir */ }
+        live.catching = false;
+    }
+
+    // Araç olayları ~800 ms toplanır, yalnızca değişen veriler tazelenir (filtre, sayfa, açık satır korunur)
+    function scheduleVehicleRefresh() {
+        if (live.vehicleTimer) return;
+        live.vehicleTimer = setTimeout(async () => {
+            live.vehicleTimer = null;
+            if (live.stopped) return;
+            await Promise.all([fetchActiveSpots(), fetchBICharts(), fetchIncomeKPI(), fetchHistoryTable(), fetchShifts()]);
+        }, 800);
     }
 
     // ---- Olaylar ----
@@ -1071,8 +1809,11 @@
         if (e.key === 'Enter' || e.key === ' ') { const tr = e.target.closest('tr.clickable'); if (tr) { e.preventDefault(); toggleRow(tr); } }
     });
 
+    $('tarClick').addEventListener('click', onTariffClick);
+    $('tarClick').addEventListener('input', e => { if (e.target.id === 'wizEff') wiz.eff = e.target.value; else if (e.target.id && e.target.id.startsWith('tf_')) wiz.dirty = true; });
+    $('usersBody').addEventListener('change', onUserToggle);
+
     applyStoredTheme();
-    setLive(true);
     document.querySelectorAll('.live-pill').forEach(p => { p.className = 'status-pill live-pill status-offline'; p.textContent = 'Yükleniyor…'; });
     if (localStorage.getItem('token')) {
         showDashboard();

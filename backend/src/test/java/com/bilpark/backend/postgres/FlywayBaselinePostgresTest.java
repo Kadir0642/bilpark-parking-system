@@ -86,12 +86,12 @@ class FlywayBaselinePostgresTest {
 
         MigrateResult result = flyway(url).migrate();
         assertTrue(result.success);
-        assertEquals(1, result.migrationsExecuted, "only V2 should run");
+        assertEquals(2, result.migrationsExecuted, "V2 and V3 should run");
 
         try (Connection c = conn(url); Statement st = c.createStatement()) {
             List<String> hist = strings(c,
                     "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank");
-            assertEquals(List.of("BASELINE:1", "SQL:2"), hist);
+            assertEquals(List.of("BASELINE:1", "SQL:2", "SQL:3"), hist);
 
             assertEquals(0, count(c, "SELECT count(*) FROM pg_constraint WHERE conname = 'ukabc123xyz'"));
             assertEquals(1, count(c, "SELECT count(*) FROM pg_indexes WHERE indexname = 'ux_subscriptions_active_plate'"));
@@ -118,6 +118,26 @@ class FlywayBaselinePostgresTest {
             assertEquals(1, count(c, "SELECT count(*) FROM pg_indexes WHERE indexname='ix_shifts_user_device_open'"));
             assertFalse(strings(c, "SELECT archived::text FROM fiscal_years").contains("true"));
             assertEquals(1, count(c, "SELECT count(*) FROM parking_records WHERE payment_method IS NULL"));
+
+            // ---- V3 ----
+            assertEquals(3, count(c, "SELECT count(*) FROM streets"));
+            assertEquals("Z1", strings(c, "SELECT zone_name FROM zones WHERE street='TEVFIK_BEY' AND zone_number=1").get(0));
+            assertEquals(6, count(c, "SELECT count(*) FROM zones"));
+            assertEquals(1, count(c, "SELECT count(*) FROM pg_constraint WHERE conname='fk_zones_street'"));
+            assertEquals(1, count(c, "SELECT count(*) FROM tariffs WHERE status='ACTIVE'"));
+            assertEquals(1, count(c, "SELECT count(*) FROM tariffs WHERE status='ACTIVE' AND small_first_hour=25 "
+                    + "AND small_extra_hour=15 AND large_first_hour=50 AND large_extra_hour=30 AND free_minutes=5 "
+                    + "AND paid_start='08:00' AND paid_end='22:00' "
+                    + "AND subscription_small_monthly=2500 AND subscription_large_monthly=3000"));
+            assertEquals(2, count(c, "SELECT count(*) FROM information_schema.columns WHERE table_name='parking_records' "
+                    + "AND column_name IN ('tariff_id','paid_minutes')"));
+            assertEquals(1, count(c, "SELECT count(*) FROM parking_records WHERE tariff_id IS NULL AND paid_minutes IS NULL"));
+            assertEquals(1, count(c, "SELECT count(*) FROM users WHERE username='admin' AND active"));
+            assertEquals(1, count(c, "SELECT count(*) FROM information_schema.tables WHERE table_name='sync_events'"));
+            assertThrows(SQLException.class, () -> st.execute(
+                    "INSERT INTO tariffs (status, small_first_hour, small_extra_hour, large_first_hour, large_extra_hour, "
+                            + "free_minutes, paid_start, paid_end, subscription_small_monthly, subscription_large_monthly, "
+                            + "created_by_username, created_at) VALUES ('ACTIVE',1,1,1,1,5,'08:00','22:00',1,1,'t',now())"));
         }
 
         // idempotent: second migrate is a no-op
@@ -167,10 +187,10 @@ class FlywayBaselinePostgresTest {
         String url = urlFor("fresh_db");
         MigrateResult result = flyway(url).migrate();
         assertTrue(result.success);
-        assertEquals(2, result.migrationsExecuted);
+        assertEquals(3, result.migrationsExecuted);
 
         try (Connection c = conn(url); Statement st = c.createStatement()) {
-            assertEquals(List.of("SQL:1", "SQL:2"),
+            assertEquals(List.of("SQL:1", "SQL:2", "SQL:3"),
                     strings(c, "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank"));
             assertEquals(0, count(c, "SELECT count(*) FROM pg_constraint c JOIN pg_class t ON t.oid=c.conrelid "
                     + "WHERE t.relname='subscriptions' AND c.contype='u'"));
