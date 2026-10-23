@@ -4,4 +4,6 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Yerel emulator geliştirmesi için http'ye yalnızca debug'da izin ver -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>

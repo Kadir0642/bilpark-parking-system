@@ -49,12 +49,14 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
     try {
       final response = await http.get(
         uri,
-        headers: {
-          if (AppConstants.authToken != null) 
-            'Authorization': 'Bearer ${AppConstants.authToken}'
-        }
+        headers: AppConstants.authHeaders()
       );
       if (!mounted) return;
+      if (response.statusCode == 401) {
+        timer?.cancel();
+        AppConstants.handleAuthError(context, response);
+        return;
+      }
       if (response.statusCode == 200) {
         List<dynamic> data = json.decode(response.body);
         if (widget.zoneId != null) {
@@ -80,11 +82,10 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
     try {
       final response = await http.post(
         url,
-        headers: {
-          if (AppConstants.authToken != null) 
-            'Authorization': 'Bearer ${AppConstants.authToken}'
-        }
+        headers: AppConstants.authHeaders()
       );
+      if (!mounted) return;
+      if (AppConstants.handleAuthError(context, response)) return;
       if (response.statusCode == 200 || response.statusCode == 201) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("✅ Araç Sokağa Eklendi!"), backgroundColor: Colors.green));
         fetchActiveVehicles();
@@ -99,11 +100,10 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
     try {
       final response = await http.post(
         url,
-        headers: {
-          if (AppConstants.authToken != null) 
-            'Authorization': 'Bearer ${AppConstants.authToken}'
-        }
+        headers: AppConstants.authHeaders()
       );
+      if (!mounted) return;
+      if (AppConstants.handleAuthError(context, response)) return;
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("💸 Ödeme Alındı: ${data['fee']} TL"), backgroundColor: Colors.green));
@@ -117,11 +117,10 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
     try {
       final response = await http.post(
         url,
-        headers: {
-          if (AppConstants.authToken != null) 
-            'Authorization': 'Bearer ${AppConstants.authToken}'
-        }
+        headers: AppConstants.authHeaders()
       );
+      if (!mounted) return;
+      if (AppConstants.handleAuthError(context, response)) return;
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("🚨 Araç Kaçak Olarak İşaretlendi!"), backgroundColor: Colors.red));
         fetchActiveVehicles();
@@ -182,7 +181,7 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
                   ),
                   const SizedBox(height: 15),
                   DropdownButtonFormField<String>(
-                    value: selectedType, decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                    initialValue: selectedType, decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                     items: const [
                       DropdownMenuItem(value: "SMALL", child: Text("Otomobil 🚗")),
                       DropdownMenuItem(value: "LARGE", child: Text("Kamyonet / Ticari 🚐")),
@@ -226,12 +225,11 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
     String type = vehicle['currentType'] ?? 'SMALL';
     DateTime entryTime = DateTime.parse(vehicle['entryTime']).toLocal();
     bool isLarge = (type == 'LARGE');
+    Timer? dialogTimer; // Dialog kapanınca her durumda iptal edilir
 
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
-        Timer? dialogTimer; // Saniyeleri sayacak İsviçre saatimiz!
-
         return StatefulBuilder(
           builder: (context, setStateDialog) {
 
@@ -484,7 +482,7 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
 
     return Scaffold(
       backgroundColor: Colors.grey[200],
-      appBar: AppBar(title: Text('${widget.street}${widget.zoneName != null ? ' - ' + widget.zoneName! : ''}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)), backgroundColor: const Color(0xFF3F51B5)),
+      appBar: AppBar(title: Text('${widget.street}${widget.zoneName != null ? ' - ${widget.zoneName!}' : ''}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)), backgroundColor: const Color(0xFF3F51B5)),
       body: activeVehicles.isEmpty
           ? const Center(child: Text("Sokak boş. Araç eklemek için +'ya basın.", style: TextStyle(color: Colors.grey, fontSize: 16)))
           : ListView.builder(
