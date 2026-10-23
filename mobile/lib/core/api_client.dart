@@ -130,6 +130,9 @@ class ApiClient {
   static Future<dynamic> post(String path, {Map<String, String>? query, Object? body, bool auth = true}) =>
       _send('POST', path, query: query, body: body, auth: auth);
 
+  static Future<dynamic> put(String path, {Map<String, String>? query, Object? body, bool auth = true}) =>
+      _send('PUT', path, query: query, body: body, auth: auth);
+
   static Future<dynamic> _send(String method, String path,
       {Map<String, String>? query, Object? body, bool auth = true}) async {
     final uri = Uri.parse('${AppConstants.apiBase}$path')
@@ -145,9 +148,12 @@ class ApiClient {
 
     http.Response response;
     try {
+      final encoded = body == null ? null : jsonEncode(body);
       final future = method == 'GET'
           ? http.get(uri, headers: headers)
-          : http.post(uri, headers: headers, body: body == null ? null : jsonEncode(body));
+          : method == 'PUT'
+              ? http.put(uri, headers: headers, body: encoded)
+              : http.post(uri, headers: headers, body: encoded);
       response = await future.timeout(timeout);
     } on TimeoutException {
       throw const ApiException(null, 'TIMEOUT', 'Sunucu yanıt vermedi. Lütfen tekrar deneyin.');
@@ -167,14 +173,14 @@ class ApiClient {
 
     final err = parseError(response.statusCode, text);
     if (response.statusCode == 401 && auth) {
-      await _handleUnauthorized();
+      await handleUnauthorized();
       throw ApiException(401, err.code ?? 'UNAUTHORIZED', sessionExpiredMessage);
     }
     throw err;
   }
 
   /// 401: token temizlenir, girişe dönülür. Polling zamanlayıcıları üst üste çağırsa da bir kez çalışır.
-  static Future<void> _handleUnauthorized() async {
+  static Future<void> handleUnauthorized() async {
     if (_redirecting) return;
     _redirecting = true;
     await clearToken();
