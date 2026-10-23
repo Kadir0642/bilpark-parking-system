@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface SyncEventRepository extends JpaRepository<SyncEvent, Long> {
@@ -21,8 +22,8 @@ public interface SyncEventRepository extends JpaRepository<SyncEvent, Long> {
     @Query("SELECT COALESCE(MAX(e.id), 0) FROM SyncEvent e")
     long latestVersion();
 
-    @Query("SELECT MIN(e.id) FROM SyncEvent e")
-    Long oldestVersion();
+    // No MIN(): a derived query renders the same SQL whatever the JVM locale
+    Optional<SyncEvent> findFirstByOrderByIdAsc();
 
     @Modifying
     @Query("DELETE FROM SyncEvent e WHERE e.createdAt < :before")

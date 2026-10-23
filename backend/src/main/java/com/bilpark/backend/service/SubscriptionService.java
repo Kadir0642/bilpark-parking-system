@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -59,7 +60,7 @@ public class SubscriptionService {
 
         VehicleType type;
         try {
-            type = VehicleType.valueOf(vehicleTypeStr.toUpperCase());
+            type = VehicleType.valueOf(vehicleTypeStr.toUpperCase(Locale.ROOT));
         } catch (Exception e) {
             type = VehicleType.SMALL;
         }

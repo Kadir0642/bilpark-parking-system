@@ -166,7 +166,7 @@ public class SyncService implements ChangePublisher {
     /** True when the client cannot catch up from since (older than retained events, or newer than the DB). */
     public boolean resetRequired(long since, long latest) {
         if (since > latest) return true;
-        Long oldest = repository.oldestVersion();
+        Long oldest = repository.findFirstByOrderByIdAsc().map(SyncEvent::getId).orElse(null);
         return oldest != null && since < oldest - 1;
     }
 
