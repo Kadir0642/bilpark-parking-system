@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'settings_screen.dart';
 import 'history_screen.dart';
+import '../core/api_client.dart';
 import '../core/constants.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -37,24 +36,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> fetchStats() async {
-    final uri = Uri.parse('${AppConstants.baseUrl}/filter').replace(queryParameters: {
-      'street': _backendStreetEnum,
-    });
-
     try {
-      final response = await http.get(
-        uri,
-        headers: AppConstants.authHeaders()
-      );
+      final spots = await ApiClient.get('/parking/filter', query: {'street': _backendStreetEnum});
       if (!mounted) return;
-      if (response.statusCode == 200) {
-        List<dynamic> spots = json.decode(response.body);
-        setState(() {
-          activeVehicleCount = spots.length;
-        });
+      var list = spots is List ? spots : [];
+      // Görevli yalnızca kendi bölgesini görür (harita ekranıyla aynı süzme)
+      if (widget.zoneId != null) {
+        list = list.where((s) => s['zone'] != null && s['zone']['id'] == widget.zoneId).toList();
       }
-    } catch (e) {
-      debugPrint("İstatistik Hatası: $e");
+      setState(() {
+        activeVehicleCount = list.length;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), backgroundColor: Colors.red));
     }
   }
 

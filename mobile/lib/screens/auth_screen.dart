@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../core/api_client.dart';
 import '../core/constants.dart';
 import '../main.dart'; // MainContainer
 import 'login_screen.dart'; // Vardiya/Lokasyon seçim ekranına gidecek
@@ -31,17 +30,13 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() { _isLoading = true; });
 
     try {
-      final response = await http.post(
-        Uri.parse('${AppConstants.apiBase}/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': username, 'password': password}),
-      );
+      final data = await ApiClient.post('/auth/login',
+          body: {'username': username, 'password': password}, auth: false);
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+      {
         
         // Save auth state
-        AppConstants.authToken = data['token'];
+        await ApiClient.saveToken(data['token'] as String);
         AppConstants.currentUser = data['username'];
         AppConstants.currentRole = data['role'];
         final zone = data['assignedZone'];
@@ -70,15 +65,14 @@ class _AuthScreenState extends State<AuthScreen> {
               MaterialPageRoute(builder: (context) => const LoginScreen())
           );
         }
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Hatalı kullanıcı adı veya şifre!")));
       }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), backgroundColor: Colors.red));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Bağlantı hatası: $e")));
+          const SnackBar(content: Text("Giriş sırasında beklenmeyen bir hata oluştu."), backgroundColor: Colors.red));
     } finally {
       if (mounted) setState(() { _isLoading = false; });
     }

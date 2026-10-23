@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../core/api_client.dart';
 import '../core/constants.dart';
 
 class HistoryScreen extends StatefulWidget {
@@ -39,38 +38,28 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Future<void> fetchHistory() async {
     setState(() => isLoading = true);
 
-    final uri = Uri.parse('${AppConstants.baseUrl}/history').replace(queryParameters: {
-      'street': _backendStreetEnum,
-    });
-
     try {
-      final response = await http.get(
-        uri,
-        headers: AppConstants.authHeaders()
-      );
-
-      if (response.statusCode == 200 && mounted) {
-        List<dynamic> allRecords = json.decode(response.body);
-
-        if (widget.showOnlyRunaways) {
-          // Eğer Kaçaklar sayfasındaysak, SADECE KAÇANLARI al
-          allRecords = allRecords.where((r) => r['status'] == 'RUNAWAY').toList();
-        } else {
-          // Eğer Normal Geçmiş sayfasındaysak, SADECE ÖDEYENLERİ (PAID) al
-          allRecords = allRecords.where((r) => r['status'] == 'PAID').toList();
-        }
-
-        setState(() {
-          historyRecords = allRecords;
-          isLoading = false;
-        });
-      } else {
-        setState(() => isLoading = false);
-      }
-    } catch (e) {
-      debugPrint("Geçmiş Çekme Hatası: $e");
-      if (mounted) setState(() => isLoading = false);
+      final data = await ApiClient.get('/parking/history', query: {'street': _backendStreetEnum});
+      if (!mounted) return;
+      setState(() {
+        historyRecords = _filterByMode(data is List ? data : []);
+        isLoading = false;
+      });
+    } on ApiException catch (e) {
+      _showError(e.message);
+      if (mounted) setState(() { historyRecords = []; isLoading = false; });
     }
+  }
+
+  // Kaçaklar sayfasında yalnızca RUNAWAY, normal geçmişte yalnızca PAID kayıtlar
+  List<dynamic> _filterByMode(List<dynamic> records) {
+    final wanted = widget.showOnlyRunaways ? 'RUNAWAY' : 'PAID';
+    return records.where((r) => r['status'] == wanted).toList();
+  }
+
+  void _showError(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
   }
 
 // --- 2. GÜNCELLENMİŞ ARAMA MOTORU ---
@@ -81,36 +70,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
 
     setState(() => isLoading = true);
-    final uri = Uri.parse('${AppConstants.baseUrl}/history/search').replace(queryParameters: {
-      'plate': plate.toUpperCase().replaceAll(' ', ''),
-    });
-
     try {
-      final response = await http.get(
-        uri,
-        headers: AppConstants.authHeaders()
-      );
-
-      if (response.statusCode == 200 && mounted) {
-        List<dynamic> results = json.decode(response.body);
-
-        // ARAMADA DA AYNI KESİN AYRIMI YAPIYORUZ
-        if (widget.showOnlyRunaways) {
-          results = results.where((r) => r['status'] == 'RUNAWAY').toList();
-        } else {
-          results = results.where((r) => r['status'] == 'PAID').toList();
-        }
-
-        setState(() {
-          historyRecords = results;
-          isLoading = false;
-        });
-      } else {
-        setState(() { historyRecords = []; isLoading = false; });
-      }
-    } catch (e) {
-      debugPrint("Arama Hatası: $e");
-      if (mounted) setState(() => isLoading = false);
+      // Sunucu parça arama yapar; kayıt yoksa 404 NOT_FOUND döner (boş liste gibi ele alınır)
+      final data = await ApiClient.get('/parking/history/search',
+          query: {'plate': plate.toUpperCase().replaceAll(RegExp(r'[\s-]'), '')});
+      if (!mounted) return;
+      setState(() {
+        historyRecords = _filterByMode(data is List ? data : []);
+        isLoading = false;
+      });
+    } on ApiException catch (e) {
+      if (e.statusCode != 404) _showError(e.message);
+      if (mounted) setState(() { historyRecords = []; isLoading = false; });
     }
   }
 

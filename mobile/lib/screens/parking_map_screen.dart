@@ -1,12 +1,46 @@
-import 'dart:convert';
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../core/api_client.dart';
 import '../core/constants.dart';
+
+enum _ActionKind {
+  checkOut('Ödeme'),
+  runaway('Kaçak');
+
+  final String label;
+  const _ActionKind(this.label);
+}
+
+class _PendingAction {
+  final String plate;
+  final _ActionKind kind;
+  final String? method; // CASH | POS | SUBSCRIPTION (yalnızca ödeme)
+  final double amount;
+  Timer? timer;
+  bool sent = false; // true: istek yola çıktı, artık geri alınamaz
+
+  _PendingAction(this.plate, this.kind, this.method, this.amount);
+}
+
+class _FailedAction {
+  final String plate;
+  final _ActionKind kind;
+  final String? method;
+  final double amount;
+  final DateTime time;
+  final String message;
+  final String? code;
+  final int? statusCode;
+
+  _FailedAction(this.plate, this.kind, this.method, this.amount, this.time, this.message, this.code, this.statusCode);
+
+  // Ağ/sunucu hatası ve kilit çakışması tekrar denenebilir; "zaten işlendi", "abonelik yok" gibi iş kuralı hataları denenemez
+  bool get retryable => statusCode == null || statusCode! >= 500 || code == 'CONFLICT';
+}
 
 class ParkingMapScreen extends StatefulWidget {
   final String region;
@@ -24,6 +58,10 @@ class ParkingMapScreen extends StatefulWidget {
 class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAliveClientMixin {
   List<dynamic> activeVehicles = [];
   Timer? timer;
+  String? _listError;
+  bool _failedExpanded = true;
+  final Map<String, _PendingAction> _pending = {};
+  final List<_FailedAction> _failed = [];
 
   String get _backendStreetEnum => AppConstants.toBackendEnum(widget.street);
 
@@ -40,37 +78,47 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
   @override
   void dispose() {
     timer?.cancel();
+    // Ekran kapanırken bekleyen işlemler SESSİZCE DÜŞÜRÜLMEZ, hemen gönderilir: görevli onay vermişti ve
+    // tahsilat/kaçak kaydı kaybolursa kasa ile saha uyuşmaz. (UI yok; sonuç sunucu kaydında görünür.)
+    for (final p in _pending.values.toList()) {
+      if (!p.sent) {
+        p.timer?.cancel();
+        _execute(p);
+      }
+    }
     super.dispose();
   }
 
   // --- API İŞLEMLERİ ---
   Future<void> fetchActiveVehicles() async {
-    final uri = Uri.parse('${AppConstants.baseUrl}/filter').replace(queryParameters: {'street': _backendStreetEnum});
     try {
-      final response = await http.get(
-        uri,
-        headers: AppConstants.authHeaders()
-      );
+      final data = await ApiClient.get('/parking/filter', query: {'street': _backendStreetEnum});
       if (!mounted) return;
-      if (response.statusCode == 401) {
-        timer?.cancel();
-        AppConstants.handleAuthError(context, response);
-        return;
+      var list = data is List ? data : <dynamic>[];
+      if (widget.zoneId != null) {
+        list = list.where((spot) => spot['zone'] != null && spot['zone']['id'] == widget.zoneId).toList();
       }
-      if (response.statusCode == 200) {
-        List<dynamic> data = json.decode(response.body);
-        if (widget.zoneId != null) {
-          data = data.where((spot) => spot['zone'] != null && spot['zone']['id'] == widget.zoneId).toList();
-        }
-        setState(() => activeVehicles = data);
-      }
-    } catch (e) { debugPrint("Hata: $e"); }
+      setState(() {
+        activeVehicles = list;
+        _listError = null;
+      });
+    } on ApiException catch (e) {
+      // Polling her 6 sn'de çalışır: hatayı SnackBar yağmuru yerine ekranda tek satır olarak göster
+      if (mounted && !e.isUnauthorized) setState(() => _listError = e.message);
+    }
+  }
+
+  void _showSnack(String msg, {Color? color, Duration duration = const Duration(seconds: 4), SnackBarAction? action}) {
+    if (!mounted) return;
+    final m = ScaffoldMessenger.of(context);
+    m.hideCurrentSnackBar();
+    m.showSnackBar(SnackBar(content: Text(msg), backgroundColor: color, duration: duration, action: action));
   }
 
   // YENİ: CHECK-IN ARTIK "SIDE" (YÖN) İSTİYOR!
   Future<void> checkInVehicle(String plate, String type, String side) async {
-    final Map<String, dynamic> params = {
-      'plate': plate.toUpperCase().replaceAll(' ', ''),
+    final Map<String, String> params = {
+      'plate': plate.toUpperCase().replaceAll(RegExp(r'[\s-]'), ''),
       'street': _backendStreetEnum,
       'type': type,
       'side': side, // 'LEFT' veya 'RIGHT' olarak Backend'e gidiyor!
@@ -78,60 +126,207 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
     if (widget.zoneId != null) {
       params['zoneId'] = widget.zoneId.toString();
     }
-    final url = Uri.parse('${AppConstants.baseUrl}/check-in').replace(queryParameters: params);
     try {
-      final response = await http.post(
-        url,
-        headers: AppConstants.authHeaders()
-      );
-      if (!mounted) return;
-      if (AppConstants.handleAuthError(context, response)) return;
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("✅ Araç Sokağa Eklendi!"), backgroundColor: Colors.green));
-        fetchActiveVehicles();
+      await ApiClient.post('/parking/check-in', query: params);
+      _showSnack("✅ ${params['plate']} sokağa eklendi!", color: Colors.green);
+      fetchActiveVehicles();
+    } on ApiException catch (e) {
+      // 409 ALREADY_PARKED / 400 INVALID_PLATE: sunucunun mesajı olduğu gibi gösterilir
+      if (e.isUnauthorized) return;
+      _showSnack(e.message, color: Colors.red, duration: const Duration(seconds: 6));
+      if (e.code == 'ALREADY_PARKED') fetchActiveVehicles();
+    }
+  }
+
+  // --- GERİ ALINABİLİR İŞLEMLER (Ödeme Al / Kaçtı) ---
+  static const Duration _undoWindow = Duration(seconds: 5);
+
+  String _money(num v) => "₺${v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(2)}";
+
+  String _methodLabel(String? m) {
+    switch (m) {
+      case 'CASH':
+        return 'Nakit';
+      case 'POS':
+        return 'POS';
+      case 'SUBSCRIPTION':
+        return 'Abonelik';
+      default:
+        return m ?? '-';
+    }
+  }
+
+  String _hhmm(DateTime t) => "${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}";
+
+  /// Aracın aktif aboneliği var mı? true/false; belirlenemezse null.
+  Future<bool?> _hasSubscription(dynamic vehicle) async {
+    final known = vehicle['hasSubscription'];
+    if (known is bool) return known;
+    try {
+      final r = await ApiClient.get('/subscription/check', query: {'plate': vehicle['currentPlate'].toString()});
+      return r is Map ? r['hasSubscription'] == true : null;
+    } on ApiException {
+      return null;
+    }
+  }
+
+  Future<void> _requestCheckout(dynamic vehicle) async {
+    final String plate = vehicle['currentPlate'];
+    if (_pending.containsKey(plate)) return;
+    final type = vehicle['currentType'] ?? 'SMALL';
+    final entry = DateTime.parse(vehicle['entryTime']).toLocal();
+    final fee = calculateLiveFee(type, entry);
+    final hasSub = await _hasSubscription(vehicle);
+    if (!mounted) return;
+    final method = await _askPaymentMethod(plate, fee, hasSub);
+    if (method == null || !mounted) return;
+    _schedule(plate, _ActionKind.checkOut, method, method == 'SUBSCRIPTION' ? 0 : fee);
+  }
+
+  Future<String?> _askPaymentMethod(String plate, double fee, bool? hasSub) {
+    String selected = hasSub == true ? 'SUBSCRIPTION' : 'CASH';
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) {
+          final amount = selected == 'SUBSCRIPTION' ? 0.0 : fee;
+          Widget option(String value, String label, IconData icon, {bool enabled = true, String? note}) {
+            return RadioListTile<String>(
+              value: value,
+              enabled: enabled,
+              title: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: note != null ? Text(note) : null,
+              secondary: Icon(icon),
+              dense: true,
+            );
+          }
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text("$plate - Ödeme Yöntemi", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            content: RadioGroup<String>(
+              groupValue: selected,
+              onChanged: (v) => setD(() => selected = v!),
+              child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                option('CASH', 'Nakit', Icons.payments),
+                option('POS', 'POS', Icons.credit_card),
+                option('SUBSCRIPTION', 'Abonelik', Icons.card_membership,
+                    enabled: hasSub != false, note: hasSub == false ? 'Aktif abonelik yok' : (hasSub == true ? 'Aktif abonelik var' : null)),
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: Colors.green[50], borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.green[200]!)),
+                  child: Text("$plate için ${_money(amount)} ${_methodLabel(selected)} ile tahsil edilecek.",
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                ),
+              ],
+            )),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("İptal")),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                onPressed: () => Navigator.pop(ctx, selected),
+                child: const Text("Onayla"),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _requestRunaway(dynamic vehicle) async {
+    final String plate = vehicle['currentPlate'];
+    if (_pending.containsKey(plate)) return;
+    final type = vehicle['currentType'] ?? 'SMALL';
+    final entry = DateTime.parse(vehicle['entryTime']).toLocal();
+    final debt = calculateLiveFee(type, entry);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("Kaçak İşaretle"),
+        content: Text("$plate kaçak olarak işaretlensin mi? Borç: ${_money(debt)}"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Vazgeç")),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Kaçak İşaretle"),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    _schedule(plate, _ActionKind.runaway, null, debt);
+  }
+
+  /// İşlem 5 sn BEKLETİLİR; ancak süre dolunca sunucuya gider. "Geri Al" zamanlayıcıyı iptal eder, hiçbir şey gönderilmez.
+  void _schedule(String plate, _ActionKind kind, String? method, double amount) {
+    if (_pending.containsKey(plate)) return; // aynı işlem iki kez tetiklenemez
+    final p = _PendingAction(plate, kind, method, amount);
+    p.timer = Timer(_undoWindow, () => _execute(p));
+    setState(() => _pending[plate] = p);
+    _showSnack("$plate: ${kind.label} — İşlem 5 sn içinde gönderilecek",
+        duration: _undoWindow, action: SnackBarAction(label: "Geri Al", onPressed: () => _undo(plate)));
+  }
+
+  void _undo(String plate) {
+    final p = _pending[plate];
+    // İstek yola çıktıysa artık geri alınamaz
+    if (p == null || p.sent) return;
+    p.timer?.cancel();
+    if (!mounted) return;
+    setState(() => _pending.remove(plate));
+    _showSnack("$plate: ${p.kind.label} iptal edildi.");
+  }
+
+  Future<void> _execute(_PendingAction p) async {
+    p.sent = true;
+    try {
+      if (p.kind == _ActionKind.checkOut) {
+        final data = await ApiClient.post('/parking/check-out', query: {
+          'plate': p.plate,
+          if (p.method != null) 'paymentMethod': p.method!,
+        });
+        final fee = (data is Map && data['fee'] is num) ? data['fee'] as num : p.amount;
+        final method = (data is Map ? data['paymentMethod'] as String? : null) ?? p.method;
+        _showSnack("${p.plate} çıkış yapıldı — ${_money(fee)} (${_methodLabel(method)})", color: Colors.green);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Hata: Kayıt Başarısız"), backgroundColor: Colors.red));
+        await ApiClient.post('/parking/runaway', query: {'plate': p.plate});
+        _showSnack("🚨 ${p.plate} kaçak olarak işaretlendi — borç ${_money(p.amount)}", color: Colors.red);
       }
-    } catch (e) { debugPrint(e.toString()); }
+      if (mounted) fetchActiveVehicles();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      if (!e.isUnauthorized) {
+        setState(() => _failed.insert(0, _FailedAction(p.plate, p.kind, p.method, p.amount, DateTime.now(), e.message, e.code, e.statusCode)));
+        _showSnack("${p.plate}: ${e.message}", color: Colors.red, duration: const Duration(seconds: 7));
+      }
+      // Araç başka bir işlemle kapandıysa liste eskimiştir
+      if (e.code == 'ALREADY_PROCESSED' || e.code == 'VEHICLE_NOT_FOUND') fetchActiveVehicles();
+    } finally {
+      if (mounted) setState(() => _pending.remove(p.plate));
+    }
   }
 
-  Future<void> checkOutVehicle(String plate) async {
-    final url = Uri.parse('${AppConstants.baseUrl}/check-out').replace(queryParameters: {'plate': plate});
-    try {
-      final response = await http.post(
-        url,
-        headers: AppConstants.authHeaders()
-      );
-      if (!mounted) return;
-      if (AppConstants.handleAuthError(context, response)) return;
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("💸 Ödeme Alındı: ${data['fee']} TL"), backgroundColor: Colors.green));
-        fetchActiveVehicles();
-      }
-    } catch (e) { debugPrint(e.toString()); }
-  }
-
-  Future<void> markAsRunaway(String plate) async {
-    final url = Uri.parse('${AppConstants.baseUrl}/runaway').replace(queryParameters: {'plate': plate});
-    try {
-      final response = await http.post(
-        url,
-        headers: AppConstants.authHeaders()
-      );
-      if (!mounted) return;
-      if (AppConstants.handleAuthError(context, response)) return;
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("🚨 Araç Kaçak Olarak İşaretlendi!"), backgroundColor: Colors.red));
-        fetchActiveVehicles();
-      }
-    } catch (e) { debugPrint(e.toString()); }
+  void _retry(_FailedAction f) {
+    final p = _PendingAction(f.plate, f.kind, f.method, f.amount);
+    setState(() {
+      _failed.remove(f);
+      _pending[f.plate] = p;
+    });
+    _execute(p); // kullanıcı işlemi zaten onaylamıştı: tekrar denemede bekleme yok
   }
 
   double calculateLiveFee(String type, DateTime entryTime) {
     Duration diff = DateTime.now().difference(entryTime);
-    if (diff.inSeconds <= AppConstants.gracePeriodSeconds) return 0.0;
     int minutes = diff.inMinutes;
+    // Sunucu dakika <= 5 iken 0 alır (5:59'a kadar ücretsiz)
+    if (minutes <= AppConstants.gracePeriodSeconds ~/ 60) return 0.0;
     double baseFee = (type == "LARGE") ? AppConstants.largeBaseFee : AppConstants.smallBaseFee;
     double extraFee = (type == "LARGE") ? AppConstants.largeExtraFee : AppConstants.smallExtraFee;
     if (minutes <= 60) return baseFee;
@@ -350,7 +545,7 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
                             onPressed: () {
                               dialogTimer?.cancel();
                               Navigator.pop(dialogContext);
-                              markAsRunaway(plate);
+                              _requestRunaway(vehicle);
                             },
                             icon: const Icon(Icons.warning, color: Colors.redAccent),
                             label: const Text("Kaçtı"),
@@ -374,7 +569,7 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
                         onPressed: () {
                           dialogTimer?.cancel();
                           Navigator.pop(dialogContext);
-                          checkOutVehicle(plate);
+                          _requestCheckout(vehicle);
                         },
                         icon: const Icon(Icons.payment, size: 24),
                         label: const Text("Ödeme Al", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -429,14 +624,15 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
     if (vehicle == null) return const SizedBox.shrink();
     bool isLarge = vehicle['currentType'] == 'LARGE';
     String? landmarkNames = (vehicle['zone'] != null && vehicle['zone']['landmarkNames'] != null) ? vehicle['zone']['landmarkNames'] : null;
+    final bool isPending = _pending.containsKey(vehicle['currentPlate']);
     return InkWell(
-      onTap: () => showSpotDetails(vehicle),
+      onTap: isPending ? null : () => showSpotDetails(vehicle),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isLarge ? Colors.orange[50] : Colors.blue[50],
-          border: Border.all(color: isLarge ? Colors.orange : Colors.blueAccent, width: 2),
+          color: isPending ? Colors.grey[300] : (isLarge ? Colors.orange[50] : Colors.blue[50]),
+          border: Border.all(color: isPending ? Colors.grey : (isLarge ? Colors.orange : Colors.blueAccent), width: 2),
           borderRadius: BorderRadius.circular(12),
           boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
         ),
@@ -446,11 +642,106 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
             Icon(isLarge ? Icons.local_shipping : Icons.directions_car, size: 28, color: isLarge ? Colors.orange : Colors.blueAccent),
             const SizedBox(height: 5),
             Text(vehicle['currentPlate'], style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.grey[800])),
+            if (isPending)
+              const Padding(
+                padding: EdgeInsets.only(top: 4.0),
+                child: Text("Bekliyor…", style: TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.bold)),
+              ),
             if (landmarkNames != null && landmarkNames.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 4.0),
                 child: Text(landmarkNames, style: const TextStyle(fontSize: 10, color: Colors.grey, fontStyle: FontStyle.italic), textAlign: TextAlign.center),
               )
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Gönderilmeyi bekleyen işlemler (5 sn içinde Geri Al yapılabilir)
+  Widget _buildPendingPanel() {
+    final waiting = _pending.values.where((p) => !p.sent).toList();
+    if (waiting.isEmpty) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      color: Colors.amber[100],
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Column(
+        children: waiting
+            .map((p) => Row(
+                  children: [
+                    Expanded(
+                      child: Text("${p.plate}: ${p.kind.label} — 5 sn içinde gönderilecek",
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    ),
+                    TextButton(onPressed: () => _undo(p.plate), child: const Text("Geri Al")),
+                  ],
+                ))
+            .toList(),
+      ),
+    );
+  }
+
+  // Sunucunun reddettiği / ulaşamadığımız işlemler
+  Widget _buildFailedPanel() {
+    if (_failed.isEmpty) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      color: Colors.red[50],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _failedExpanded = !_failedExpanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text("Başarısız işlemler (${_failed.length})",
+                        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                  ),
+                  Icon(_failedExpanded ? Icons.expand_less : Icons.expand_more, color: Colors.red),
+                ],
+              ),
+            ),
+          ),
+          if (_failedExpanded)
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 220),
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                children: _failed.map(_buildFailedRow).toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFailedRow(_FailedAction f) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 6),
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("${f.plate} • ${f.kind.label}${f.method != null ? ' (${_methodLabel(f.method)})' : ''} • ${_hhmm(f.time)}",
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 2),
+            Text(f.message, style: const TextStyle(color: Colors.red, fontSize: 13)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (f.retryable && !_pending.containsKey(f.plate))
+                  TextButton(onPressed: () => _retry(f), child: const Text("Tekrar dene")),
+                TextButton(onPressed: () => setState(() => _failed.remove(f)), child: const Text("Kapat")),
+              ],
+            ),
           ],
         ),
       ),
@@ -483,26 +774,41 @@ class _ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepA
     return Scaffold(
       backgroundColor: Colors.grey[200],
       appBar: AppBar(title: Text('${widget.street}${widget.zoneName != null ? ' - ${widget.zoneName!}' : ''}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)), backgroundColor: const Color(0xFF3F51B5)),
-      body: activeVehicles.isEmpty
-          ? const Center(child: Text("Sokak boş. Araç eklemek için +'ya basın.", style: TextStyle(color: Colors.grey, fontSize: 16)))
-          : ListView.builder(
-        itemCount: rowCount,
-        itemBuilder: (context, index) {
-          // Her satırda soldan ve sağdan sıradaki aracı alıyoruz
-          var leftVehicle = index < leftVehicles.length ? leftVehicles[index] : null;
-          var rightVehicle = index < rightVehicles.length ? rightVehicles[index] : null;
-
-          return IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: _buildCarCard(leftVehicle)), // Sol Kaldırım (Geldikçe dolar)
-                _buildRoadDivider(),                         // Asfalt
-                Expanded(child: _buildCarCard(rightVehicle)),// Sağ Kaldırım (Geldikçe dolar)
-              ],
+      body: Column(
+        children: [
+          if (_listError != null)
+            Container(
+              width: double.infinity,
+              color: Colors.red[50],
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Text("Liste güncellenemedi: $_listError", style: const TextStyle(color: Colors.red, fontSize: 12)),
             ),
-          );
-        },
+          _buildPendingPanel(),
+          _buildFailedPanel(),
+          Expanded(
+            child: activeVehicles.isEmpty
+                ? const Center(child: Text("Sokak boş. Araç eklemek için +'ya basın.", style: TextStyle(color: Colors.grey, fontSize: 16)))
+                : ListView.builder(
+                    itemCount: rowCount,
+                    itemBuilder: (context, index) {
+                      // Her satırda soldan ve sağdan sıradaki aracı alıyoruz
+                      var leftVehicle = index < leftVehicles.length ? leftVehicles[index] : null;
+                      var rightVehicle = index < rightVehicles.length ? rightVehicles[index] : null;
+
+                      return IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(child: _buildCarCard(leftVehicle)), // Sol Kaldırım (Geldikçe dolar)
+                            _buildRoadDivider(), // Asfalt
+                            Expanded(child: _buildCarCard(rightVehicle)), // Sağ Kaldırım (Geldikçe dolar)
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,

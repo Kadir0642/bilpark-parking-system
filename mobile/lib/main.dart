@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/parking_map_screen.dart';
 import 'screens/auth_screen.dart';
+import 'core/api_client.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -27,6 +28,7 @@ class BilParkApp extends StatelessWidget {
         valueListenable: themeNotifier,
         builder: (context, currentMode, child) {
           return MaterialApp(
+            navigatorKey: navigatorKey,
             debugShowCheckedModeBanner: false,
             title: 'BilPark Pro',
 

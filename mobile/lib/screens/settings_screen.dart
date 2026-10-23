@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/api_client.dart';
 import '../core/constants.dart';
 import '../main.dart'; // YENİ: main.dart içindeki themeNotifier'ı içeri aktardık
 
@@ -13,28 +13,27 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> endShift(BuildContext context) async {
+    String? warning;
     try {
-      final prefs = await SharedPreferences.getInstance();
+      // Sunucuda bu cihazın açık vardiyasını kapatır
+      if (await ApiClient.getToken() != null) {
+        await ApiClient.post('/auth/logout');
+      }
+    } on ApiException catch (e) {
+      // 401 zaten girişe yönlendirir; diğer hatalarda yerel çıkış yine de yapılır ama kullanıcı bilgilendirilir
+      if (!e.isUnauthorized) warning = 'Vardiya sunucuda kapatılamadı: ${e.message}';
+    }
+    await ApiClient.clearToken();
+    AppConstants.clearAuth();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('user_role');
+    await prefs.remove('username');
 
-      if (AppConstants.authToken != null) {
-        await http.post(
-          Uri.parse('${AppConstants.apiBase}/auth/logout'),
-          headers: AppConstants.authHeaders(),
-        );
-      }
-      AppConstants.clearAuth();
-      await prefs.remove('auth_token');
-      await prefs.remove('user_role');
-      await prefs.remove('username');
-      
-      if (context.mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Çıkış yapılırken hata oluştu: $e')));
-        Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
-      }
+    if (!context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
+    if (warning != null) {
+      messenger.showSnackBar(SnackBar(content: Text(warning), backgroundColor: Colors.red));
     }
   }
 

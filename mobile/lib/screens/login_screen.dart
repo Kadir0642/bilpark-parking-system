@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../core/api_client.dart';
 import '../core/constants.dart';
 import '../main.dart';
 
@@ -24,15 +23,15 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() { isLoadingZones = true; selectedZone = null; availableZones = []; });
     String backendEnum = AppConstants.toBackendEnum(streetName);
     try {
-      final response = await http.get(Uri.parse('${AppConstants.apiBase}/zones/by-street?street=$backendEnum'));
-      if (response.statusCode == 200) {
-        setState(() {
-          availableZones = json.decode(response.body);
-        });
+      final data = await ApiClient.get('/zones/by-street', query: {'street': backendEnum});
+      if (!mounted) return;
+      setState(() { availableZones = data is List ? data : []; });
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), backgroundColor: Colors.red));
       }
-    } catch (e) {
-      debugPrint('Zone fetch error: $e');
     }
+    if (!mounted) return;
     setState(() { isLoadingZones = false; });
   }
 
