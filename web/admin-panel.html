@@ -169,6 +169,7 @@
                             <tr>
                                 <th>Personel</th>
                                 <th>Sorumlu Bölge</th>
+                                <th>Cihaz</th>
                                 <th>Giriş Saati</th>
                                 <th>Kazanılan Ciro</th>
                                 <th>Çalışma Süresi</th>
@@ -187,12 +188,12 @@
         <div class="card-header d-flex flex-wrap justify-content-between align-items-center py-3 gap-2">
             <span><i class="fa-solid fa-folder-open me-2"></i>Arşiv ve Dönem Yönetimi</span>
             <div class="d-flex gap-2 align-items-center flex-wrap">
-                <select id="fiscalYearSelect" class="form-select w-auto" onchange="fetchHistory()">
+                <select id="fiscalYearSelect" class="form-select w-auto" onchange="fetchHistory(); updateArchiveButton()">
                     <option value="">-- Dönem Seçin --</option>
                 </select>
                 <button class="btn btn-outline-primary btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#createFiscalYearModal"><i class="fa-solid fa-plus me-1"></i>Yeni Dönem</button>
                 <button class="btn btn-success fw-bold" onclick="downloadExcel()"><i class="fa-solid fa-file-excel me-2"></i>Excel İndir</button>
-                <button class="btn btn-danger fw-bold" onclick="archiveFiscalYear()"><i class="fa-solid fa-box-archive me-2"></i>Dönemi Kapat & Arşivle</button>
+                <button id="btnArchive" class="btn btn-danger fw-bold" onclick="archiveFiscalYear()"><i class="fa-solid fa-box-archive me-2"></i>Dönemi Kapat & Arşivle</button>
                 <button class="btn btn-outline-danger fw-bold ms-2" onclick="deleteFiscalYear()"><i class="fa-solid fa-trash me-2"></i>Dönemi Sil</button>
             </div>
         </div>
@@ -539,19 +540,36 @@
             const years = await res.json();
 
             const select = document.getElementById("fiscalYearSelect");
+            // Listede değişiklik yoksa select'e dokunma (30 sn'lik yenileme seçimi sıfırlamasın)
+            const signature = JSON.stringify(years.map(y => [y.id, y.label, y.startDate, y.endDate, !!y.active, !!y.archived]));
+            if (select.dataset.signature === signature) return;
+            const previous = select.value;
             select.innerHTML = '<option value="">-- Dönem Seçin --</option>';
             years.forEach(y => {
                 const opt = document.createElement("option");
                 opt.value = y.id;
                 opt.dataset.start = y.startDate;
                 opt.dataset.end = y.endDate;
-                opt.text = `${y.label} (${y.startDate} - ${y.endDate}) ${y.active ? '[Aktif]' : '[Arşivli]'}`;
+                opt.dataset.archived = y.archived ? "true" : "false";
+                const state = y.archived ? ' [Arşivlendi]' : (y.active ? ' [Aktif]' : '');
+                opt.text = `${y.label} (${y.startDate} - ${y.endDate})${state}`;
                 select.appendChild(opt);
             });
+            select.dataset.signature = signature;
+            if (previous && Array.from(select.options).some(o => o.value === previous)) select.value = previous;
+            updateArchiveButton();
         } catch (error) { console.error("Dönem verisi hatası:", error); }
     }
 
 
+
+    function escapeHtml(v) {
+        return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function shortDevice(id) {
+        if (!id) return '-';
+        return id.length > 8 ? id.substring(0, 8) + '…' : id;
+    }
 
     // YENİ: Aktif Vardiya (Shift) Verilerini Getir
     async function fetchShifts() {
@@ -562,7 +580,7 @@
 
             let html = "";
             shifts.forEach(s => {
-                const loginDate = new Date(s.lastLogin).toLocaleTimeString('tr-TR', { hour: '2-digit', minute:'2-digit' });
+                const loginDate = new Date(s.startTime || s.lastLogin).toLocaleTimeString('tr-TR', { hour: '2-digit', minute:'2-digit' });
                 const duration = s.activeMinutes;
                 const hours = Math.floor(duration / 60);
                 const mins = duration % 60;
@@ -573,15 +591,24 @@
                     <tr>
                         <td><i class="fa-solid fa-user-tie me-2 text-secondary"></i>${s.username}</td>
                         <td><span class="badge ${badgeClass}">${s.zoneName}</span></td>
+                        <td><code title="${escapeHtml(s.deviceId || '')}">${escapeHtml(shortDevice(s.deviceId))}</code></td>
                         <td>${loginDate}</td>
-                        <td class="text-success fw-bold">₺${s.revenue.toFixed(2)}</td>
+                        <td class="text-success fw-bold">₺${(s.revenue || 0).toFixed(2)}</td>
                         <td class="text-primary fw-bold">${durationText}</td>
                     </tr>
                 `;
             });
             
-            document.getElementById("shiftsTableBody").innerHTML = html || `<tr><td colspan="5" class="text-center py-4 text-secondary">Aktif personel bulunamadı.</td></tr>`;
+            document.getElementById("shiftsTableBody").innerHTML = html || `<tr><td colspan="6" class="text-center py-4 text-secondary">Aktif personel bulunamadı.</td></tr>`;
         } catch (error) { console.error("Vardiya verisi hatası:", error); }
+    }
+
+    function updateArchiveButton() {
+        const select = document.getElementById("fiscalYearSelect");
+        const btn = document.getElementById("btnArchive");
+        if (!select || !btn) return;
+        const opt = select.selectedOptions[0];
+        btn.disabled = !!(opt && opt.dataset.archived === "true");
     }
 
     function fetchHistory() {
@@ -599,12 +626,15 @@
         let filteredData = globalHistoryData;
         const select = document.getElementById("fiscalYearSelect");
         if(select.value && select.selectedOptions[0]) {
-            const startDate = new Date(select.selectedOptions[0].dataset.start);
-            const endDate = new Date(select.selectedOptions[0].dataset.end);
-            
+            // Bitiş günü DAHİL: [start 00:00, end+1 gün 00:00) — hepsi yerel saatle
+            const [sy, sm, sd] = select.selectedOptions[0].dataset.start.split('-').map(Number);
+            const [ey, em, ed] = select.selectedOptions[0].dataset.end.split('-').map(Number);
+            const startDate = new Date(sy, sm - 1, sd);
+            const endExclusive = new Date(ey, em - 1, ed + 1);
+
             filteredData = globalHistoryData.filter(r => {
                 const entryDate = new Date(r.entryTime);
-                return entryDate >= startDate && entryDate <= endDate;
+                return entryDate >= startDate && entryDate < endExclusive;
             });
 
             if (filteredData.length === 0) {
@@ -643,7 +673,7 @@
             } catch(e) { 
                 console.error("Could not parse JSON:", text); 
             }
-            alert("Hata: " + (data.message || data.error || `İşlem başarısız. (HTTP ${res.status})`));
+            alert("Hata: " + (data.error || data.message || `İşlem başarısız. (HTTP ${res.status})`));
         }
     }
 
@@ -694,8 +724,13 @@
             return;
         }
 
-        const confirmArchive = confirm("Bu işlem seçili dönemdeki tüm verileri Excel olarak indirecek ve ardından VERİTABANINDAN SİLECEKTİR (Dönem arşivlenmiş olarak kalır). Emin misiniz?");
+        const confirmArchive = confirm("Seçili dönemdeki kayıtlar Excel olarak indirilecek ve dönem ARŞİVLENDİ olarak işaretlenecek. Kayıtlar silinmez, veritabanında saklanmaya devam eder. Devam edilsin mi?");
         if (!confirmArchive) return;
+
+        if (select.selectedOptions[0].dataset.archived === "true") {
+            alert("Bu dönem zaten arşivlenmiş.");
+            return;
+        }
 
         downloadExcel();
 
@@ -706,7 +741,10 @@
                     'Content-Type': 'application/json'
                 }
             });
-            await handleApiResponse(res, "Dönem başarıyla arşivlendi ve eski veriler temizlendi.", updateDashboard);
+            await handleApiResponse(res, "Dönem arşivlendi olarak işaretlendi. Kayıtlar korunuyor.", () => {
+                select.dataset.signature = ""; // listeyi zorla yenile
+                updateDashboard();
+            });
         } catch (error) {
             console.error(error);
             alert("Sistem hatası oluştu: " + error);
