@@ -3,9 +3,11 @@ package com.bilpark.backend.config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.bilpark.backend.model.Role;
+import com.bilpark.backend.model.Street;
 import com.bilpark.backend.model.StreetLocation;
 import com.bilpark.backend.model.User;
 import com.bilpark.backend.model.Zone;
+import com.bilpark.backend.repository.StreetRepository;
 import com.bilpark.backend.repository.UserRepository;
 import com.bilpark.backend.repository.ZoneRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,10 +24,19 @@ public class DataInitializer {
     @Bean
     public CommandLineRunner initData(UserRepository userRepository,
                                       ZoneRepository zoneRepository,
+                                      StreetRepository streetRepository,
                                       PasswordEncoder passwordEncoder,
                                       @Value("${bilpark.seed.admin-password:}") String adminPassword,
                                       @Value("${bilpark.seed.officer-password:}") String officerPassword) {
         return args -> {
+
+            // --- Seed Streets (only once; Flyway V3 seeds them on PostgreSQL, this covers H2 tests) ---
+            if (streetRepository.count() == 0) {
+                for (StreetLocation loc : StreetLocation.values()) {
+                    streetRepository.save(new Street(loc.name(), loc.getDisplayName(), loc.ordinal() + 1));
+                }
+                log.info("Streets created.");
+            }
 
             // --- Seed Zones (only once) ---
             if (zoneRepository.count() == 0) {
