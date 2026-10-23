@@ -1,12 +1,18 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/api_client.dart';
+import 'core/constants.dart';
+import 'core/format.dart';
+import 'core/live_sync.dart';
+import 'core/tariff.dart';
 import 'core/theme.dart';
 import 'screens/auth_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/parking_map_screen.dart';
+import 'widgets/bp_snack.dart';
 
 const String _themeModeKey = 'themeMode';
 const String _legacyDarkKey = 'isDarkMode';
@@ -82,20 +88,18 @@ class BilParkApp extends StatelessWidget {
 }
 
 class MainContainer extends StatefulWidget {
-  final String region;
-  final String neighborhood;
-  final String street;
+  final String streetCode; // sunucudaki cadde kodu
+  final String streetName; // görünen cadde adı
   final int? zoneId;
   final String? zoneName;
 
-  const MainContainer(
-      {super.key, required this.region, required this.neighborhood, required this.street, this.zoneId, this.zoneName});
+  const MainContainer({super.key, required this.streetCode, required this.streetName, this.zoneId, this.zoneName});
 
   @override
   State<MainContainer> createState() => _MainContainerState();
 }
 
-class _MainContainerState extends State<MainContainer> {
+class _MainContainerState extends State<MainContainer> with WidgetsBindingObserver {
   static const int _home = 0, _street = 1, _history = 2, _runaways = 3;
 
   int _index = _home;
@@ -105,6 +109,91 @@ class _MainContainerState extends State<MainContainer> {
   final _mapKey = GlobalKey<ParkingMapScreenState>();
   final _historyKey = GlobalKey<HistoryScreenState>();
   final _runawayKey = GlobalKey<HistoryScreenState>();
+
+  StreamSubscription<SyncEvent>? _eventSub;
+  StreamSubscription<void>? _reloadSub;
+  Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    TariffStore.load();
+    _eventSub = liveSync.events.listen(_onEvent);
+    _reloadSub = liveSync.reloads.listen((_) {
+      TariffStore.load();
+      _scheduleRefresh();
+    });
+    liveSync.onDeactivated = _onDeactivated;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) liveSync.start(zoneId: widget.zoneId);
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _debounce?.cancel();
+    _eventSub?.cancel();
+    _reloadSub?.cancel();
+    liveSync.onDeactivated = null;
+    liveSync.stop();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) liveSync.reconnectNow();
+  }
+
+  bool _isMine(SyncEvent e) {
+    if (e.zoneId != null && widget.zoneId != null) return e.zoneId == widget.zoneId;
+    return e.street == null || e.street == widget.streetCode;
+  }
+
+  void _onEvent(SyncEvent e) {
+    if (!mounted) return;
+    switch (e.type) {
+      case 'TARIFF_UPDATED':
+        final hadUpcoming = TariffStore.current.value?.upcoming != null;
+        TariffStore.applyPayload(e.payload);
+        final up = TariffStore.current.value?.upcoming;
+        final from = up?.effectiveFrom;
+        final msg = (up != null && !hadUpcoming && from != null)
+            ? 'Yeni tarife zamanlandı: ${formatDayMonth(from)} ${formatHm(from)}'
+            : 'Tarife güncellendi';
+        ScaffoldMessenger.of(context).showSnackBar(bpSnackBar(context, msg));
+      case 'VEHICLE_ENTERED' || 'VEHICLE_EXITED' || 'VEHICLE_RUNAWAY':
+        if (_isMine(e)) _scheduleRefresh();
+    }
+  }
+
+  /// Art arda gelen olaylar tek yenilemeye indirgenir.
+  void _scheduleRefresh() {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
+      _dashKey.currentState?.refresh();
+      _historyKey.currentState?.refresh();
+      _runawayKey.currentState?.refresh();
+    });
+  }
+
+  /// Yönetici hesabı pasife aldı: oturum yerelde kapatılır (sunucuya /auth/logout gitmez).
+  Future<void> _onDeactivated() async {
+    await ApiClient.clearToken();
+    AppConstants.clearAuth();
+    final nav = navigatorKey.currentState;
+    if (nav == null) return;
+    nav.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const AuthScreen()), (route) => false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = navigatorKey.currentContext;
+      if (ctx != null) {
+        ScaffoldMessenger.maybeOf(ctx)
+            ?.showSnackBar(const SnackBar(content: Text('Hesabınız pasife alındı. Lütfen yöneticinize başvurun.')));
+      }
+    });
+  }
 
   void _select(int i) {
     final firstVisit = _visited.add(i);
@@ -133,9 +222,8 @@ class _MainContainerState extends State<MainContainer> {
           children: [
             DashboardScreen(
               key: _dashKey,
-              region: widget.region,
-              neighborhood: widget.neighborhood,
-              street: widget.street,
+              streetCode: widget.streetCode,
+              streetName: widget.streetName,
               zoneId: widget.zoneId,
               zoneName: widget.zoneName,
               onOpenStreet: () => _select(_street),
@@ -150,26 +238,23 @@ class _MainContainerState extends State<MainContainer> {
             ),
             ParkingMapScreen(
               key: _mapKey,
-              region: widget.region,
-              neighborhood: widget.neighborhood,
-              street: widget.street,
+              streetCode: widget.streetCode,
+              streetName: widget.streetName,
               zoneId: widget.zoneId,
               zoneName: widget.zoneName,
             ),
             _visited.contains(_history)
                 ? HistoryScreen(
                     key: _historyKey,
-                    region: widget.region,
-                    neighborhood: widget.neighborhood,
-                    street: widget.street,
+                    streetCode: widget.streetCode,
+                    streetName: widget.streetName,
                     showOnlyRunaways: false)
                 : const SizedBox.shrink(),
             _visited.contains(_runaways)
                 ? HistoryScreen(
                     key: _runawayKey,
-                    region: widget.region,
-                    neighborhood: widget.neighborhood,
-                    street: widget.street,
+                    streetCode: widget.streetCode,
+                    streetName: widget.streetName,
                     showOnlyRunaways: true)
                 : const SizedBox.shrink(),
           ],

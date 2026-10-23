@@ -3,14 +3,14 @@ import 'settings_screen.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
 import '../core/format.dart';
+import '../core/tariff.dart';
 import '../core/theme.dart';
 import '../widgets/bp_header.dart';
 import '../widgets/connection_banner.dart';
 
 class DashboardScreen extends StatefulWidget {
-  final String region;
-  final String neighborhood;
-  final String street;
+  final String streetCode; // sunucudaki cadde kodu
+  final String streetName; // görünen cadde adı
   final int? zoneId;
   final String? zoneName;
   final VoidCallback? onOpenStreet;
@@ -19,9 +19,8 @@ class DashboardScreen extends StatefulWidget {
 
   const DashboardScreen({
     super.key,
-    required this.region,
-    required this.neighborhood,
-    required this.street,
+    required this.streetCode,
+    required this.streetName,
     this.zoneId,
     this.zoneName,
     this.onOpenStreet,
@@ -47,13 +46,9 @@ class DashboardScreenState extends State<DashboardScreen> {
   int leftCount = 0;
   int rightCount = 0;
   int subscriberCount = 0;
-  bool? _online;
-  DateTime? _lastOk;
   _Summary? _summary;
 
-  String get _backendStreetEnum => AppConstants.toBackendEnum(widget.street);
-
-  String get _title => zoneTitle(widget.street, widget.zoneName);
+  String get _title => zoneTitle(widget.streetName, widget.zoneName);
 
   @override
   void initState() {
@@ -67,7 +62,7 @@ class DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _fetchStats() async {
     try {
-      final spots = await ApiClient.get('/parking/filter', query: {'street': _backendStreetEnum});
+      final spots = await ApiClient.get('/parking/filter', query: {'street': widget.streetCode});
       if (!mounted) return;
       var list = spots is List ? spots : [];
       // Görevli yalnızca kendi bölgesini görür (harita ekranıyla aynı süzme)
@@ -79,19 +74,16 @@ class DashboardScreenState extends State<DashboardScreen> {
         leftCount = list.where((s) => s['side'] == 'LEFT' || s['side'] == null).length;
         rightCount = list.where((s) => s['side'] == 'RIGHT').length;
         subscriberCount = list.where((s) => s['hasSubscription'] == true).length;
-        _online = true;
-        _lastOk = DateTime.now();
       });
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      if (!e.isUnauthorized) setState(() => _online = false);
+    } on ApiException {
+      // Bağlantı durumunu canlı senkron bandı gösterir; sayılar son değerde kalır
     }
   }
 
   /// Vardiya özeti, mevcut geçmiş uç noktasından bugünün kayıtlarıyla hesaplanır (yeni API çağrısı yok).
   Future<void> _fetchSummary() async {
     try {
-      final data = await ApiClient.get('/parking/history', query: {'street': _backendStreetEnum});
+      final data = await ApiClient.get('/parking/history', query: {'street': widget.streetCode});
       if (!mounted) return;
       final now = DateTime.now();
       final user = AppConstants.currentUser;
@@ -139,7 +131,7 @@ class DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                ConnectionBanner(online: _online, lastUpdate: _lastOk),
+                const LiveConnectionBanner(),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -168,7 +160,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                       onPressed: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => SettingsScreen(street: widget.street, zoneName: widget.zoneName, online: _online),
+                          builder: (_) => SettingsScreen(street: widget.streetName, zoneName: widget.zoneName),
                         ),
                       ),
                     ),
@@ -185,6 +177,8 @@ class DashboardScreenState extends State<DashboardScreen> {
                 padding: const EdgeInsets.all(BpSize.screenPad),
                 children: [
                   _vehicleCard(c),
+                  const SizedBox(height: 16),
+                  _tariffCard(c),
                   const SizedBox(height: 16),
                   _summaryCard(c),
                   const SizedBox(height: 16),
@@ -246,6 +240,55 @@ class DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Güncel tarife özeti; TARIFF_UPDATED olayında anında yenilenir.
+  Widget _tariffCard(BilParkColors c) {
+    return ValueListenableBuilder<Tariff?>(
+      valueListenable: TariffStore.current,
+      builder: (_, t, _) {
+        if (t == null) return const SizedBox.shrink();
+        String line(Tariff x, String label, String type) =>
+            '$label: İlk saat ${formatMoney(x.firstHour(type))} · sonraki ${formatMoney(x.extraHour(type))}';
+        final end = t.paidEnd == '00:00' ? '24:00' : t.paidEnd;
+        final up = t.upcoming;
+        final from = up?.effectiveFrom;
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: c.surface,
+            border: Border.all(color: c.border),
+            borderRadius: BorderRadius.circular(BpSize.rLg),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('Güncel tarife', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 10),
+              Text(line(t, 'Otomobil', 'SMALL'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text(line(t, 'Kamyonet', 'LARGE'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              Text('İlk ${t.freeMinutes} dk ücretsiz · ücretli ${t.paidStart}–$end',
+                  style: TextStyle(fontSize: 14, color: c.text2)),
+              if (up != null && from != null) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: c.warningSoft, borderRadius: BorderRadius.circular(BpSize.rSm)),
+                  child: Text(
+                    '${formatDayMonth(from)} ${formatHm(from)} itibarıyla yeni tarife: '
+                    'Otomobil ${formatMoney(up.smallFirstHour)}/${formatMoney(up.smallExtraHour)} · '
+                    'Kamyonet ${formatMoney(up.largeFirstHour)}/${formatMoney(up.largeExtraHour)}',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c.onWarningSoft),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 

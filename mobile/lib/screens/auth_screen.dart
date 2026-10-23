@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
+import '../core/streets.dart';
 import '../core/theme.dart';
 import '../main.dart'; // MainContainer
 import 'login_screen.dart'; // Vardiya/Lokasyon seçim ekranına gidecek
@@ -54,16 +55,15 @@ class _AuthScreenState extends State<AuthScreen> {
       if (data['role'] == 'OFFICER' && AppConstants.assignedZone != null) {
         // Atanmış bölgesi olan görevli: seçim ekranını atla
         final z = AppConstants.assignedZone!;
-        final street = AppConstants.streetToEnum.entries
-            .firstWhere((e) => e.value == z['street'], orElse: () => AppConstants.streetToEnum.entries.first)
-            .key;
+        await StreetStore.load();
+        if (!mounted) return;
+        final code = '${z['street']}';
         Navigator.pushReplacement(
             context,
             MaterialPageRoute(
                 builder: (context) => MainContainer(
-                      region: 'Bilecik',
-                      neighborhood: 'Merkez',
-                      street: street,
+                      streetCode: code,
+                      streetName: StreetStore.displayName(code),
                       zoneId: z['id'],
                       zoneName: z['zoneName'],
                     )));

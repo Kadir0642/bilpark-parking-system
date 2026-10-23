@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import '../core/api_client.dart';
-import '../core/constants.dart';
 import '../core/format.dart';
+import '../core/live_sync.dart';
+import '../core/tariff.dart';
 import '../core/theme.dart';
 import '../widgets/bp_header.dart';
 import '../widgets/bp_snack.dart';
@@ -53,14 +54,15 @@ class _FailedAction {
 }
 
 class ParkingMapScreen extends StatefulWidget {
-  final String region;
-  final String neighborhood;
-  final String street;
+  /// Sunucudaki cadde kodu (TEVFIK_BEY ...)
+  final String streetCode;
+
+  /// Görünen ad ("Tevfik Bey Caddesi")
+  final String streetName;
   final int? zoneId;
   final String? zoneName;
 
-  const ParkingMapScreen(
-      {super.key, required this.region, required this.neighborhood, required this.street, this.zoneId, this.zoneName});
+  const ParkingMapScreen({super.key, required this.streetCode, required this.streetName, this.zoneId, this.zoneName});
 
   @override
   State<ParkingMapScreen> createState() => ParkingMapScreenState();
@@ -70,11 +72,11 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
   static const Duration _longStay = Duration(hours: 3);
 
   List<dynamic> activeVehicles = [];
-  Timer? timer;
-  Timer? _clock; // kart sürelerini periyodik yeniler
+  Timer? _clock; // kart sürelerini yerelde yeniler (ağ yok)
   Timer? _pendingTick; // geri alma geri sayımı
-  bool? _online;
-  DateTime? _lastOk;
+  Timer? _debounce; // art arda gelen yenileme istekleri tek istek olur
+  StreamSubscription<SyncEvent>? _evSub;
+  StreamSubscription<void>? _reloadSub;
   bool _failedExpanded = true;
   final Map<String, _PendingAction> _pending = {};
   final List<_FailedAction> _failed = [];
@@ -83,7 +85,7 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
   bool _sortLongest = false;
   bool _hideSubscribers = false;
 
-  String get _backendStreetEnum => AppConstants.toBackendEnum(widget.street);
+  String get _backendStreetEnum => widget.streetCode;
 
   @override
   bool get wantKeepAlive => true;
@@ -92,15 +94,40 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
   void initState() {
     super.initState();
     fetchActiveVehicles();
-    timer = Timer.periodic(const Duration(seconds: 6), (t) => fetchActiveVehicles());
-    _clock = Timer.periodic(const Duration(seconds: 20), (t) {
+    // Veri yalnızca olay gelince yenilenir; bu zamanlayıcı sadece süreleri yeniden çizer
+    _clock = Timer.periodic(const Duration(seconds: 30), (t) {
       if (mounted) setState(() {});
+    });
+    _evSub = liveSync.events.listen(_onEvent);
+    _reloadSub = liveSync.reloads.listen((_) => scheduleRefresh());
+    TariffStore.current.addListener(_onTariff);
+  }
+
+  void _onTariff() {
+    if (mounted) setState(() {});
+  }
+
+  void _onEvent(SyncEvent e) {
+    if (e.type != 'VEHICLE_ENTERED' && e.type != 'VEHICLE_EXITED' && e.type != 'VEHICLE_RUNAWAY') return;
+    final mine = widget.zoneId != null ? e.zoneId == widget.zoneId : e.street == widget.streetCode;
+    if (mine) scheduleRefresh();
+  }
+
+  /// Yenilemeyi ~300 ms geciktirir; art arda gelen tetikler tek GET /parking/filter olur.
+  void scheduleRefresh() {
+    if (!mounted) return;
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) fetchActiveVehicles();
     });
   }
 
   @override
   void dispose() {
-    timer?.cancel();
+    _debounce?.cancel();
+    _evSub?.cancel();
+    _reloadSub?.cancel();
+    TariffStore.current.removeListener(_onTariff);
     _clock?.cancel();
     _pendingTick?.cancel();
     _search.dispose();
@@ -116,7 +143,7 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
   }
 
   // --- API İŞLEMLERİ ---
-  Future<void> fetchActiveVehicles() async {
+  Future<void> fetchActiveVehicles({bool userTriggered = false}) async {
     try {
       final data = await ApiClient.get('/parking/filter', query: {'street': _backendStreetEnum});
       if (!mounted) return;
@@ -124,14 +151,12 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
       if (widget.zoneId != null) {
         list = list.where((spot) => spot['zone'] != null && spot['zone']['id'] == widget.zoneId).toList();
       }
-      setState(() {
-        activeVehicles = list;
-        _online = true;
-        _lastOk = DateTime.now();
-      });
+      setState(() => activeVehicles = list);
     } on ApiException catch (e) {
-      // Polling her 6 sn'de çalışır: hatayı SnackBar yağmuru yerine bağlantı bandında göster
-      if (mounted && !e.isUnauthorized) setState(() => _online = false);
+      // Bağlantı durumunu canlı senkron bandı gösterir; yalnızca kullanıcı işleminden sonraki hata bildirilir
+      if (userTriggered && mounted && !e.isUnauthorized) {
+        _showSnack('Liste yenilenemedi: ${e.message}', tone: BadgeTone.danger);
+      }
     }
   }
 
@@ -156,38 +181,30 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
     try {
       await ApiClient.post('/parking/check-in', query: params);
       _showSnack('${params['plate']} sokağa eklendi.', tone: BadgeTone.success);
-      fetchActiveVehicles();
+      scheduleRefresh();
     } on ApiException catch (e) {
       // 409 ALREADY_PARKED / 400 INVALID_PLATE: sunucunun mesajı olduğu gibi gösterilir
       if (e.isUnauthorized) return;
       _showSnack(e.message, tone: BadgeTone.danger, duration: const Duration(seconds: 6));
-      if (e.code == 'ALREADY_PARKED') fetchActiveVehicles();
+      if (e.code == 'ALREADY_PARKED') scheduleRefresh();
     }
   }
 
   // --- GERİ ALINABİLİR İŞLEMLER (Ödeme Al / Kaçtı) ---
   static const Duration _undoWindow = Duration(seconds: 5);
 
-  /// Aracın aktif aboneliği var mı? true/false; belirlenemezse null.
-  Future<bool?> _hasSubscription(dynamic vehicle) async {
-    final known = vehicle['hasSubscription'];
-    if (known is bool) return known;
-    try {
-      final r = await ApiClient.get('/subscription/check', query: {'plate': vehicle['currentPlate'].toString()});
-      return r is Map ? r['hasSubscription'] == true : null;
-    } on ApiException {
-      return null;
-    }
+  /// Tarifeden canlı tahmin; tarife yoksa null.
+  double? _estimate(String type, DateTime entry) {
+    final t = TariffStore.current.value;
+    return t == null ? null : estimateFee(t, type, entry, DateTime.now()).fee;
   }
 
   /// Detay sayfasında yöntem seçilip "Ödemeyi al" basıldığında: sayfa onay özetidir, ayrı diyalog yoktur.
-  void _payFromDetail(dynamic vehicle, String method) {
+  /// [amount] detay sayfasının gösterdiği sunucu tutarıdır (abonelikte 0).
+  void _payFromDetail(dynamic vehicle, String method, double amount) {
     final String plate = vehicle['currentPlate'];
     if (!mounted || _pending.containsKey(plate)) return;
-    final type = vehicle['currentType'] ?? 'SMALL';
-    final entry = DateTime.parse(vehicle['entryTime']).toLocal();
-    final fee = calculateLiveFee(type, entry);
-    _schedule(plate, _ActionKind.checkOut, method, method == 'SUBSCRIPTION' ? 0 : fee);
+    _schedule(plate, _ActionKind.checkOut, method, amount);
   }
 
   Future<void> _requestRunaway(dynamic vehicle) async {
@@ -195,12 +212,12 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
     if (!mounted || _pending.containsKey(plate)) return;
     final type = vehicle['currentType'] ?? 'SMALL';
     final entry = DateTime.parse(vehicle['entryTime']).toLocal();
-    final debt = calculateLiveFee(type, entry);
+    final debt = _estimate(type, entry);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Kaçak işaretle'),
-        content: Text('${formatPlate(plate)} kaçak olarak işaretlensin mi? Borç: ${formatMoney(debt)}'),
+        content: Text('${formatPlate(plate)} kaçak olarak işaretlensin mi? Tahmini borç: ${debt == null ? '—' : formatMoney(debt)}'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
           FilledButton(
@@ -213,7 +230,7 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
       ),
     );
     if (ok != true || !mounted) return;
-    _schedule(plate, _ActionKind.runaway, null, debt);
+    _schedule(plate, _ActionKind.runaway, null, debt ?? 0);
   }
 
   /// İşlem 5 sn BEKLETİLİR; ancak süre dolunca sunucuya gider. "Geri al" zamanlayıcıyı iptal eder, hiçbir şey gönderilmez.
@@ -257,10 +274,11 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
         final method = (data is Map ? data['paymentMethod'] as String? : null) ?? p.method;
         _showSnack('${formatPlate(p.plate)} çıkış yapıldı — ${formatMoney(fee)} (${methodLabel(method)})', tone: BadgeTone.success);
       } else {
-        await ApiClient.post('/parking/runaway', query: {'plate': p.plate});
-        _showSnack('${formatPlate(p.plate)} kaçak olarak işaretlendi — borç ${formatMoney(p.amount)}', tone: BadgeTone.danger);
+        final data = await ApiClient.post('/parking/runaway', query: {'plate': p.plate});
+        final debt = (data is Map && data['debt'] is num) ? data['debt'] as num : p.amount;
+        _showSnack('${formatPlate(p.plate)} kaçak olarak işaretlendi — borç ${formatMoney(debt)}', tone: BadgeTone.danger);
       }
-      if (mounted) fetchActiveVehicles();
+      scheduleRefresh();
     } on ApiException catch (e) {
       if (!mounted) return;
       if (!e.isUnauthorized) {
@@ -268,7 +286,7 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
         _showSnack('${formatPlate(p.plate)}: ${e.message}', tone: BadgeTone.danger, duration: const Duration(seconds: 7));
       }
       // Araç başka bir işlemle kapandıysa liste eskimiştir
-      if (e.code == 'ALREADY_PROCESSED' || e.code == 'VEHICLE_NOT_FOUND') fetchActiveVehicles();
+      if (e.code == 'ALREADY_PROCESSED' || e.code == 'VEHICLE_NOT_FOUND') scheduleRefresh();
     } finally {
       if (mounted) setState(() => _pending.remove(p.plate));
     }
@@ -283,17 +301,6 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
     _execute(p); // kullanıcı işlemi zaten onaylamıştı: tekrar denemede bekleme yok
   }
 
-  double calculateLiveFee(String type, DateTime entryTime) {
-    Duration diff = DateTime.now().difference(entryTime);
-    int minutes = diff.inMinutes;
-    // Sunucu dakika <= 5 iken 0 alır (5:59'a kadar ücretsiz)
-    if (minutes <= AppConstants.gracePeriodSeconds ~/ 60) return 0.0;
-    double baseFee = (type == 'LARGE') ? AppConstants.largeBaseFee : AppConstants.smallBaseFee;
-    double extraFee = (type == 'LARGE') ? AppConstants.largeExtraFee : AppConstants.smallExtraFee;
-    if (minutes <= 60) return baseFee;
-    return baseFee + (((minutes - 60) / 60).ceil() * extraFee);
-  }
-
   // --- ARAÇ GİRİŞİ (alt sayfa) ---
   Future<void> showEntryForm(String detectedPlate) async {
     final result = await showEntrySheet(context, detectedPlate);
@@ -305,9 +312,7 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => VehicleDetailScreen(
         vehicle: vehicle,
-        loadHasSubscription: () => _hasSubscription(vehicle),
-        feeOf: calculateLiveFee,
-        onPay: (method) => _payFromDetail(vehicle, method),
+        onPay: (method, amount) => _payFromDetail(vehicle, method, amount),
         onRunaway: () => _requestRunaway(vehicle),
       ),
     ));
@@ -356,10 +361,12 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
     final isPending = _pending.containsKey(plate);
     final isSub = vehicle['hasSubscription'] == true;
     final debt = vehicle['accumulatedDebt'];
-    final fee = isSub ? 0.0 : calculateLiveFee(vehicle['currentType'] ?? 'SMALL', entry);
+    final est = isSub ? 0.0 : _estimate((vehicle['currentType'] ?? 'SMALL').toString(), entry);
+    final feeText = isSub ? 'Abone' : (est == null ? '—' : formatMoney(est));
 
-    final Color border = isPending || isLong ? c.warning : c.border;
-    final Color bg = isPending ? c.warningSoft : c.surface;
+    // Öncelik: bekleyen işlem > abone > uzun kalış
+    final Color border = isPending ? c.warning : (isSub ? c.sub : (isLong ? c.warning : c.border));
+    final Color bg = isPending ? c.warningSoft : (isSub ? c.subSoft : c.surface);
     final Color durColor = isLong ? c.warning : c.text2;
 
     return Padding(
@@ -401,7 +408,9 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
                               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: durColor)),
                         ),
                         const SizedBox(width: 4),
-                        Text(formatMoney(fee), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                        Text(feeText,
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w800, color: isSub && !isPending ? c.onSubSoft : null)),
                       ],
                     ),
                     if (isPending || (debt is num && debt > 0) || isSub) ...[
@@ -575,7 +584,9 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
 
     // Hangi taraf daha uzunsa, otoparkın uzunluğu o kadar olacak! (Sınırsız Büyüme)
     final int rowCount = max(leftVehicles.length, rightVehicles.length);
-    final title = zoneTitle(widget.street, widget.zoneName);
+    final title = zoneTitle(widget.streetName, widget.zoneName);
+    final subCount = all.where((v) => v['hasSubscription'] == true).length;
+    final upFrom = TariffStore.current.value?.upcoming?.effectiveFrom;
 
     return ColoredBox(
       color: c.bg,
@@ -587,7 +598,7 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    ConnectionBanner(online: _online, lastUpdate: _lastOk, pending: _pending.length),
+                    LiveConnectionBanner(pending: _pending.length),
                     const SizedBox(height: 10),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -599,9 +610,21 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
                               maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
                         ),
                         const SizedBox(width: 8),
-                        Text('${all.length} araç', style: TextStyle(fontSize: 14, color: c.text2)),
+                        Text('${all.length} araç${subCount > 0 ? ' · $subCount abone' : ''}',
+                            style: TextStyle(fontSize: 14, color: c.text2)),
                       ],
                     ),
+                    if (upFrom != null) ...[
+                      const SizedBox(height: 6),
+                      Row(children: [
+                        Icon(Icons.info_outline, size: 16, color: c.text2),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text("${formatDayMonth(upFrom)} ${formatHm(upFrom)}'den itibaren yeni tarife",
+                              style: TextStyle(fontSize: 13, color: c.text2)),
+                        ),
+                      ]),
+                    ],
                     const SizedBox(height: 10),
                     BpSearchField(controller: _search, hint: 'Plaka ara', onChanged: (_) => setState(() {})),
                     const SizedBox(height: 8),
