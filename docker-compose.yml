@@ -1,0 +1,66 @@
+# BilPark yerel demo ortamı (canlı ortamdan tamamen ayrı).
+# Rehber: docs/yerel-demo.md
+#
+#   1) .env.demo oluştur:  powershell -ExecutionPolicy Bypass -File demo/yeni-env.ps1
+#   2) Başlat:             docker compose up --build
+#   3) (İsteğe bağlı) örnek veri: powershell -ExecutionPolicy Bypass -File demo/ornek-veri.ps1
+#
+# Portlar başka projelerle (8080, 5432, 6379, 8000) çakışmasın diye kaydırıldı:
+#   PostgreSQL -> 127.0.0.1:5433 (yalnızca bu bilgisayardan erişilir)
+#   Backend    -> 0.0.0.0:8081   (telefon aynı Wi-Fi'den erişir)
+#   Web        -> 0.0.0.0:5500   (yönetim paneli ve vatandaş sayfası)
+# Çakışma olursa kabukta DEMO_DB_PORT / DEMO_API_PORT / DEMO_WEB_PORT ile değiştirilebilir.
+
+name: bilpark-demo
+
+services:
+  db:
+    image: postgres:16-alpine
+    env_file: .env.demo
+    environment:
+      POSTGRES_DB: bilpark_demo
+      PGTZ: Europe/Istanbul
+      TZ: Europe/Istanbul
+    # Kullanıcı adı ve şifre .env.demo'daki DB_USERNAME / DB_PASSWORD'den gelir; backend ile aynı değerler.
+    entrypoint: ["sh", "-c", "export POSTGRES_USER=\"$$DB_USERNAME\" POSTGRES_PASSWORD=\"$$DB_PASSWORD\"; exec docker-entrypoint.sh postgres"]
+    ports:
+      - "127.0.0.1:${DEMO_DB_PORT:-5433}:5432"
+    volumes:
+      - bilpark_demo_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$DB_USERNAME\" -d bilpark_demo"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    env_file: .env.demo
+    environment:
+      # Yalnızca compose içindeki veritabanı; .env.demo'daki DB_URL yok sayılır.
+      DB_URL: jdbc:postgresql://db:5432/bilpark_demo
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Europe/Istanbul
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${DEMO_API_PORT:-8081}:8080"
+    healthcheck:
+      # /api/zones kimlik istemez; uygulama ve veritabanı hazırsa 200 döner.
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/zones > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
+  web:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./web:/usr/share/nginx/html:ro
+    ports:
+      - "${DEMO_WEB_PORT:-5500}:80"
+    depends_on:
+      - backend
+
+volumes:
+  bilpark_demo_pgdata:
