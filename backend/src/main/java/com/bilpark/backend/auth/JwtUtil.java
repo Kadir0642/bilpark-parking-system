@@ -1,6 +1,7 @@
 package com.bilpark.backend.auth;
 
 import io.jsonwebtoken.Claims;
+import jakarta.annotation.PostConstruct;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,6 +9,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,15 +18,25 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    // Usually this should be injected from environment variables
-    @Value("${jwt.secret:defaultSecretKeyThatNeedsToBeLongEnoughForHS256AlgorithmToWork}")
+    // Comes from the JWT_SECRET env var (no default - app must not start without it)
+    @Value("${jwt.secret}")
     private String secret;
+
+    @PostConstruct
+    void validateSecret() {
+        if (secret == null || secret.isBlank()
+                || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException(
+                    "JWT_SECRET is missing or too short: at least 32 bytes required "
+                    + "(generate one with: openssl rand -base64 48)");
+        }
+    }
 
     @Value("${jwt.expiration:86400000}") // Default 24 hours
     private Long expiration;
 
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes());
+        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateToken(UserDetails userDetails) {

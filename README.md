@@ -77,9 +77,9 @@ Since the backend is deployed in the cloud, you can test the mobile app and web 
 To modify the core backend business logic:
 1. Clone the repository and open the `backend` folder in IntelliJ IDEA.
 2. Right-click `pom.xml` -> "Add as Maven Project".
-3. Add your Neon.tech PostgreSQL credentials inside `src/main/resources/application.properties`.
-4. Run `BackendApplication.java`.
-5. Update the `globalBaseUrl` in the Flutter and HTML files to your local machine's IP address.
+3. Set the environment variables listed in `backend/.env.example` (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `ADMIN_PASSWORD`, `OFFICER_PASSWORD`). The backend refuses to start without `JWT_SECRET`.
+4. Run `BackendApplication.java`. Tests run without a database: `./mvnw test` (H2 `test` profile).
+5. Point the clients at your local server: `flutter run --dart-define=API_BASE=http://10.0.2.2:8080/api` for mobile; the web pages pick `http://localhost:8080` automatically when opened from localhost (see `web/config.js`).
 
 ---
 

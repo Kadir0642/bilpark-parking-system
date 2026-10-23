@@ -1,6 +1,7 @@
 package com.bilpark.backend.auth;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpStatus;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -14,6 +15,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -44,8 +46,6 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/login",
                                 "/api/parking/debt",
-                                "/api/parking/pay",
-                                "/api/subscription/create", // Citizens can buy subscriptions
                                 "/api/zones",            // Officers need zones on login screen
                                 "/api/zones/by-street",  // Officers filter zones by street
                                 "/v3/api-docs/**",
@@ -53,12 +53,19 @@ public class SecurityConfig {
                                 "/swagger-ui.html"
                         ).permitAll() // Citizen portal, Zones listing & Swagger
                         
+                        // Online payment stays closed until stage 4 replaces it with the payment-provider flow
+                        .requestMatchers("/api/parking/pay").hasRole("ADMIN")
+                        .requestMatchers("/api/subscription/create").hasRole("ADMIN")
+
                         // Admin only endpoints
                         .requestMatchers("/api/parking/bi/**").hasRole("ADMIN")
                         .requestMatchers("/api/parking/income/**").hasRole("ADMIN")
                         
                         // Officer and Admin endpoints
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling(e -> e
+                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)) // 401, not 403
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)

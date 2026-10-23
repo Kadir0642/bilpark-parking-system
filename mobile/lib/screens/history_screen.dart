@@ -46,10 +46,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     try {
       final response = await http.get(
         uri,
-        headers: {
-          if (AppConstants.authToken != null) 
-            'Authorization': 'Bearer ${AppConstants.authToken}'
-        }
+        headers: AppConstants.authHeaders()
       );
 
       if (response.statusCode == 200 && mounted) {
@@ -91,10 +88,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     try {
       final response = await http.get(
         uri,
-        headers: {
-          if (AppConstants.authToken != null) 
-            'Authorization': 'Bearer ${AppConstants.authToken}'
-        }
+        headers: AppConstants.authHeaders()
       );
 
       if (response.statusCode == 200 && mounted) {

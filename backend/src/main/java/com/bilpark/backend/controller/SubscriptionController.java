@@ -21,9 +21,10 @@ public class SubscriptionController {
 
     /**
      * Creates a new monthly subscription.
-     * Accessible by anyone (citizens from the web portal).
+     * Admin only (online purchase opens with the payment-provider flow in stage 4).
      */
     @PostMapping("/create")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> createSubscription(@RequestBody @jakarta.validation.Valid com.bilpark.backend.dto.SubscriptionRequest request) {
         try {
             Subscription sub = subscriptionService.createSubscription(

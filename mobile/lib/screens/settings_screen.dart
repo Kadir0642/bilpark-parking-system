@@ -15,23 +15,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> endShift(BuildContext context) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
-      
-      if (token != null) {
+
+      if (AppConstants.authToken != null) {
         await http.post(
           Uri.parse('${AppConstants.apiBase}/auth/logout'),
-          headers: {'Authorization': 'Bearer $token'},
+          headers: AppConstants.authHeaders(),
         );
       }
+      AppConstants.clearAuth();
       await prefs.remove('auth_token');
       await prefs.remove('user_role');
       await prefs.remove('username');
       
-      if (mounted) {
+      if (context.mounted) {
         Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
       }
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Çıkış yapılırken hata oluştu: $e')));
         Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
       }
@@ -62,7 +62,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: const Text("Göz yorgunluğunu azaltır"),
             secondary: Icon(isDarkMode ? Icons.dark_mode : Icons.light_mode),
             value: isDarkMode,
-            activeColor: Colors.indigoAccent,
+            activeThumbColor: Colors.indigoAccent,
             onChanged: (bool value) async {
               themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
               final prefs = await SharedPreferences.getInstance();

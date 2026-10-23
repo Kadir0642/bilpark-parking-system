@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/constants.dart';
+import '../main.dart'; // MainContainer
 import 'login_screen.dart'; // Vardiya/Lokasyon seçim ekranına gidecek
 
 class AuthScreen extends StatefulWidget {
@@ -31,7 +32,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('${AppConstants.baseUrl.replaceAll('/parking', '/auth')}/login'),
+        Uri.parse('${AppConstants.apiBase}/auth/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'username': username, 'password': password}),
       );
@@ -43,13 +44,32 @@ class _AuthScreenState extends State<AuthScreen> {
         AppConstants.authToken = data['token'];
         AppConstants.currentUser = data['username'];
         AppConstants.currentRole = data['role'];
-        
-        // Navigate to next screen
+        final zone = data['assignedZone'];
+        AppConstants.assignedZone = zone is Map<String, dynamic> ? zone : null;
+
         if (!mounted) return;
-        Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const LoginScreen())
-        );
+        if (data['role'] == 'OFFICER' && AppConstants.assignedZone != null) {
+          // Atanmış bölgesi olan görevli: seçim ekranını atla
+          final z = AppConstants.assignedZone!;
+          final street = AppConstants.streetToEnum.entries
+              .firstWhere((e) => e.value == z['street'],
+                  orElse: () => AppConstants.streetToEnum.entries.first)
+              .key;
+          Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => MainContainer(
+                    region: 'Bilecik',
+                    neighborhood: 'Merkez',
+                    street: street,
+                    zoneId: z['id'],
+                    zoneName: z['zoneName'],
+                  )));
+        } else {
+          Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const LoginScreen())
+          );
+        }
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(

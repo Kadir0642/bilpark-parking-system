@@ -44,10 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final response = await http.get(
         uri,
-        headers: {
-          if (AppConstants.authToken != null) 
-            'Authorization': 'Bearer ${AppConstants.authToken}'
-        }
+        headers: AppConstants.authHeaders()
       );
       if (!mounted) return;
       if (response.statusCode == 200) {
