@@ -54,6 +54,17 @@ public class ShiftService {
                 });
     }
 
+    /** Closes every open shift of the user (all devices), e.g. when the account is deactivated. */
+    @Transactional
+    public void closeAllOpenShifts(User user) {
+        if (user == null) return;
+        LocalDateTime now = LocalDateTime.now();
+        for (Shift s : shiftRepository.findByUserAndEndTimeIsNull(user)) {
+            s.setEndTime(now);
+            shiftRepository.save(s);
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<Shift> listOpenShifts() {
         return shiftRepository.findByEndTimeIsNullOrderByStartTimeAsc();

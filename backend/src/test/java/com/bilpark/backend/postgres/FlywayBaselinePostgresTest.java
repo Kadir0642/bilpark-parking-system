@@ -86,12 +86,12 @@ class FlywayBaselinePostgresTest {
 
         MigrateResult result = flyway(url).migrate();
         assertTrue(result.success);
-        assertEquals(1, result.migrationsExecuted, "only V2 should run");
+        assertEquals(2, result.migrationsExecuted, "only V2 and V3 should run");
 
         try (Connection c = conn(url); Statement st = c.createStatement()) {
             List<String> hist = strings(c,
                     "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank");
-            assertEquals(List.of("BASELINE:1", "SQL:2"), hist);
+            assertEquals(List.of("BASELINE:1", "SQL:2", "SQL:3"), hist);
 
             assertEquals(0, count(c, "SELECT count(*) FROM pg_constraint WHERE conname = 'ukabc123xyz'"));
             assertEquals(1, count(c, "SELECT count(*) FROM pg_indexes WHERE indexname = 'ux_subscriptions_active_plate'"));
@@ -167,10 +167,10 @@ class FlywayBaselinePostgresTest {
         String url = urlFor("fresh_db");
         MigrateResult result = flyway(url).migrate();
         assertTrue(result.success);
-        assertEquals(2, result.migrationsExecuted);
+        assertEquals(3, result.migrationsExecuted);
 
         try (Connection c = conn(url); Statement st = c.createStatement()) {
-            assertEquals(List.of("SQL:1", "SQL:2"),
+            assertEquals(List.of("SQL:1", "SQL:2", "SQL:3"),
                     strings(c, "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank"));
             assertEquals(0, count(c, "SELECT count(*) FROM pg_constraint c JOIN pg_class t ON t.oid=c.conrelid "
                     + "WHERE t.relname='subscriptions' AND c.contype='u'"));
