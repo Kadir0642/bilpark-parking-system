@@ -728,6 +728,10 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
                             message: ro ? readOnlyReason : 'Plaka tara',
                             child: FloatingActionButton.extended(
                               heroTag: null,
+                              // FAB onPressed null olunca soluklaşmaz; pasif görünümü elle verilir
+                              backgroundColor: ro ? c.surface2 : null,
+                              foregroundColor: ro ? c.text2 : null,
+                              elevation: ro ? 0 : null,
                               onPressed: ro ? null : scanPlate,
                               icon: const Icon(Icons.photo_camera_outlined),
                               label: const Text('Plaka tara'),
