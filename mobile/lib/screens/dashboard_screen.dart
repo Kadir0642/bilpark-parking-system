@@ -7,6 +7,7 @@ import '../core/tariff.dart';
 import '../core/theme.dart';
 import '../widgets/bp_header.dart';
 import '../widgets/connection_banner.dart';
+import '../widgets/license_banner.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String streetCode; // sunucudaki cadde kodu
@@ -182,13 +183,16 @@ class DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(height: 16),
                   _summaryCard(c),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(child: _actionButton(Icons.photo_camera_outlined, 'Plaka tara', widget.onScanPlate)),
-                      const SizedBox(width: 10),
-                      Expanded(child: _actionButton(Icons.add, 'Elle ekle', widget.onManualEntry)),
-                    ],
+                  ReadOnlyGate(
+                    builder: (_, ro) => Row(
+                      children: [
+                        Expanded(child: _actionButton(Icons.photo_camera_outlined, 'Plaka tara', ro ? null : widget.onScanPlate)),
+                        const SizedBox(width: 10),
+                        Expanded(child: _actionButton(Icons.add, 'Elle ekle', ro ? null : widget.onManualEntry)),
+                      ],
+                    ),
                   ),
+                  const ReadOnlyNote(),
                 ],
               ),
             ),

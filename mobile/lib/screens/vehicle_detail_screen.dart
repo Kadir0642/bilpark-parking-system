@@ -8,6 +8,7 @@ import '../core/theme.dart';
 import '../widgets/bp_header.dart';
 import '../widgets/bp_snack.dart';
 import '../widgets/day_breakdown.dart';
+import '../widgets/license_banner.dart';
 import '../widgets/plate_badge.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/toggle_tile.dart';
@@ -309,46 +310,49 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
               ),
             ),
           ),
-          Container(
-            decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: SafeArea(
-              top: false,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  FilledButton(
-                    style: FilledButton.styleFrom(backgroundColor: c.success, foregroundColor: c.onSuccess),
-                    onPressed: payable == null ? null : () => _pay(payable),
-                    child: Text('Ödemeyi al · $amountText ${methodLabel(_method)}${isEstimate && !isSubPay ? ' (tahmini)' : ''}',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _showQr,
-                          icon: const Icon(Icons.qr_code_2),
-                          label: const Text('QR göster'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: c.danger,
-                            side: BorderSide(color: c.danger, width: 2),
+          ReadOnlyGate(
+            builder: (_, readOnly) => Container(
+              decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    FilledButton(
+                      style: FilledButton.styleFrom(backgroundColor: c.success, foregroundColor: c.onSuccess),
+                      onPressed: payable == null || readOnly ? null : () => _pay(payable),
+                      child: Text('Ödemeyi al · $amountText ${methodLabel(_method)}${isEstimate && !isSubPay ? ' (tahmini)' : ''}',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _showQr,
+                            icon: const Icon(Icons.qr_code_2),
+                            label: const Text('QR göster'),
                           ),
-                          onPressed: _runaway,
-                          icon: const Icon(Icons.warning_amber_rounded),
-                          label: const Text('Kaçtı'),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: c.danger,
+                              side: BorderSide(color: c.danger, width: 2),
+                            ),
+                            onPressed: readOnly ? null : _runaway,
+                            icon: const Icon(Icons.warning_amber_rounded),
+                            label: const Text('Kaçtı'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const ReadOnlyNote(),
+                  ],
+                ),
               ),
             ),
           ),

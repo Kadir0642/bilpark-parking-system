@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/format.dart';
 import '../core/theme.dart';
+import 'license_banner.dart';
 import 'status_badge.dart';
 import 'toggle_tile.dart';
 
@@ -97,25 +98,28 @@ class _EntrySheetState extends State<_EntrySheet> {
               ],
             ),
             const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: () => _submit('LEFT'),
-                    icon: const Icon(Icons.arrow_back),
-                    label: const Text('Sola park'),
+            ReadOnlyGate(
+              builder: (_, ro) => Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: ro ? null : () => _submit('LEFT'),
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text('Sola park'),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: () => _submit('RIGHT'),
-                    icon: const Icon(Icons.arrow_forward),
-                    label: const Text('Sağa park'),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: ro ? null : () => _submit('RIGHT'),
+                      icon: const Icon(Icons.arrow_forward),
+                      label: const Text('Sağa park'),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
+            const ReadOnlyNote(),
           ],
         ),
       ),

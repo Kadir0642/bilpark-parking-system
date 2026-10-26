@@ -7,7 +7,10 @@ import '../main.dart'; // MainContainer
 import 'login_screen.dart'; // Vardiya/Lokasyon seçim ekranına gidecek
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key});
+  /// Oturumun neden kapandığını açıklayan kalıcı uyarı (pasife alma, süre dolması).
+  final String? message;
+
+  const AuthScreen({super.key, this.message});
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -119,6 +122,26 @@ class _AuthScreenState extends State<AuthScreen> {
                         children: [
                           const Text('Personel girişi', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
                           const SizedBox(height: BpSize.s4),
+                          if (widget.message != null) ...[
+                            Container(
+                              padding: const EdgeInsets.all(BpSize.s3),
+                              decoration: BoxDecoration(
+                                color: c.warningSoft,
+                                border: Border.all(color: c.warning),
+                                borderRadius: BorderRadius.circular(BpSize.rSm),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.info_outline, size: 20, color: c.onWarningSoft),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                      child: Text(widget.message!, style: TextStyle(fontSize: 14, color: c.onWarningSoft))),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: BpSize.s4),
+                          ],
                           TextField(
                             controller: _usernameController,
                             autofillHints: const [AutofillHints.username],

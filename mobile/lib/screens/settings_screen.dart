@@ -9,6 +9,7 @@ import '../main.dart'; // themeNotifier, setThemeMode
 import '../widgets/bp_header.dart';
 import '../widgets/bp_snack.dart';
 import '../widgets/status_badge.dart';
+import 'change_password_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final String? street;
@@ -123,6 +124,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Text('Koyu tema gece vardiyasında göz yorgunluğunu azaltır.',
                             style: TextStyle(fontSize: 14, color: c.text2)),
                       ],
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 20),
+                _sectionTitle(c, 'HESAP'),
+                _card(c, [
+                  InkWell(
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen())),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 52),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        child: Row(
+                          children: [
+                            Icon(Icons.lock_outline, size: 20, color: c.text2),
+                            const SizedBox(width: 12),
+                            const Expanded(child: Text('Şifremi değiştir', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600))),
+                            Icon(Icons.chevron_right, color: c.text2),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ]),

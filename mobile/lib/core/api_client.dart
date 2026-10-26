@@ -23,6 +23,7 @@ class ApiException implements Exception {
   const ApiException(this.statusCode, this.code, this.message);
 
   bool get isUnauthorized => statusCode == 401;
+  bool get isReadOnly => statusCode == 423;
 
   @override
   String toString() => message;
@@ -35,6 +36,10 @@ class ApiClient {
   static const String deviceIdKey = 'device_id';
   static const Duration timeout = Duration(seconds: 15);
   static const String sessionExpiredMessage = 'Oturumunuzun süresi doldu, lütfen tekrar giriş yapın.';
+  static const String deactivatedMessage = 'Hesabınız yönetici tarafından pasife alındı. Oturumunuz kapatıldı.';
+
+  /// 423 READ_ONLY alınınca çağrılır (LicenseStore.attach bağlar; döngüsel import olmasın diye kanca).
+  static void Function(String message)? onReadOnly;
 
   static String? _token;
   static String? _deviceId;
@@ -99,6 +104,8 @@ class ApiClient {
         return 'Bu işlem için yetkiniz yok.';
       case 404:
         return 'Kayıt bulunamadı.';
+      case 423:
+        return 'Lisans süresi doldu; sistem okunur modda. Giriş, çıkış ve kaçak işlemleri yapılamaz.';
       case 409:
         return 'İşlem çakıştı, lütfen listeyi yenileyip tekrar deneyin.';
       default:
@@ -176,6 +183,7 @@ class ApiClient {
       await handleUnauthorized();
       throw ApiException(401, err.code ?? 'UNAUTHORIZED', sessionExpiredMessage);
     }
+    if (response.statusCode == 423) onReadOnly?.call(err.message);
     throw err;
   }
 
@@ -187,13 +195,8 @@ class ApiClient {
     AppConstants.clearAuth();
     final nav = navigatorKey.currentState;
     if (nav == null) return;
-    nav.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const AuthScreen()), (route) => false);
-    // Yeni ekran yerleştikten sonra mesajı göster
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final c = navigatorKey.currentContext;
-      if (c != null) {
-        ScaffoldMessenger.maybeOf(c)?.showSnackBar(const SnackBar(content: Text(sessionExpiredMessage)));
-      }
-    });
+    // Mesaj giriş formunun üstünde kalıcı uyarı olarak görünür
+    nav.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AuthScreen(message: sessionExpiredMessage)), (route) => false);
   }
 }

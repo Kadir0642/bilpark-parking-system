@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'core/api_client.dart';
 import 'core/constants.dart';
 import 'core/format.dart';
+import 'core/license.dart';
 import 'core/live_sync.dart';
 import 'core/tariff.dart';
 import 'core/theme.dart';
@@ -13,6 +14,7 @@ import 'screens/dashboard_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/parking_map_screen.dart';
 import 'widgets/bp_snack.dart';
+import 'widgets/license_banner.dart';
 
 const String _themeModeKey = 'themeMode';
 const String _legacyDarkKey = 'isDarkMode';
@@ -119,9 +121,12 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     TariffStore.load();
+    LicenseStore.attach();
+    LicenseStore.load();
     _eventSub = liveSync.events.listen(_onEvent);
     _reloadSub = liveSync.reloads.listen((_) {
       TariffStore.load();
+      LicenseStore.load();
       _scheduleRefresh();
     });
     liveSync.onDeactivated = _onDeactivated;
@@ -137,6 +142,8 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
     _eventSub?.cancel();
     _reloadSub?.cancel();
     liveSync.onDeactivated = null;
+    ApiClient.onReadOnly = null;
+    LicenseStore.reset();
     liveSync.stop();
     super.dispose();
   }
@@ -172,7 +179,9 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
         ScaffoldMessenger.of(context)
           ..clearSnackBars()
           ..showSnackBar(bpSnackBar(context, msg));
-      case 'VEHICLE_ENTERED' || 'VEHICLE_EXITED' || 'VEHICLE_RUNAWAY':
+      case 'LICENSE_UPDATED':
+        LicenseStore.load();
+      case 'VEHICLE_ENTERED' || 'VEHICLE_EXITED' || 'VEHICLE_RUNAWAY' || 'VEHICLE_CANCELLED' || 'RECORD_CANCELLED':
         if (_isMine(e)) _scheduleRefresh();
     }
   }
@@ -194,14 +203,8 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
     AppConstants.clearAuth();
     final nav = navigatorKey.currentState;
     if (nav == null) return;
-    nav.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const AuthScreen()), (route) => false);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctx = navigatorKey.currentContext;
-      if (ctx != null) {
-        ScaffoldMessenger.maybeOf(ctx)
-            ?.showSnackBar(const SnackBar(content: Text('Hesabınız pasife alındı. Lütfen yöneticinize başvurun.')));
-      }
-    });
+    nav.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AuthScreen(message: ApiClient.deactivatedMessage)), (route) => false);
   }
 
   void _select(int i) {
@@ -226,47 +229,49 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
         if (!didPop) _select(_home);
       },
       child: Scaffold(
-        body: IndexedStack(
-          index: _index,
-          children: [
-            DashboardScreen(
-              key: _dashKey,
-              streetCode: widget.streetCode,
-              streetName: widget.streetName,
-              zoneId: widget.zoneId,
-              zoneName: widget.zoneName,
-              onOpenStreet: () => _select(_street),
-              onScanPlate: () {
-                _select(_street);
-                _mapKey.currentState?.scanPlate();
-              },
-              onManualEntry: () {
-                _select(_street);
-                _mapKey.currentState?.showEntryForm('');
-              },
-            ),
-            ParkingMapScreen(
-              key: _mapKey,
-              streetCode: widget.streetCode,
-              streetName: widget.streetName,
-              zoneId: widget.zoneId,
-              zoneName: widget.zoneName,
-            ),
-            _visited.contains(_history)
-                ? HistoryScreen(
-                    key: _historyKey,
-                    streetCode: widget.streetCode,
-                    streetName: widget.streetName,
-                    showOnlyRunaways: false)
-                : const SizedBox.shrink(),
-            _visited.contains(_runaways)
-                ? HistoryScreen(
-                    key: _runawayKey,
-                    streetCode: widget.streetCode,
-                    streetName: widget.streetName,
-                    showOnlyRunaways: true)
-                : const SizedBox.shrink(),
-          ],
+        body: LicenseBannerHost(
+          child: IndexedStack(
+            index: _index,
+            children: [
+              DashboardScreen(
+                key: _dashKey,
+                streetCode: widget.streetCode,
+                streetName: widget.streetName,
+                zoneId: widget.zoneId,
+                zoneName: widget.zoneName,
+                onOpenStreet: () => _select(_street),
+                onScanPlate: () {
+                  _select(_street);
+                  _mapKey.currentState?.scanPlate();
+                },
+                onManualEntry: () {
+                  _select(_street);
+                  _mapKey.currentState?.showEntryForm('');
+                },
+              ),
+              ParkingMapScreen(
+                key: _mapKey,
+                streetCode: widget.streetCode,
+                streetName: widget.streetName,
+                zoneId: widget.zoneId,
+                zoneName: widget.zoneName,
+              ),
+              _visited.contains(_history)
+                  ? HistoryScreen(
+                      key: _historyKey,
+                      streetCode: widget.streetCode,
+                      streetName: widget.streetName,
+                      showOnlyRunaways: false)
+                  : const SizedBox.shrink(),
+              _visited.contains(_runaways)
+                  ? HistoryScreen(
+                      key: _runawayKey,
+                      streetCode: widget.streetCode,
+                      streetName: widget.streetName,
+                      showOnlyRunaways: true)
+                  : const SizedBox.shrink(),
+            ],
+          ),
         ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _index,

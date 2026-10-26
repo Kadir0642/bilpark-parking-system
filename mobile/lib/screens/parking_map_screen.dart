@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import '../core/api_client.dart';
 import '../core/format.dart';
+import '../core/license.dart';
 import '../core/live_sync.dart';
 import '../core/tariff.dart';
 import '../core/theme.dart';
@@ -12,6 +13,7 @@ import '../widgets/bp_header.dart';
 import '../widgets/bp_snack.dart';
 import '../widgets/connection_banner.dart';
 import '../widgets/entry_sheet.dart';
+import '../widgets/license_banner.dart';
 import '../widgets/plate_badge.dart';
 import '../widgets/search_field.dart';
 import '../widgets/status_badge.dart';
@@ -50,6 +52,7 @@ class _FailedAction {
   _FailedAction(this.plate, this.kind, this.method, this.amount, this.time, this.message, this.code, this.statusCode);
 
   // Ağ/sunucu hatası ve kilit çakışması tekrar denenebilir; "zaten işlendi", "abonelik yok" gibi iş kuralı hataları denenemez
+  // 423 READ_ONLY dahil diğer 4xx hataları tekrar denenemez
   bool get retryable => statusCode == null || statusCode! >= 500 || code == 'CONFLICT';
 }
 
@@ -303,6 +306,10 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
 
   // --- ARAÇ GİRİŞİ (alt sayfa) ---
   Future<void> showEntryForm(String detectedPlate) async {
+    if (LicenseStore.readOnly.value) {
+      _showSnack(readOnlyReason, tone: BadgeTone.danger);
+      return;
+    }
     final result = await showEntrySheet(context, detectedPlate);
     if (result == null || !mounted) return;
     await checkInVehicle(result.plate, result.type, result.side);
@@ -319,6 +326,10 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
   }
 
   Future<void> scanPlate() async {
+    if (LicenseStore.readOnly.value) {
+      _showSnack(readOnlyReason, tone: BadgeTone.danger);
+      return;
+    }
     final ImagePicker picker = ImagePicker();
     final XFile? photo = await picker.pickImage(source: ImageSource.camera);
     if (photo != null) {
@@ -691,29 +702,39 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Tooltip(
-                      message: 'Elle araç ekle',
-                      child: SizedBox(
-                        width: BpSize.tapLg,
-                        height: BpSize.tapLg,
-                        child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            foregroundColor: c.primary,
-                            side: BorderSide(color: c.primary, width: 2),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BpSize.rLg)),
+                    ReadOnlyGate(
+                      builder: (_, ro) => Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Tooltip(
+                            message: ro ? readOnlyReason : 'Elle araç ekle',
+                            child: SizedBox(
+                              width: BpSize.tapLg,
+                              height: BpSize.tapLg,
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  foregroundColor: c.primary,
+                                  side: BorderSide(color: ro ? c.border : c.primary, width: 2),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BpSize.rLg)),
+                                ),
+                                onPressed: ro ? null : () => showEntryForm(''),
+                                child: const Icon(Icons.add, size: 26),
+                              ),
+                            ),
                           ),
-                          onPressed: () => showEntryForm(''),
-                          child: const Icon(Icons.add, size: 26),
-                        ),
+                          const SizedBox(width: 10),
+                          Tooltip(
+                            message: ro ? readOnlyReason : 'Plaka tara',
+                            child: FloatingActionButton.extended(
+                              heroTag: null,
+                              onPressed: ro ? null : scanPlate,
+                              icon: const Icon(Icons.photo_camera_outlined),
+                              label: const Text('Plaka tara'),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    FloatingActionButton.extended(
-                      heroTag: null,
-                      onPressed: scanPlate,
-                      icon: const Icon(Icons.photo_camera_outlined),
-                      label: const Text('Plaka tara'),
                     ),
                   ],
                 ),
