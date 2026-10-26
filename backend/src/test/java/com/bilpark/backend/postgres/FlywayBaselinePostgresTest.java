@@ -75,6 +75,10 @@ class FlywayBaselinePostgresTest {
             st.execute(v1Sql().replace("uk_subscriptions_license_plate", "ukabc123xyz"));
             st.execute("INSERT INTO zones(street, zone_number, zone_name) VALUES ('TEVFIK_BEY', 1, 'Z1')");
             st.execute("INSERT INTO users(username, password, role) VALUES ('admin','x','ADMIN')");
+            // Hibernate-style check constraints that would block the new DEVELOPER role / CANCELLED status
+            st.execute("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('ADMIN','OFFICER'))");
+            st.execute("ALTER TABLE parking_records ADD CONSTRAINT parking_records_status_check "
+                    + "CHECK (status IN ('ACTIVE','PAID','RUNAWAY'))");
             st.execute("INSERT INTO parking_records(license_plate, debt_paid, status, fee) VALUES ('34 abc-123', true, 'PAID', 20)");
             st.execute("INSERT INTO active_park_spots(current_plate, street) VALUES ('06 a 12345', 'TEVFIK_BEY')");
             st.execute("INSERT INTO subscriptions(license_plate, vehicle_type, start_date, end_date, status) "
@@ -138,6 +142,40 @@ class FlywayBaselinePostgresTest {
                     "INSERT INTO tariffs (status, small_first_hour, small_extra_hour, large_first_hour, large_extra_hour, "
                             + "free_minutes, paid_start, paid_end, subscription_small_monthly, subscription_large_monthly, "
                             + "created_by_username, created_at) VALUES ('ACTIVE',1,1,1,1,5,'08:00','22:00',1,1,'t',now())"));
+
+            // ---- V4 ----
+            assertEquals(3, count(c, "SELECT count(*) FROM information_schema.columns WHERE table_name='users' "
+                    + "AND column_name IN ('full_name','created_at','password_changed_at')"));
+            assertEquals(5, count(c, "SELECT count(*) FROM information_schema.columns WHERE table_name='parking_records' "
+                    + "AND column_name IN ('cancelled_from_status','cancelled_at','cancelled_by_username',"
+                    + "'cancel_reason','plate_anonymized')"));
+            // existing rows get plate_anonymized = false
+            assertEquals(1, count(c, "SELECT count(*) FROM parking_records WHERE plate_anonymized = false "
+                    + "AND cancelled_at IS NULL AND cancelled_from_status IS NULL"));
+            assertEquals(1, count(c, "SELECT count(*) FROM information_schema.tables WHERE table_name='audit_logs'"));
+            assertEquals(1, count(c, "SELECT count(*) FROM information_schema.tables WHERE table_name='app_settings'"));
+            assertEquals(1, count(c, "SELECT count(*) FROM information_schema.tables WHERE table_name='error_logs'"));
+            assertEquals(1, count(c, "SELECT count(*) FROM information_schema.tables WHERE table_name='license_info'"));
+            assertEquals(1, count(c, "SELECT count(*) FROM license_info"));
+            assertEquals(1, count(c, "SELECT count(*) FROM license_info WHERE id = 1 AND grace_days = 15 "
+                    + "AND expires_on BETWEEN current_date + 364 AND current_date + 366"));
+            assertEquals(3, count(c, "SELECT count(*) FROM pg_indexes WHERE indexname IN "
+                    + "('ix_audit_logs_created_at','ix_audit_logs_action','ix_audit_logs_actor')"));
+
+            // the old role / status check constraints are gone
+            assertEquals(0, count(c, "SELECT count(*) FROM pg_constraint c JOIN pg_class t ON t.oid=c.conrelid "
+                    + "WHERE t.relname='users' AND c.contype='c'"));
+            assertEquals(0, count(c, "SELECT count(*) FROM pg_constraint c JOIN pg_class t ON t.oid=c.conrelid "
+                    + "WHERE t.relname='parking_records' AND c.contype='c' AND pg_get_constraintdef(c.oid) ILIKE '%status%'"));
+            st.execute("INSERT INTO users(username, password, role) VALUES ('gelistirici','x','DEVELOPER')");
+            st.execute("INSERT INTO parking_records(license_plate, debt_paid, status, fee, plate_anonymized, cancelled_from_status) "
+                    + "VALUES ('06C1', true, 'CANCELLED', 0, false, 'ACTIVE')");
+            assertEquals(1, count(c, "SELECT count(*) FROM users WHERE role='DEVELOPER'"));
+
+            // audit_logs accepts a row (identity column, nullable actor)
+            st.execute("INSERT INTO audit_logs(created_at, actor_username, action, summary) "
+                    + "VALUES (now(), 'system', 'RETENTION_RUN', 'x')");
+            assertEquals(1, count(c, "SELECT count(*) FROM audit_logs"));
         }
 
         // idempotent: second migrate is a no-op
@@ -196,6 +234,8 @@ class FlywayBaselinePostgresTest {
                     + "WHERE t.relname='subscriptions' AND c.contype='u'"));
             assertEquals(1, count(c, "SELECT count(*) FROM pg_indexes WHERE indexname = 'ux_subscriptions_active_plate'"));
             assertEquals(1, count(c, "SELECT count(*) FROM information_schema.tables WHERE table_name='shifts'"));
+            assertEquals(1, count(c, "SELECT count(*) FROM license_info WHERE grace_days = 15"));
+            assertEquals(1, count(c, "SELECT count(*) FROM information_schema.tables WHERE table_name='audit_logs'"));
         }
     }
 }
