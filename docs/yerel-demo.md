@@ -172,6 +172,31 @@ ya da APK'yı telefona kopyalayıp dosya yöneticisinden aç ("Bilinmeyen kaynak
 
 API adresi APK'nın içine gömülür: bilgisayarın IP'si değişirse (modem yeniden başlayınca olabilir) APK'yı yeni IP ile tekrar üret. Bunu önlemek için modem arayüzünden bilgisayara sabit IP (DHCP rezervasyonu) verebilirsin.
 
+### 4.6. Wi-Fi olmadan: USB kablo ile (okul / ortak ağlar için)
+
+Kampüs ağları (eduroam vb.) genellikle cihazların birbirini görmesini engeller; ortak ağda güvenlik duvarı açmak da önerilmez. Bunun yerine telefon backend'e USB kablosu üzerinden bağlanabilir. Telefonda internet gerekmez, ağ profili ve güvenlik duvarı kuralı da gerekmez.
+
+1. APK'yı bir kez `127.0.0.1` adresiyle üret ve kur:
+
+   ```bash
+   cd mobile
+   flutter build apk --debug --dart-define=API_BASE=http://127.0.0.1:8081/api
+   ```
+
+   ```bash
+   adb install -r build/app/outputs/flutter-apk/app-debug.apk
+   ```
+
+2. Telefondaki 8081'i bilgisayarın 8081'ine yönlendir:
+
+   ```bash
+   adb reverse tcp:8081 tcp:8081
+   ```
+
+3. Telefonun tarayıcısında `http://127.0.0.1:8081/api/health` açılıyorsa hazır.
+
+Kablo çıkarılınca veya telefon yeniden başlayınca yönlendirme silinir; kabloyu takıp yalnızca 2. adımı tekrarla. `adb` PATH'te değilse tam yolu: `%LOCALAPPDATA%\Android\Sdk\platform-toolsdb.exe`.
+
 ---
 
 ## 5. Demo kullanıcılarıyla giriş
