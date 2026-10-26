@@ -29,7 +29,7 @@ class ShiftServiceTest {
     @BeforeEach
     void setUp() {
         repo = mock(ShiftRepository.class);
-        service = new ShiftService(repo);
+        service = new ShiftService(repo, java.time.Clock.system(com.bilpark.backend.config.ClockConfig.ZONE));
         store.clear();
         long[] ids = {0};
         when(repo.save(any(Shift.class))).thenAnswer(i -> {
@@ -84,7 +84,7 @@ class ShiftServiceTest {
     @Test
     void staleShiftFromEarlierDayIsAutoClosed() {
         Shift old = service.openShift(officer, "devA");
-        old.setStartTime(LocalDateTime.now().minusDays(1));
+        old.setStartTime(LocalDateTime.now(com.bilpark.backend.config.ClockConfig.ZONE).minusDays(1));
         Shift fresh = service.openShift(officer, "devA");
         assertNotSame(old, fresh);
         assertFalse(old.isOpen());
