@@ -42,6 +42,17 @@ public class User {
     @Column(nullable = false)
     private boolean active = true;
 
+    @Column(name = "full_name")
+    private String fullName; // Ad soyad (Flyway V4), optional
+
+    @Column(name = "created_at")
+    private java.time.LocalDateTime createdAt;
+
+    // Europe/Istanbul local time (Clock bean). JWTs issued before this second are rejected.
+    @JsonIgnore
+    @Column(name = "password_changed_at")
+    private java.time.LocalDateTime passwordChangedAt;
+
     public User(String username, String password, Role role, Zone assignedZone) {
         this.username = username;
         this.password = password;

@@ -31,4 +31,12 @@ public class ApiException extends RuntimeException {
     public static ApiException conflict(String code, String message) {
         return new ApiException(HttpStatus.CONFLICT, code, message);
     }
+
+    public static ApiException forbidden(String code, String message) {
+        return new ApiException(HttpStatus.FORBIDDEN, code, message);
+    }
+
+    public static ApiException locked(String code, String message) {
+        return new ApiException(HttpStatus.LOCKED, code, message);
+    }
 }

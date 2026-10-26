@@ -46,6 +46,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
     }
 
+    /** A password change or reset invalidates older tokens (JWT iat has second precision). */
+    private boolean issuedBeforePasswordChange(String jwt, UserDetails userDetails) {
+        if (!(userDetails instanceof BilparkUserDetails b) || b.getPasswordChangedAt() == null) return false;
+        java.util.Date iat = jwtUtil.extractIssuedAt(jwt);
+        return iat == null
+                || iat.toInstant().isBefore(b.getPasswordChangedAt().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+    }
+
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
@@ -73,7 +81,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
                 
-                if (userDetails.isEnabled() && jwtUtil.validateToken(jwt, userDetails)) {
+                if (userDetails.isEnabled() && jwtUtil.validateToken(jwt, userDetails)
+                        && !issuedBeforePasswordChange(jwt, userDetails)) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,

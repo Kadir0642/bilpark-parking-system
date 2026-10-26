@@ -2,6 +2,8 @@ package com.bilpark.backend.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.bilpark.backend.audit.AuditService;
+import com.bilpark.backend.model.AuditAction;
 import com.bilpark.backend.model.Role;
 import com.bilpark.backend.model.Street;
 import com.bilpark.backend.model.StreetLocation;
@@ -27,7 +29,11 @@ public class DataInitializer {
                                       StreetRepository streetRepository,
                                       PasswordEncoder passwordEncoder,
                                       @Value("${bilpark.seed.admin-password:}") String adminPassword,
-                                      @Value("${bilpark.seed.officer-password:}") String officerPassword) {
+                                      @Value("${bilpark.seed.officer-password:}") String officerPassword,
+                                      @Value("${bilpark.seed.developer-username:gelistirici}") String developerUsername,
+                                      @Value("${bilpark.seed.developer-password:}") String developerPassword,
+                                      AuditService auditService,
+                                      java.time.Clock clock) {
         return args -> {
 
             // --- Seed Streets (only once; Flyway V3 seeds them on PostgreSQL, this covers H2 tests) ---
@@ -101,6 +107,24 @@ public class DataInitializer {
                 ));
 
                 log.info("Default users (admin, tevfik) created.");
+            }
+
+            // --- Seed the developer (maintenance) account once, only when DEVELOPER_PASSWORD is set ---
+            // Its existence and powers are written in the contract annex; the admin sees it in the user list.
+            if (developerPassword != null && !developerPassword.isBlank() && !userRepository.existsByRole(Role.DEVELOPER)) {
+                String name = developerUsername == null || developerUsername.isBlank() ? "gelistirici" : developerUsername.trim();
+                if (userRepository.existsByUsername(name)) {
+                    log.warn("Developer account not created: username '{}' is taken.", name);
+                } else {
+                    User dev = new User(name, passwordEncoder.encode(developerPassword), Role.DEVELOPER, null);
+                    dev.setFullName("Sistem geliştiricisi (bakım)");
+                    dev.setCreatedAt(java.time.LocalDateTime.now(clock));
+                    userRepository.save(dev);
+                    auditService.logSystem(AuditAction.DEVELOPER_ACCOUNT_CREATED, "User", dev.getId(),
+                            "Geliştirici (bakım) hesabı oluşturuldu: " + name, null,
+                            java.util.Map.of("username", name, "role", Role.DEVELOPER.name()));
+                    log.info("Developer account '{}' created.", name);
+                }
             }
         };
     }

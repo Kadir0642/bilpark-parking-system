@@ -6,5 +6,9 @@ public enum SyncEventType {
     VEHICLE_EXITED,
     VEHICLE_RUNAWAY,
     TARIFF_UPDATED,
-    USER_DEACTIVATED
+    USER_DEACTIVATED,
+    USER_UPDATED,      // zone/role/profile of the target user changed (stage 5)
+    VEHICLE_CANCELLED, // an active vehicle entry was cancelled (wrong entry), zone scope
+    RECORD_CANCELLED,  // a closed record was cancelled by the admin, zone scope
+    LICENSE_UPDATED    // license dates changed, global
 }

@@ -23,4 +23,12 @@ public final class ErrorCodes {
     public static final String TARIFF_STATE = "TARIFF_STATE";             // tarife bu durumda bu işleme izin vermiyor
     public static final String PASSWORD_MISMATCH = "PASSWORD_MISMATCH";   // yönetici şifresi tekrar doğrulanamadı
     public static final String SYNC_RESET_REQUIRED = "SYNC_RESET_REQUIRED";
+
+    // Aşama 5
+    public static final String READ_ONLY = "READ_ONLY";                   // lisans ve ek süre doldu: okunur mod (423)
+    public static final String WEAK_PASSWORD = "WEAK_PASSWORD";           // şifre kurallara uymuyor
+    public static final String USERNAME_TAKEN = "USERNAME_TAKEN";
+    public static final String PROTECTED_ACCOUNT = "PROTECTED_ACCOUNT";   // bu hesap bu uç noktayla değiştirilemez
+    public static final String ALREADY_CANCELLED = "ALREADY_CANCELLED";
+    public static final String INVALID_SETTINGS = "INVALID_SETTINGS";
 }

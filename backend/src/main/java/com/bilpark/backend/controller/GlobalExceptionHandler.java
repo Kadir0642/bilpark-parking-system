@@ -1,5 +1,6 @@
 package com.bilpark.backend.controller;
 
+import com.bilpark.backend.audit.ErrorLogService;
 import com.bilpark.backend.common.ApiException;
 import com.bilpark.backend.common.ErrorCodes;
 import jakarta.persistence.OptimisticLockException;
@@ -36,6 +37,12 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    private final ErrorLogService errorLogService; // 500s are kept for the developer's recent-errors view
+
+    public GlobalExceptionHandler(ErrorLogService errorLogService) {
+        this.errorLogService = errorLogService;
+    }
 
     static final String CONFLICT_MSG = "Kayıt çakışması: bu işlem başka bir işlemle aynı anda yapıldı veya kayıt zaten var.";
     static final String LOCK_MSG = "Araç aynı anda başka bir cihazda işleniyor, lütfen tekrar deneyin.";
@@ -135,6 +142,7 @@ public class GlobalExceptionHandler {
             org.hibernate.HibernateException.class})
     public ResponseEntity<Map<String, String>> handleDataAccess(Exception ex) {
         log.error("Database error", ex);
+        errorLogService.record(ex, ErrorCodes.INTERNAL_ERROR);
         return body(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCodes.INTERNAL_ERROR,
                 "Veritabanı hatası oluştu. Lütfen tekrar deneyin.");
     }
@@ -149,6 +157,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGeneric(Exception ex) {
         log.error("Unexpected error", ex);
+        errorLogService.record(ex, ErrorCodes.INTERNAL_ERROR);
         return body(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCodes.INTERNAL_ERROR,
                 "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.");
     }

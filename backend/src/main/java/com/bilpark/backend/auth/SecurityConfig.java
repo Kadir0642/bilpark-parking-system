@@ -65,13 +65,19 @@ public class SecurityConfig {
                         .requestMatchers("/api/parking/pay").hasRole("ADMIN")
                         .requestMatchers("/api/subscription/create").hasRole("ADMIN")
 
+                        // Developer (maintenance) only; written in the contract annex, every call audited
+                        .requestMatchers("/api/developer/**").hasRole("DEVELOPER")
+
                         // Admin only endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/parking/bi/**").hasRole("ADMIN")
                         .requestMatchers("/api/parking/income/**").hasRole("ADMIN")
-                        
-                        // Officer and Admin endpoints
-                        .anyRequest().authenticated()
+
+                        // Every logged-in role: own account, license status, logout
+                        .requestMatchers("/api/me", "/api/me/**", "/api/license/status", "/api/auth/logout").authenticated()
+
+                        // Officer and Admin endpoints (the developer role has no access to operational data)
+                        .anyRequest().hasAnyRole("ADMIN", "OFFICER")
                 )
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((req, res, ex) -> writeJson(res, 401, ErrorCodes.UNAUTHORIZED,

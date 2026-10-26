@@ -67,6 +67,24 @@ public class ParkingRecord {
     @Column(name = "paid_minutes")
     private Integer paidMinutes;
 
+    // --- Cancellation (stage 5): soft delete, status = CANCELLED, never removed ---
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancelled_from_status", length = 20)
+    private ParkingStatus cancelledFromStatus; // ACTIVE (wrong entry), PAID or RUNAWAY
+
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
+
+    @Column(name = "cancelled_by_username")
+    private String cancelledByUsername;
+
+    @Column(name = "cancel_reason", length = 500)
+    private String cancelReason;
+
+    // true once the plate was replaced by the retention job (financial records older than 5 years)
+    @Column(name = "plate_anonymized", nullable = false)
+    private boolean plateAnonymized = false;
+
     public ParkingRecord(String licensePlate, StreetLocation street, Zone zone,
                          String region, String neighborhood, LocalDateTime entryTime) {
         this.licensePlate = licensePlate;

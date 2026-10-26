@@ -1,5 +1,6 @@
 package com.bilpark.backend.config;
 
+import com.bilpark.backend.license.ReadOnlyModeInterceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.orm.jpa.support.OpenEntityManagerInViewInterceptor;
@@ -21,9 +22,17 @@ public class OpenEntityManagerInViewConfig implements WebMvcConfigurer {
         return new OpenEntityManagerInViewInterceptor();
     }
 
+    private final ReadOnlyModeInterceptor readOnlyModeInterceptor;
+
+    public OpenEntityManagerInViewConfig(ReadOnlyModeInterceptor readOnlyModeInterceptor) {
+        this.readOnlyModeInterceptor = readOnlyModeInterceptor;
+    }
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addWebRequestInterceptor(openEntityManagerInViewInterceptor())
                 .excludePathPatterns(SSE_PATH, SSE_PATH + "/**");
+        // License expired (after the grace period): writes answer 423, reads stay open
+        registry.addInterceptor(readOnlyModeInterceptor).addPathPatterns("/api/**");
     }
 }

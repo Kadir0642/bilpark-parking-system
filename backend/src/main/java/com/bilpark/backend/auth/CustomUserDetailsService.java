@@ -1,5 +1,6 @@
 package com.bilpark.backend.auth;
 
+import com.bilpark.backend.config.ClockConfig;
 import com.bilpark.backend.model.User;
 import com.bilpark.backend.repository.UserRepository;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -24,10 +25,12 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
-        return org.springframework.security.core.userdetails.User.withUsername(user.getUsername())
-                .password(user.getPassword())
-                .authorities(Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())))
-                .disabled(!user.isActive())
-                .build();
+        return new BilparkUserDetails(
+                user.getUsername(),
+                user.getPassword(),
+                user.isActive(),
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())),
+                user.getPasswordChangedAt() != null
+                        ? user.getPasswordChangedAt().atZone(ClockConfig.ZONE).toInstant() : null);
     }
 }
