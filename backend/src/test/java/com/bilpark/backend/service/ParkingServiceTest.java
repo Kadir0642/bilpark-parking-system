@@ -1,5 +1,6 @@
 package com.bilpark.backend.service;
 
+import com.bilpark.backend.audit.AuditService;
 import com.bilpark.backend.common.ApiException;
 import com.bilpark.backend.common.ErrorCodes;
 import com.bilpark.backend.model.ParkSpot;
@@ -89,7 +90,7 @@ public class ParkingServiceTest {
         t.setPaidEnd(LocalTime.of(22, 0));
         when(tariffService.current()).thenReturn(t);
         parkingService = new ParkingService(parkSpotRepository, parkingRecordRepository, zoneRepository,
-                subscriptionRepository, tariffService, changePublisher, clock);
+                subscriptionRepository, tariffService, changePublisher, mock(AuditService.class), clock);
     }
 
     private ParkSpot spot(String plate, VehicleType type, Zone zone, int minutesAgo) {
@@ -339,7 +340,7 @@ public class ParkingServiceTest {
     void testCheckOut_OvernightCarriesPaidMinutes() {
         // clock 09:00 next morning: yesterday 21:00-22:00 (60) + today 08:00-09:00 (60) = 120 paid minutes
         ParkingService svc = new ParkingService(parkSpotRepository, parkingRecordRepository, zoneRepository,
-                subscriptionRepository, tariffService, changePublisher, fixedClock(LocalDateTime.of(2026, 10, 21, 9, 0)));
+                subscriptionRepository, tariffService, changePublisher, mock(AuditService.class), fixedClock(LocalDateTime.of(2026, 10, 21, 9, 0)));
         ParkSpot s = new ParkSpot("34NGT003", StreetLocation.CUMHURIYET, VehicleType.SMALL, "Merkez", "Bilecik", "LEFT", null);
         s.setEntryTime(LocalDateTime.of(2026, 10, 20, 21, 0));
         when(parkSpotRepository.findByPlateForUpdate("34NGT003")).thenReturn(Optional.of(s));

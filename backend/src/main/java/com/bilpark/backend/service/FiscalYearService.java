@@ -1,7 +1,9 @@
 package com.bilpark.backend.service;
 
+import com.bilpark.backend.audit.AuditService;
 import com.bilpark.backend.common.ApiException;
 import com.bilpark.backend.common.ErrorCodes;
+import com.bilpark.backend.model.AuditAction;
 import com.bilpark.backend.model.FiscalYear;
 import com.bilpark.backend.repository.FiscalYearRepository;
 import org.springframework.stereotype.Service;
@@ -9,15 +11,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class FiscalYearService {
 
     private final FiscalYearRepository fiscalYearRepository;
 
-    public FiscalYearService(FiscalYearRepository fiscalYearRepository) {
+    private final AuditService auditService;
+
+    public FiscalYearService(FiscalYearRepository fiscalYearRepository, AuditService auditService) {
         this.fiscalYearRepository = fiscalYearRepository;
+        this.auditService = auditService;
     }
 
     public List<FiscalYear> getAllFiscalYears() {
@@ -38,7 +45,10 @@ public class FiscalYearService {
 
         FiscalYear fy = new FiscalYear(startDate, endDate, label);
         fy.setActive(true);
-        return fiscalYearRepository.save(fy);
+        FiscalYear saved = fiscalYearRepository.save(fy);
+        auditService.log(AuditAction.FISCAL_YEAR_CREATED, "FiscalYear", saved.getId(),
+                "Dönem oluşturuldu: " + label, null, summary(saved));
+        return saved;
     }
 
     /** Marks the period as archived. Parking records are never deleted. */
@@ -51,13 +61,30 @@ public class FiscalYearService {
         fy.setArchived(true);
         fy.setActive(false);
         fy.setArchivedAt(LocalDateTime.now());
-        return fiscalYearRepository.save(fy);
+        FiscalYear saved = fiscalYearRepository.save(fy);
+        auditService.log(AuditAction.FISCAL_YEAR_ARCHIVED, "FiscalYear", id,
+                "Dönem arşivlendi: " + saved.getLabel(), null, summary(saved));
+        return saved;
     }
 
     /** Deletes only the period definition; parking records are untouched. */
     @Transactional
     public void deleteFiscalYear(Long id) {
-        fiscalYearRepository.delete(find(id));
+        FiscalYear fy = find(id);
+        Map<String, Object> before = summary(fy);
+        fiscalYearRepository.delete(fy);
+        auditService.log(AuditAction.FISCAL_YEAR_DELETED, "FiscalYear", id,
+                "Dönem tanımı silindi: " + fy.getLabel(), before, null);
+    }
+
+    private static Map<String, Object> summary(FiscalYear fy) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("label", fy.getLabel());
+        m.put("startDate", String.valueOf(fy.getStartDate()));
+        m.put("endDate", String.valueOf(fy.getEndDate()));
+        m.put("active", fy.isActive());
+        m.put("archived", fy.isArchived());
+        return m;
     }
 
     private FiscalYear find(Long id) {

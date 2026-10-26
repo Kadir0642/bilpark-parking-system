@@ -1,7 +1,9 @@
 package com.bilpark.backend.auth;
 
+import com.bilpark.backend.audit.AuditService;
 import com.bilpark.backend.common.DeviceIds;
 import com.bilpark.backend.common.ErrorCodes;
+import com.bilpark.backend.model.AuditAction;
 import com.bilpark.backend.model.Shift;
 import com.bilpark.backend.model.User;
 import com.bilpark.backend.repository.UserRepository;
@@ -14,6 +16,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
@@ -25,12 +28,15 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final ShiftService shiftService;
+    private final AuditService auditService;
 
     public AuthController(AuthenticationManager authenticationManager,
                           CustomUserDetailsService userDetailsService,
                           JwtUtil jwtUtil,
                           UserRepository userRepository,
-                          ShiftService shiftService) {
+                          ShiftService shiftService,
+                          AuditService auditService) {
+        this.auditService = auditService;
         this.authenticationManager = authenticationManager;
         this.userDetailsService = userDetailsService;
         this.jwtUtil = jwtUtil;
@@ -46,6 +52,8 @@ public class AuthController {
                     new UsernamePasswordAuthenticationToken(request.username(), request.password())
             );
         } catch (AuthenticationException e) {
+            auditService.logAsName(request.username(), AuditAction.LOGIN_FAILED, "User", null,
+                    "Başarısız giriş denemesi", null, null);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "Kullanıcı adı veya şifre hatalı.", "code", ErrorCodes.UNAUTHORIZED));
         }
@@ -60,6 +68,12 @@ public class AuthController {
 
         // Officers get a shift per device; admin has none
         Shift shift = shiftService.openShift(user, DeviceIds.sanitize(deviceHeader));
+
+        Map<String, Object> after = new LinkedHashMap<>();
+        after.put("deviceId", DeviceIds.sanitize(deviceHeader));
+        after.put("shiftId", shift != null ? shift.getId() : null);
+        auditService.logAs(user, AuditAction.LOGIN, "User", user.getId(),
+                user.getUsername() + " giriş yaptı", null, after);
 
         return ResponseEntity.ok(new LoginResponse(
                 token,
@@ -77,6 +91,8 @@ public class AuthController {
             User user = userRepository.findByUsername(principal.getName()).orElse(null);
             if (user != null) {
                 shiftService.closeShift(user, DeviceIds.sanitize(deviceHeader));
+                auditService.logAs(user, AuditAction.LOGOUT, "User", user.getId(),
+                        user.getUsername() + " çıkış yaptı", null, null);
                 user.setLastLoginTime(null);
                 userRepository.save(user);
             }

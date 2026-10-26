@@ -4,6 +4,8 @@ import com.bilpark.backend.model.ParkingRecord;
 import com.bilpark.backend.model.StreetLocation;
 import com.bilpark.backend.model.ParkingStatus;
 import com.bilpark.backend.model.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -68,4 +70,11 @@ public interface ParkingRecordRepository extends JpaRepository<ParkingRecord, Lo
     // 6. Tarih aralığına göre tüm kayıtları getir (Excel indirme için, start <= entryTime < end)
     @Query("SELECT r FROM ParkingRecord r WHERE r.entryTime >= :start AND r.entryTime < :end ORDER BY r.entryTime DESC")
     List<ParkingRecord> findByEntryTimeRange(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    // 7. İptal edilmiş kayıtlar (cancelledAt azalan), start <= cancelledAt < end
+    @Query(value = "SELECT r FROM ParkingRecord r WHERE r.status = com.bilpark.backend.model.ParkingStatus.CANCELLED "
+            + "AND r.cancelledAt >= :start AND r.cancelledAt < :end ORDER BY r.cancelledAt DESC, r.id DESC",
+            countQuery = "SELECT COUNT(r) FROM ParkingRecord r WHERE r.status = com.bilpark.backend.model.ParkingStatus.CANCELLED "
+            + "AND r.cancelledAt >= :start AND r.cancelledAt < :end")
+    Page<ParkingRecord> findCancelled(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, Pageable pageable);
 }

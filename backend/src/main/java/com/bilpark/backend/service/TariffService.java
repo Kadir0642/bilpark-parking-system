@@ -1,5 +1,6 @@
 package com.bilpark.backend.service;
 
+import com.bilpark.backend.audit.AuditService;
 import com.bilpark.backend.common.ApiException;
 import com.bilpark.backend.common.ErrorCodes;
 import com.bilpark.backend.dto.TariffRequest;
@@ -7,6 +8,7 @@ import com.bilpark.backend.fee.DaySegment;
 import com.bilpark.backend.fee.FeeBreakdown;
 import com.bilpark.backend.fee.FeeEngine;
 import com.bilpark.backend.fee.TariffRules;
+import com.bilpark.backend.model.AuditAction;
 import com.bilpark.backend.model.SyncEventType;
 import com.bilpark.backend.model.Tariff;
 import com.bilpark.backend.model.TariffStatus;
@@ -56,6 +58,7 @@ public class TariffService {
     private final PasswordEncoder passwordEncoder;
     private final TaskScheduler taskScheduler;
     private final TransactionTemplate tx;
+    private final AuditService auditService;
 
     private volatile Tariff active;
     private volatile Tariff scheduled;
@@ -63,7 +66,8 @@ public class TariffService {
 
     public TariffService(TariffRepository tariffRepository, ChangePublisher changePublisher, Clock clock,
                          PasswordEncoder passwordEncoder, TaskScheduler taskScheduler,
-                         PlatformTransactionManager txManager) {
+                         PlatformTransactionManager txManager, AuditService auditService) {
+        this.auditService = auditService;
         this.tariffRepository = tariffRepository;
         this.changePublisher = changePublisher;
         this.clock = clock;
@@ -171,7 +175,10 @@ public class TariffService {
         t.setCreatedBy(admin);
         t.setCreatedByUsername(admin != null ? admin.getUsername() : "system");
         t.setCreatedAt(LocalDateTime.now(clock));
-        return toAdminMap(tariffRepository.save(t));
+        Map<String, Object> out = toAdminMap(tariffRepository.save(t));
+        auditService.log(AuditAction.TARIFF_DRAFT_CREATED, "Tariff", out.get("id"),
+                "Tarife taslağı oluşturuldu (#" + out.get("id") + ")", null, out);
+        return out;
     }
 
     @Transactional
@@ -180,8 +187,12 @@ public class TariffService {
         if (t.getStatus() != TariffStatus.DRAFT) {
             throw ApiException.conflict(ErrorCodes.TARIFF_STATE, "Yalnızca taslak tarife düzenlenebilir.");
         }
+        Map<String, Object> before = toAdminMap(t);
         apply(t, req);
-        return toAdminMap(tariffRepository.save(t));
+        Map<String, Object> out = toAdminMap(tariffRepository.save(t));
+        auditService.log(AuditAction.TARIFF_DRAFT_UPDATED, "Tariff", id,
+                "Tarife taslağı güncellendi (#" + id + ")", before, out);
+        return out;
     }
 
     /** Sample calculations: current ACTIVE tariff versus the given one. */
@@ -254,7 +265,10 @@ public class TariffService {
         refreshCache();
         scheduleTimer(saved);
         changePublisher.globalEvent(SyncEventType.TARIFF_UPDATED, currentWithUpcoming());
-        return toAdminMap(saved);
+        Map<String, Object> out = toAdminMap(saved);
+        auditService.log(AuditAction.TARIFF_SCHEDULED, "Tariff", id,
+                "Tarife zamanlandı (#" + id + ", yürürlük " + ISO.format(effectiveFrom) + ")", null, out);
+        return out;
     }
 
     @Transactional
@@ -273,7 +287,10 @@ public class TariffService {
             refreshCache();
             changePublisher.globalEvent(SyncEventType.TARIFF_UPDATED, currentWithUpcoming());
         }
-        return toAdminMap(saved);
+        Map<String, Object> out = toAdminMap(saved);
+        auditService.log(AuditAction.TARIFF_CANCELLED, "Tariff", id,
+                (wasScheduled ? "Zamanlanmış" : "Taslak") + " tarife iptal edildi (#" + id + ")", null, out);
+        return out;
     }
 
     // --- activation ---
@@ -298,6 +315,8 @@ public class TariffService {
             tariffRepository.saveAndFlush(next);
             refreshCache();
             changePublisher.globalEvent(SyncEventType.TARIFF_UPDATED, currentWithUpcoming());
+            auditService.logSystem(AuditAction.TARIFF_ACTIVATED, "Tariff", next.getId(),
+                    "Zamanlanmış tarife yürürlüğe girdi (#" + next.getId() + ")", null, toPublicMap(next));
             return true;
         });
         if (Boolean.TRUE.equals(done)) {

@@ -1,5 +1,6 @@
 package com.bilpark.backend.service;
 
+import com.bilpark.backend.audit.AuditService;
 import com.bilpark.backend.common.ApiException;
 import com.bilpark.backend.common.ErrorCodes;
 import com.bilpark.backend.model.Subscription;
@@ -33,7 +34,7 @@ class SubscriptionServiceTest {
         t.setSubscriptionSmallMonthly(2600.0);
         t.setSubscriptionLargeMonthly(3100.0);
         when(tariffService.current()).thenReturn(t);
-        service = new SubscriptionService(repo, tariffService);
+        service = new SubscriptionService(repo, tariffService, mock(AuditService.class));
         when(repo.saveAndFlush(any(Subscription.class))).thenAnswer(i -> i.getArguments()[0]);
     }
 
