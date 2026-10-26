@@ -108,6 +108,21 @@
         .link-btn:hover { color: var(--primary); }
         .seg-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
         .live-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+        .nav-group { width: 100%; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: var(--text-2); margin: var(--s-2) 0 2px; padding: 0 12px; }
+        .license-chip { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); min-height: var(--tap); padding: 0 12px; border-radius: var(--r-sm); border: 1px solid var(--border); font-size: 14px; font-weight: 600; color: var(--text-2); text-decoration: none; }
+        .license-banner { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); font-size: 15px; }
+        .license-banner i { font-size: 18px; }
+        .license-banner b { font-weight: 800; }
+        .license-banner .lb-text { flex: 1 1 280px; min-width: 0; }
+        .ro-band { position: sticky; top: 0; z-index: 50; border-width: 2px; box-shadow: var(--shadow); }
+        .ro-note { font-size: 13px; color: var(--danger); font-weight: 600; }
+        .tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--border); }
+        .tab { min-height: var(--tap); padding: 0 var(--s-4); background: none; border: 0; border-bottom: 3px solid transparent; color: var(--text-2); font: 600 15px var(--font); cursor: pointer; display: inline-flex; align-items: center; gap: var(--s-2); }
+        .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--primary); }
+        .textarea { min-height: 96px; padding: var(--s-2) var(--s-3); resize: vertical; line-height: 1.4; }
+        .rules { margin: 0; padding-left: 20px; font-size: 14px; color: var(--text-2); display: flex; flex-direction: column; gap: 2px; }
+        .rules li.ok { color: var(--success); }
+        .amount-cancelled { text-decoration: line-through; color: var(--text-2); }
         @media (max-width: 600px) { .page-head h1 { font-size: 22px; } .kpi-value { font-size: 28px; } }
     </style>
 </head>
@@ -142,27 +157,33 @@
             <div><div class="brand-name">BilPark</div><div class="brand-sub">Yönetim paneli</div></div>
         </div>
         <nav class="nav" aria-label="Panel menüsü">
-            <a href="#genel" data-nav="genel"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>Genel bakış</a>
-            <a href="#kayitlar" data-nav="kayitlar"><i class="fa-solid fa-list" aria-hidden="true"></i>Kayıtlar</a>
-            <a href="#kacaklar" data-nav="kacaklar"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>Kaçaklar</a>
-            <a href="#vardiyalar" data-nav="vardiyalar"><i class="fa-solid fa-users" aria-hidden="true"></i>Vardiyalar</a>
-            <a href="#tarife" data-nav="tarife"><i class="fa-solid fa-tags" aria-hidden="true"></i>Tarife</a>
+            <a href="#genel" data-nav="genel" data-role="ADMIN"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>Genel bakış</a>
+            <a href="#kayitlar" data-nav="kayitlar" data-role="ADMIN"><i class="fa-solid fa-list" aria-hidden="true"></i>Kayıtlar</a>
+            <a href="#kacaklar" data-nav="kacaklar" data-role="ADMIN"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>Kaçaklar</a>
+            <a href="#vardiyalar" data-nav="vardiyalar" data-role="ADMIN"><i class="fa-solid fa-clock" aria-hidden="true"></i>Vardiyalar</a>
+            <a href="#personel" data-nav="personel" data-role="ADMIN"><i class="fa-solid fa-users" aria-hidden="true"></i>Personel</a>
+            <a href="#raporlar" data-nav="raporlar" data-role="ADMIN"><i class="fa-solid fa-file-excel" aria-hidden="true"></i>Raporlar</a>
+            <a href="#tarife" data-nav="tarife" data-role="ADMIN"><i class="fa-solid fa-tags" aria-hidden="true"></i>Tarife</a>
+            <a href="#denetim" data-nav="denetim" data-role="ADMIN"><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>Denetim kaydı</a>
+            <a href="#gelistirici" data-nav="gelistirici" data-role="DEVELOPER"><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>Geliştirici</a>
+            <a href="#hesabim" data-nav="hesabim"><i class="fa-solid fa-user-lock" aria-hidden="true"></i>Hesabım</a>
         </nav>
-        <div>
-            <div class="soon-title">SONRAKİ AŞAMALAR</div>
+        <div data-role="ADMIN">
             <div class="soon-list">
                 <span class="soon-item" aria-disabled="true">Aboneler <span class="badge badge-neutral">Yakında</span></span>
-                <span class="soon-item" aria-disabled="true">Personel raporları <span class="badge badge-neutral">Yakında</span></span>
             </div>
         </div>
+        <a class="license-chip" id="licenseChip" href="#hesabim" hidden title="Lisans durumu"></a>
         <div class="side-foot">
-            <div class="side-user"><b id="navUsername"></b><span>Yönetici</span></div>
+            <div class="side-user"><b id="navUsername"></b><span id="navRole">Yönetici</span></div>
             <button type="button" id="btnTheme" class="btn btn-secondary btn-icon" aria-label="Temayı değiştir"><i class="fa-solid fa-moon" aria-hidden="true"></i></button>
             <button type="button" class="btn btn-secondary btn-icon" aria-label="Çıkış" title="Çıkış" onclick="logout()"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i></button>
         </div>
     </aside>
 
     <main class="main">
+        <!-- Lisans uyarısı / okunur mod bandı (loadLicense doldurur) -->
+        <div id="licenseBanner" role="status" aria-live="polite" hidden></div>
 
         <!-- GENEL BAKIŞ -->
         <section id="sec-genel" data-sec="genel" hidden>
@@ -209,6 +230,11 @@
                     <button type="button" class="btn btn-success" onclick="downloadExcel()"><i class="fa-solid fa-file-excel" aria-hidden="true"></i>Excel indir</button>
                 </div>
             </div>
+            <div class="tabs" role="tablist" aria-label="Kayıt listeleri" style="margin-top:16px;">
+                <button type="button" class="tab" role="tab" id="tabRecAll" aria-selected="true" aria-controls="recAllPane">Tüm kayıtlar</button>
+                <button type="button" class="tab" role="tab" id="tabRecCancelled" aria-selected="false" aria-controls="recCancelledPane">İptal edilenler <span class="badge badge-neutral" id="cancelledCount" hidden></span></button>
+            </div>
+            <div id="recAllPane" role="tabpanel" aria-labelledby="tabRecAll">
             <div class="card" style="margin-top:16px;">
                 <div class="filters">
                     <label class="field">Plaka ara
@@ -222,6 +248,7 @@
                             <option value="">Tümü</option>
                             <option value="PAID">Ödendi</option>
                             <option value="RUNAWAY">Kaçak</option>
+                            <option value="CANCELLED">İptal edildi</option>
                         </select>
                     </label>
                     <label class="field">Yöntem
@@ -254,12 +281,39 @@
                 <div class="card-body" style="display:flex; flex-direction:column; gap:12px;">
                     <div class="muted" id="periodInfo">Bir dönem seçin. Seçili dönem: yok.</div>
                     <div class="toolbar">
-                        <button type="button" class="btn btn-secondary" onclick="openCreateFiscalYear()"><i class="fa-solid fa-plus" aria-hidden="true"></i>Yeni dönem</button>
-                        <button type="button" id="btnArchive" class="btn btn-warning-outline" onclick="archiveFiscalYear()"><i class="fa-solid fa-box-archive" aria-hidden="true"></i>Dönemi kapat ve arşivle</button>
-                        <button type="button" id="btnDelete" class="btn btn-danger-outline" onclick="deleteFiscalYear()"><i class="fa-solid fa-trash" aria-hidden="true"></i>Dönemi sil</button>
+                        <button type="button" class="btn btn-secondary" data-write onclick="openCreateFiscalYear()"><i class="fa-solid fa-plus" aria-hidden="true"></i>Yeni dönem</button>
+                        <button type="button" id="btnArchive" class="btn btn-warning-outline" data-write onclick="archiveFiscalYear()"><i class="fa-solid fa-box-archive" aria-hidden="true"></i>Dönemi kapat ve arşivle</button>
+                        <button type="button" id="btnDelete" class="btn btn-danger-outline" data-write onclick="deleteFiscalYear()"><i class="fa-solid fa-trash" aria-hidden="true"></i>Dönemi sil</button>
                     </div>
                     <div class="muted" style="font-size:14px;">Arşivleme kayıtları silmez; Excel indirilir ve dönem arşivlendi olarak işaretlenir. Silme geri alınamaz.</div>
                 </div>
+            </div>
+            </div>
+
+            <div id="recCancelledPane" role="tabpanel" aria-labelledby="tabRecCancelled" hidden>
+                <div class="card" style="margin-top:16px;">
+                    <div class="filters">
+                        <label class="field">İptal tarihi (başlangıç)<input type="date" id="cFrom" class="input"></label>
+                        <label class="field">İptal tarihi (bitiş)<input type="date" id="cTo" class="input"></label>
+                        <div class="toolbar"><button type="button" class="btn btn-secondary" id="cClear">Tarihi temizle</button></div>
+                    </div>
+                </div>
+                <div class="card" style="margin-top:16px;">
+                    <div class="table-wrap">
+                        <table class="table">
+                            <thead><tr><th>Plaka</th><th>Saha</th><th>Giriş → Çıkış</th><th>Önceki durum</th><th class="right">Tutar</th><th>İptal</th><th>Gerekçe</th></tr></thead>
+                            <tbody id="cancelledBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pager">
+                        <span id="cPagerInfo"></span>
+                        <span class="toolbar">
+                            <button type="button" class="btn btn-secondary" id="cPrev">Önceki</button>
+                            <button type="button" class="btn btn-secondary" id="cNext">Sonraki</button>
+                        </span>
+                    </div>
+                </div>
+                <p class="muted" style="font-size:14px;">İptal kaydı silmez: kayıt saklanır, cirodan ve kaçak borcundan düşer. Kim, ne zaman, hangi gerekçeyle iptal ettiği denetim kaydında da görünür.</p>
             </div>
         </section>
 
@@ -287,29 +341,53 @@
         </section>
 
         <!-- VARDİYALAR -->
-        <section id="sec-vardiyalar" data-sec="vardiyalar" hidden>
+        <!-- Aşağıdaki boş bölümleri js/*.js modülleri doldurur (PAGES kaydı) -->
+        <section id="sec-vardiyalar" data-sec="vardiyalar" hidden></section>
+        <section id="sec-personel" data-sec="personel" hidden></section>
+        <section id="sec-raporlar" data-sec="raporlar" hidden></section>
+        <section id="sec-denetim" data-sec="denetim" hidden></section>
+        <section id="sec-gelistirici" data-sec="gelistirici" hidden></section>
+
+        <!-- HESABIM -->
+        <section id="sec-hesabim" data-sec="hesabim" hidden>
             <div class="page-head">
-                <div><h1>Vardiyalar</h1><div class="page-sub">Personelin sahadaki vardiyaları ve cirosu</div></div>
-                <span class="live-wrap"><span class="status-pill status-online live-pill"></span><button type="button" class="btn btn-secondary btn-icon btn-refresh" aria-label="Yenile" title="Verileri yenile" onclick="manualRefresh()"><i class="fa-solid fa-rotate" aria-hidden="true"></i></button></span>
+                <div><h1>Hesabım</h1><div class="page-sub">Hesap bilgileri, şifre ve lisans durumu</div></div>
             </div>
-            <div class="card" style="margin-top:16px;">
-                <div class="table-wrap">
-                    <table class="table">
-                        <thead><tr><th>Personel</th><th>Saha</th><th>Cihaz</th><th>Başlangıç</th><th>Süre</th><th class="right">Ciro</th><th>Puan</th></tr></thead>
-                        <tbody id="shiftsBody"></tbody>
-                    </table>
+            <div class="grid grid-2" style="margin-top:16px;">
+                <div class="card">
+                    <div class="card-head"><h2>Hesap</h2></div>
+                    <div class="card-body"><dl class="tar-grid" id="meInfo"></dl></div>
+                </div>
+                <div class="card">
+                    <div class="card-head"><h2>Lisans</h2></div>
+                    <div class="card-body"><dl class="tar-grid" id="licenseInfo"></dl></div>
                 </div>
             </div>
-            <div class="card" style="margin-top:16px;">
-                <div class="card-head"><h2>Personel</h2><span class="muted" style="font-size:14px;">Pasife alınan kişi oturumdan atılır ve giriş yapamaz</span></div>
-                <div class="table-wrap">
-                    <table class="table">
-                        <thead><tr><th>Kullanıcı</th><th>Rol</th><th>Saha</th><th>Son giriş</th><th>Durum</th></tr></thead>
-                        <tbody id="usersBody"></tbody>
-                    </table>
-                </div>
+            <div class="card" style="margin-top:16px; max-width:560px;">
+                <div class="card-head"><h2>Şifremi değiştir</h2></div>
+                <form class="card-body" id="pwForm" style="display:flex; flex-direction:column; gap:16px;" novalidate>
+                    <label class="field">Mevcut şifre
+                        <input type="password" id="pwCurrent" class="input" autocomplete="current-password" aria-describedby="pwCurrentErr">
+                        <span class="field-error" id="pwCurrentErr" hidden></span>
+                    </label>
+                    <label class="field">Yeni şifre
+                        <input type="password" id="pwNew" class="input" autocomplete="new-password" aria-describedby="pwRules pwNewErr">
+                        <span class="field-error" id="pwNewErr" hidden></span>
+                    </label>
+                    <ul class="rules" id="pwRules">
+                        <li data-rule="len">En az 8 karakter</li>
+                        <li data-rule="mix">En az bir harf ve bir rakam</li>
+                        <li data-rule="user">Kullanıcı adınızı içermez</li>
+                        <li data-rule="same">Mevcut şifreyle aynı değil</li>
+                    </ul>
+                    <label class="field">Yeni şifre (tekrar)
+                        <input type="password" id="pwRepeat" class="input" autocomplete="new-password" aria-describedby="pwRepeatErr">
+                        <span class="field-error" id="pwRepeatErr" hidden></span>
+                    </label>
+                    <div class="muted" style="font-size:14px;">Şifre değişince diğer cihazlardaki oturumlarınız kapanır. Bu panel açık kalır.</div>
+                    <div class="toolbar"><button type="submit" class="btn btn-primary" id="pwSubmit">Şifreyi değiştir</button></div>
+                </form>
             </div>
-            <p class="muted" style="font-size:14px;">Puan sütunu personel raporlarıyla dolacak ve yalnızca bu panelde görünür; saha uygulamasında gösterilmez.</p>
         </section>
 
         <!-- TARİFE -->
@@ -373,6 +451,23 @@
     </form>
 </dialog>
 
+<!-- Kayıt iptali -->
+<dialog id="cancelDialog">
+    <form method="dialog" class="dlg-body" id="cancelForm" novalidate>
+        <h2>Kaydı iptal et</h2>
+        <p id="cancelSummary"></p>
+        <label class="field">Gerekçe (zorunlu)
+            <textarea id="cancelReason" class="input textarea" maxlength="500" placeholder="Örn: Aynı araç iki kez kapatıldı, mükerrer fiş" aria-describedby="cancelHint cancelErr"></textarea>
+            <span class="muted" id="cancelHint" style="font-weight:500; font-size:13px;">5-500 karakter. Kayıt silinmez; cirodan ve borçtan düşer, denetim kaydına yazılır.</span>
+            <span class="field-error" id="cancelErr" hidden></span>
+        </label>
+        <div class="dlg-actions">
+            <button type="button" class="btn btn-secondary" id="cancelBack">Vazgeç</button>
+            <button type="submit" class="btn btn-danger-outline" id="cancelOk" data-write>İptal et</button>
+        </div>
+    </form>
+</dialog>
+
 <div class="toast-stack" id="toastStack" role="status" aria-live="polite"></div>
 
 <script src="config.js"></script>
@@ -404,7 +499,8 @@
     }
     function $(id) { return document.getElementById(id); }
     function money(v) {
-        return '₺' + Number(v || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const n = Number(v || 0);
+        return (n < 0 ? '-₺' : '₺') + Math.abs(n).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
     function shortDevice(id) {
         if (!id) return '-';
@@ -476,10 +572,23 @@
     function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 
     // ---- Fetch ----
+    // Denetim kaydı her isteği bir cihaza bağlar; panel tarayıcı başına sabit bir kimlik gönderir
+    function deviceId() {
+        let id = null;
+        try { id = localStorage.getItem('panelDeviceId'); } catch (e) { /* yok say */ }
+        if (!id) {
+            const r = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)).replace(/-/g, '');
+            id = 'panel-' + r.slice(0, 12);
+            try { localStorage.setItem('panelDeviceId', id); } catch (e) { /* yok say */ }
+        }
+        return id;
+    }
+
     async function fetchWithAuth(url, options = {}) {
         const token = localStorage.getItem('token');
         if (!options.headers) options.headers = {};
         if (token) options.headers['Authorization'] = 'Bearer ' + token;
+        options.headers['X-Device-Id'] = deviceId();
         const response = await fetch(url, options);
         if (response.status === 401) {
             // Token geçersiz/süresi dolmuş: oturumu kapat, girişe dön
@@ -489,6 +598,8 @@
             err.name = 'AuthError';
             throw err;
         }
+        // Lisans bitti: yazma kapalı. Bandı ve düğmeleri hemen güncelle; mesajı çağıran gösterir.
+        if (response.status === 423) loadLicense();
         return response;
     }
 
@@ -496,7 +607,11 @@
     function clearSession() {
         localStorage.removeItem('token');
         localStorage.removeItem('username');
+        localStorage.removeItem('role');
     }
+    // 'ADMIN' | 'DEVELOPER' (eski oturumlarda kayıt yoksa yönetici sayılır; /api/me ile doğrulanır)
+    function currentRole() { return localStorage.getItem('role') || 'ADMIN'; }
+    const ROLE_LABELS = { ADMIN: 'Yönetici', OFFICER: 'Memur', DEVELOPER: 'Geliştirici' };
 
     function showLoginMessage(msg, kind) {
         const box = $('loginError');
@@ -515,10 +630,17 @@
         showLoginMessage(sessionMsg || '', 'warning');
     }
 
+    function applyRoleUi() {
+        const role = currentRole();
+        document.querySelectorAll('[data-role]').forEach(el => { el.hidden = el.dataset.role !== role; });
+        $('navUsername').textContent = localStorage.getItem('username') || '';
+        $('navRole').textContent = ROLE_LABELS[role] || role;
+    }
+
     function showDashboard() {
         $('loginScreen').style.display = 'none';
         $('dashboardRoot').style.display = 'block';
-        $('navUsername').textContent = localStorage.getItem('username') || '';
+        applyRoleUi();
         route();
         startSession();
     }
@@ -532,15 +654,21 @@
         try {
             const res = await fetch(`${CONFIG.BASE_URL}/api/auth/login`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-Device-Id': deviceId() },
                 body: JSON.stringify({ username, password })
             });
             if (res.status === 401) { showLoginMessage('Kullanıcı adı veya şifre hatalı.'); return; }
-            if (!res.ok) { showLoginMessage('Giriş yapılamadı (sunucu hatası: ' + res.status + ').'); return; }
+            if (!res.ok) {
+                let msg = '';
+                try { msg = (await res.json()).error || ''; } catch (e) { /* gövde yok */ }
+                showLoginMessage(msg || 'Giriş yapılamadı (sunucu hatası: ' + res.status + ').');
+                return;
+            }
             const data = await res.json();
-            if (data.role !== 'ADMIN') { showLoginMessage('Bu panel yalnızca yöneticiler içindir.'); return; }
+            if (data.role !== 'ADMIN' && data.role !== 'DEVELOPER') { showLoginMessage('Bu panel yalnızca yöneticiler içindir. Saha personeli mobil uygulamayı kullanır.'); return; }
             localStorage.setItem('token', data.token);
             localStorage.setItem('username', data.username || username);
+            localStorage.setItem('role', data.role);
             showDashboard();
         } catch (e) {
             showLoginMessage('Sunucuya bağlanılamadı. Lütfen bağlantınızı kontrol edin.');
@@ -563,11 +691,29 @@
         }
     }
 
+    // ---- Sayfa modülleri ----
+    // js/*.js dosyaları kendini buraya kaydeder: PAGES.<bölüm> = { onShow(), onEvent(type, payload, envelope), onLicense(status) }
+    // onShow: bölüm her açıldığında; onEvent: her SSE olayında; onLicense: lisans durumu değişince. Hepsi isteğe bağlı.
+    const PAGES = window.PAGES = window.PAGES || {};
+    function pageCall(name, fn, ...args) {
+        const p = PAGES[name];
+        if (!p || typeof p[fn] !== 'function') return;
+        try { p[fn](...args); } catch (e) { console.error(`${name}.${fn} hatası:`, e); }
+    }
+    function pagesBroadcast(fn, ...args) { Object.keys(PAGES).forEach(n => pageCall(n, fn, ...args)); }
+
     // ---- Yönlendirme ----
-    const SECTIONS = ['genel', 'kayitlar', 'kacaklar', 'vardiyalar', 'tarife'];
+    const SECTIONS_BY_ROLE = {
+        ADMIN: ['genel', 'kayitlar', 'kacaklar', 'vardiyalar', 'personel', 'raporlar', 'tarife', 'denetim', 'hesabim'],
+        DEVELOPER: ['gelistirici', 'hesabim']
+    };
+    let currentSection = null;
+    let sessionReady = false;
     function route() {
+        const allowed = SECTIONS_BY_ROLE[currentRole()] || SECTIONS_BY_ROLE.ADMIN;
         let name = (location.hash || '').replace('#', '');
-        if (!SECTIONS.includes(name)) name = 'genel';
+        if (!allowed.includes(name)) name = allowed[0];
+        currentSection = name;
         document.querySelectorAll('[data-sec]').forEach(s => { s.hidden = s.dataset.sec !== name; });
         document.querySelectorAll('[data-nav]').forEach(a => {
             const on = a.dataset.nav === name;
@@ -575,8 +721,223 @@
             if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
         });
         if (name === 'genel') renderIncomeChart();
+        if (name === 'hesabim') loadMe();
+        if (name === 'kayitlar' && recTab === 'cancelled') loadCancelled();
+        if (sessionReady) pageCall(name, 'onShow'); // açılışta ilk yüklemeyi updateDashboard yapar
     }
     window.addEventListener('hashchange', route);
+
+    // ---- Lisans ve okunur mod ----
+    // Okunur modda [data-write] işaretli her düğme/alan pasif olur ve gerekçesi gösterilir.
+    // Modüller yazma düğmelerine yalnızca data-write ekler; sonradan çizilen içerik de gözlemciyle yakalanır.
+    let licenseStatus = null;
+    let licenseLoading = null;
+    const READ_ONLY_REASON = 'Lisans süresi doldu; sistem okunur modda. Bu işlem kapalı.';
+    function isReadOnly() { return !!(licenseStatus && licenseStatus.readOnly); }
+
+    function applyReadOnly(root) {
+        const ro = isReadOnly();
+        (root || document).querySelectorAll('[data-write]').forEach(el => {
+            if (ro) {
+                if (!el.disabled) { el.disabled = true; el.dataset.roDisabled = '1'; }
+                if (!el.dataset.roTitle) { el.dataset.roTitle = el.getAttribute('title') || ''; }
+                el.title = READ_ONLY_REASON;
+            } else if (el.dataset.roDisabled) {
+                el.disabled = false;
+                delete el.dataset.roDisabled;
+                if (el.dataset.roTitle !== undefined) { el.title = el.dataset.roTitle; delete el.dataset.roTitle; }
+            }
+        });
+    }
+    let roObserverQueued = false;
+    new MutationObserver(() => {
+        if (!isReadOnly() || roObserverQueued) return;
+        roObserverQueued = true;
+        queueMicrotask(() => { roObserverQueued = false; applyReadOnly(); });
+    }).observe(document.body, { childList: true, subtree: true });
+
+    async function loadLicense() {
+        if (licenseLoading) return licenseLoading;
+        licenseLoading = (async () => {
+            try {
+                const s = await apiJson('GET', '/api/license/status');
+                const changed = JSON.stringify(s) !== JSON.stringify(licenseStatus);
+                licenseStatus = s;
+                renderLicense();
+                if (changed) pagesBroadcast('onLicense', s);
+                return true;
+            } catch (e) {
+                if (e.name !== 'AuthError') console.error('Lisans durumu alınamadı:', e);
+                return false;
+            } finally {
+                licenseLoading = null;
+            }
+        })();
+        return licenseLoading;
+    }
+
+    function fmtDay(iso) {
+        if (!iso) return '-';
+        const [y, m, d] = String(iso).slice(0, 10).split('-').map(Number);
+        return new Date(y, m - 1, d).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    function renderLicense() {
+        const s = licenseStatus;
+        const banner = $('licenseBanner'), chip = $('licenseChip');
+        if (!s) { banner.hidden = true; chip.hidden = true; applyReadOnly(); return; }
+
+        // Kenar çubuğu rozeti: kalan gün
+        let chipCls = 'badge-success', chipText;
+        if (s.state === 'READ_ONLY') { chipCls = 'badge-danger'; chipText = 'Okunur mod'; }
+        else if (s.state === 'GRACE') { chipCls = 'badge-danger'; chipText = `Ek süre · ${s.graceDaysLeft} gün`; }
+        else {
+            chipText = `${s.daysLeft} gün`;
+            if (s.warningLevel === 30) chipCls = 'badge-warning';
+            else if (s.warningLevel === 7 || s.warningLevel === 1) chipCls = 'badge-danger';
+        }
+        chip.innerHTML = `<span><i class="fa-solid fa-key" aria-hidden="true"></i> Lisans</span><span class="badge ${chipCls}">${escapeHtml(chipText)}</span>`;
+        chip.title = `Lisans bitişi: ${fmtDay(s.expiresOn)}`;
+        chip.hidden = false;
+
+        // Üst bant: 30 sarı, 7 ve 1 turuncu, ek süre kırmızı, okunur mod sabit kırmızı bant
+        if (s.readOnly) {
+            banner.className = 'alert alert-danger license-banner ro-band';
+            banner.innerHTML = `<i class="fa-solid fa-lock" aria-hidden="true"></i>
+                <div class="lb-text"><b>Okunur mod.</b> ${escapeHtml(s.message || '')}</div>
+                <span class="badge badge-danger">Yazma kapalı</span>`;
+            banner.hidden = false;
+        } else if (s.warningLevel != null) {
+            const strong = s.warningLevel !== 30;
+            banner.className = 'alert license-banner ' + (s.warningLevel === 0 ? 'alert-danger' : 'alert-warning');
+            if (strong && s.warningLevel !== 0) banner.style.borderWidth = '2px'; else banner.style.borderWidth = '';
+            // Sunucu mesajı kalan günü zaten söylüyor; başlık yalnızca türü belirtir
+            const title = s.warningLevel === 0 ? 'Ek süre işliyor.' : 'Lisans uyarısı.';
+            banner.innerHTML = `<i class="fa-solid ${s.warningLevel === 30 ? 'fa-circle-info' : 'fa-triangle-exclamation'}" aria-hidden="true"></i>
+                <div class="lb-text"><b>${escapeHtml(title)}</b> ${escapeHtml(s.message || '')}</div>`;
+            banner.hidden = false;
+        } else {
+            banner.hidden = true;
+        }
+        applyReadOnly();
+        renderLicenseInfo();
+    }
+
+    // ---- Hesabım ----
+    let meData = null;
+    async function loadMe() {
+        try {
+            meData = await apiJson('GET', '/api/me');
+            if (meData && meData.role && meData.role !== localStorage.getItem('role')) {
+                localStorage.setItem('role', meData.role);
+                applyRoleUi();
+            }
+            renderMe();
+            return true;
+        } catch (e) { if (e.name !== 'AuthError') console.error('Hesap bilgisi alınamadı:', e); return false; }
+    }
+    function dlItem(label, value) { return `<div class="tar-item"><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value == null || value === '' ? '-' : value)}</dd></div>`; }
+    function renderMe() {
+        const m = meData || {};
+        $('meInfo').innerHTML = dlItem('Kullanıcı adı', m.username || localStorage.getItem('username'))
+            + dlItem('Ad soyad', m.fullName)
+            + dlItem('Rol', ROLE_LABELS[m.role] || m.role || ROLE_LABELS[currentRole()])
+            + dlItem('Son şifre değişikliği', m.passwordChangedAt ? fmtFull(m.passwordChangedAt) : 'Değiştirilmedi');
+    }
+    function renderLicenseInfo() {
+        const s = licenseStatus;
+        if (!s) { $('licenseInfo').innerHTML = dlItem('Durum', 'Alınamadı'); return; }
+        const stateLabel = { ACTIVE: 'Etkin', GRACE: 'Ek süre', READ_ONLY: 'Okunur mod' }[s.state] || s.state;
+        $('licenseInfo').innerHTML = dlItem('Lisans sahibi', s.licensee)
+            + dlItem('Durum', stateLabel)
+            + dlItem('Bitiş', fmtDay(s.expiresOn))
+            + dlItem('Ek süre sonu', `${fmtDay(s.graceEndsOn)} (${s.graceDays} gün)`)
+            + dlItem('Kalan gün', s.state === 'ACTIVE' ? s.daysLeft : (s.state === 'GRACE' ? `Ek süre: ${s.graceDaysLeft}` : 0));
+    }
+
+    function pwRules(pw, current) {
+        const user = (localStorage.getItem('username') || '').toLowerCase();
+        return {
+            len: pw.length >= 8,
+            mix: /\p{L}/u.test(pw) && /\d/.test(pw),
+            user: !user || !pw.toLowerCase().includes(user),
+            same: !pw || pw !== current
+        };
+    }
+    function setFieldError(inputId, errId, msg) {
+        const err = $(errId);
+        err.textContent = msg || '';
+        err.hidden = !msg;
+        $(inputId).setAttribute('aria-invalid', msg ? 'true' : 'false');
+    }
+    function updatePwRules() {
+        const r = pwRules($('pwNew').value, $('pwCurrent').value);
+        document.querySelectorAll('#pwRules li').forEach(li => li.classList.toggle('ok', !!$('pwNew').value && r[li.dataset.rule]));
+    }
+    async function changePassword(e) {
+        e.preventDefault();
+        const current = $('pwCurrent').value, next = $('pwNew').value, repeat = $('pwRepeat').value;
+        setFieldError('pwCurrent', 'pwCurrentErr', '');
+        setFieldError('pwNew', 'pwNewErr', '');
+        setFieldError('pwRepeat', 'pwRepeatErr', '');
+        let bad = false;
+        if (!current) { setFieldError('pwCurrent', 'pwCurrentErr', 'Mevcut şifrenizi girin.'); bad = true; }
+        const r = pwRules(next, current);
+        if (!(r.len && r.mix && r.user && r.same)) { setFieldError('pwNew', 'pwNewErr', 'Yeni şifre kuralların hepsine uymalı.'); bad = true; }
+        if (next !== repeat) { setFieldError('pwRepeat', 'pwRepeatErr', 'Şifreler eşleşmiyor.'); bad = true; }
+        if (bad) return;
+        const btn = $('pwSubmit');
+        btn.disabled = true;
+        try {
+            const res = await apiJson('POST', '/api/me/password', { currentPassword: current, newPassword: next });
+            if (res && res.token) localStorage.setItem('token', res.token); // eski token artık geçersiz
+            $('pwForm').reset();
+            updatePwRules();
+            toast((res && res.message) || 'Şifre değiştirildi.');
+            loadMe();
+        } catch (err) {
+            if (err.name === 'AuthError') return;
+            if (err.code === 'PASSWORD_MISMATCH') setFieldError('pwCurrent', 'pwCurrentErr', err.message);
+            else if (err.code === 'WEAK_PASSWORD') setFieldError('pwNew', 'pwNewErr', err.message);
+            else toast('Hata: ' + err.message, true);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // ---- İndirme (Excel/CSV) ----
+    // Token başlıkta gittiği için düz link çalışmaz: fetch -> blob -> geçici bağlantı.
+    function filenameFrom(res, fallback) {
+        const cd = res.headers.get('Content-Disposition') || '';
+        const star = cd.match(/filename\*\s*=\s*(?:UTF-8'')?([^;]+)/i);
+        if (star) { try { return decodeURIComponent(star[1].trim().replace(/^"|"$/g, '')); } catch (e) { /* düz ada düş */ } }
+        const plain = cd.match(/filename\s*=\s*"?([^";]+)"?/i);
+        return plain ? plain[1].trim() : fallback;
+    }
+    // path: '/api/admin/reports/...?...'; başarıda true. Hata mesajı toast ile gösterilir.
+    async function downloadFile(path, fallbackName) {
+        try {
+            const res = await fetchWithAuth(CONFIG.BASE_URL + path);
+            if (!res.ok) {
+                let msg = `İndirme başarısız. (HTTP ${res.status})`;
+                try { const d = JSON.parse(await res.text()); msg = d.error || d.message || msg; } catch (e) { /* JSON değil */ }
+                toast(msg, true);
+                return false;
+            }
+            const blob = await res.blob();
+            const name = filenameFrom(res, fallbackName || 'rapor');
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = name;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+            toast(`${name} indirildi.`);
+            return true;
+        } catch (e) {
+            if (e.name !== 'AuthError') toast('İndirme başarısız: sunucuya ulaşılamadı.', true);
+            return false;
+        }
+    }
 
     // ---- Canlı durum ----
     // mode: 'online' | 'reconnecting' | 'offline'
@@ -773,25 +1134,34 @@
             const key = recKey(r, start + i);
             const open = key === expandedKey;
             const dur = r.exitTime ? fmtMinutes((new Date(r.exitTime) - new Date(r.entryTime)) / 60000) : '-';
-            const amountCls = r.status === 'PAID' ? '' : 'style="color:var(--danger)"';
+            const cancelled = r.status === 'CANCELLED';
+            const amountAttr = cancelled ? 'class="amount-cancelled"' : (r.status === 'PAID' ? '' : 'style="color:var(--danger)"');
+            const stateCell = cancelled ? '<span class="badge badge-neutral">İptal edildi</span>'
+                : (r.status === 'RUNAWAY' ? '<span class="badge badge-danger">Kaçak</span>' : methodBadge(r.paymentMethod));
             html += `<tr class="clickable${open ? ' selected' : ''}" data-key="${escapeHtml(key)}" tabindex="0" aria-expanded="${open}">
                 <td>${plateHtml(r.licensePlate)}</td>
                 <td>${escapeHtml(zoneOf(r))}</td>
                 <td class="col-muted">${vehicleLabel(r.vehicleType)}</td>
                 <td class="col-muted num">${fmtDateTime(r.entryTime)} → ${r.exitTime ? fmtTime(r.exitTime) : '-'}</td>
                 <td class="num">${dur}</td>
-                <td>${r.status === 'RUNAWAY' ? '<span class="badge badge-danger">Kaçak</span>' : methodBadge(r.paymentMethod)}</td>
-                <td class="right num"><b ${amountCls}>${money(r.fee)}</b></td>
+                <td>${stateCell}</td>
+                <td class="right num"><b ${amountAttr}>${money(r.fee)}</b></td>
             </tr>`;
             if (open) {
+                const canCancel = r.id != null && (r.status === 'PAID' || r.status === 'RUNAWAY');
+                const cancelInfo = cancelled ? `
+                            <dt>İptal</dt><dd>${escapeHtml(r.cancelledByUsername || '-')} · ${r.cancelledAt ? escapeHtml(fmtFull(r.cancelledAt)) : '-'}</dd>
+                            <dt>Gerekçe</dt><dd style="word-break:normal">${escapeHtml(r.cancelReason || '-')}</dd>` : '';
                 html += `<tr class="row-detail"><td colspan="7">
                     <div class="detail-grid">
                         <dl style="margin:0">
                             <dt>Personel</dt><dd>${escapeHtml(r.collectedByUsername || '-')}</dd>
-                            <dt>Cihaz</dt><dd>${escapeHtml(r.deviceId || '-')}</dd>
+                            <dt>Cihaz</dt><dd>${escapeHtml(r.deviceId || '-')}</dd>${cancelInfo}
                         </dl>
                         <div>${breakdownHtml(r)}</div>
-                    </div></td></tr>`;
+                    </div>
+                    ${canCancel ? `<div class="toolbar" style="margin-top:8px;"><button type="button" class="btn btn-danger-outline" data-write data-cancel-id="${r.id}"><i class="fa-solid fa-ban" aria-hidden="true"></i>Kaydı iptal et</button><span class="muted" style="font-size:13px;">Gerekçe sorulur; kayıt silinmez.</span></div>` : ''}
+                    </td></tr>`;
             }
         });
         $('recordsBody').innerHTML = html || '<tr><td colspan="7" class="table-empty">Kayıt bulunamadı.</td></tr>';
@@ -806,6 +1176,90 @@
         if (!tr || !tr.dataset.key) return;
         expandedKey = expandedKey === tr.dataset.key ? null : tr.dataset.key;
         renderRecords();
+    }
+
+    // ---- 4b. Kayıt iptali (gerekçeli) ----
+    function openCancelDialog(id) {
+        const r = globalHistoryData.find(x => x.id === id);
+        if (!r) return;
+        if (isReadOnly()) { toast(READ_ONLY_REASON, true); return; }
+        const dlg = $('cancelDialog'), reason = $('cancelReason'), ok = $('cancelOk');
+        $('cancelSummary').textContent = `${fmtPlate(r.licensePlate)} · ${zoneOf(r)} · ${r.status === 'RUNAWAY' ? 'Kaçak' : 'Ödendi'} · ${money(r.fee)}. İptal edilen kayıt cirodan${r.status === 'RUNAWAY' ? ' ve kaçak borcundan' : ''} düşer.`;
+        reason.value = '';
+        setFieldError('cancelReason', 'cancelErr', '');
+        const onSubmit = async e => {
+            e.preventDefault();
+            const text = reason.value.trim();
+            if (text.length < 5) { setFieldError('cancelReason', 'cancelErr', 'Gerekçe en az 5 karakter olmalı.'); reason.focus(); return; }
+            ok.disabled = true;
+            try {
+                await apiJson('POST', `/api/admin/records/${id}/cancel`, { reason: text });
+                dlg.close();
+                toast(`${fmtPlate(r.licensePlate)} kaydı iptal edildi.`);
+                expandedKey = null;
+                await Promise.all([fetchHistoryTable(), fetchIncomeKPI()]);
+                cancelledPage = 0;
+                loadCancelled();
+            } catch (err) {
+                if (err.name === 'AuthError') { dlg.close(); return; }
+                setFieldError('cancelReason', 'cancelErr', err.message);
+                if (err.code === 'ALREADY_CANCELLED') fetchHistoryTable();
+            } finally {
+                ok.disabled = isReadOnly();
+            }
+        };
+        const onBack = () => dlg.close();
+        const onClose = () => {
+            $('cancelForm').removeEventListener('submit', onSubmit);
+            $('cancelBack').removeEventListener('click', onBack);
+            dlg.removeEventListener('close', onClose);
+        };
+        $('cancelForm').addEventListener('submit', onSubmit);
+        $('cancelBack').addEventListener('click', onBack);
+        dlg.addEventListener('close', onClose);
+        dlg.showModal();
+        reason.focus();
+    }
+
+    // ---- 4c. İptal edilenler sekmesi ----
+    let recTab = 'all';
+    let cancelledPage = 0;
+    function setRecTab(tab) {
+        recTab = tab;
+        $('tabRecAll').setAttribute('aria-selected', String(tab === 'all'));
+        $('tabRecCancelled').setAttribute('aria-selected', String(tab === 'cancelled'));
+        $('recAllPane').hidden = tab !== 'all';
+        $('recCancelledPane').hidden = tab !== 'cancelled';
+        if (tab === 'cancelled') loadCancelled();
+    }
+    const STATUS_LABELS = { PAID: 'Ödendi', RUNAWAY: 'Kaçak', ACTIVE: 'Sahada (yanlış giriş)' };
+    async function loadCancelled() {
+        const q = new URLSearchParams({ page: cancelledPage, size: PAGE_SIZE });
+        if ($('cFrom').value) q.set('from', $('cFrom').value);
+        if ($('cTo').value) q.set('to', $('cTo').value);
+        try {
+            const d = await apiJson('GET', `/api/admin/records/cancelled?${q}`);
+            const list = (d && d.content) || [];
+            $('cancelledBody').innerHTML = list.map(r => `<tr>
+                <td>${plateHtml(r.plate)}</td>
+                <td>${escapeHtml(r.zoneName || streetNames[r.street] || r.street || '-')}</td>
+                <td class="col-muted num">${r.entryTime ? fmtDateTime(r.entryTime) : '-'} → ${r.exitTime ? fmtTime(r.exitTime) : '-'}</td>
+                <td>${escapeHtml(STATUS_LABELS[r.previousStatus] || r.previousStatus || '-')}</td>
+                <td class="right num"><b class="amount-cancelled">${money(r.fee)}</b></td>
+                <td class="num">${escapeHtml(r.cancelledBy || '-')}<div class="muted" style="font-size:13px;">${r.cancelledAt ? escapeHtml(fmtFull(r.cancelledAt)) : ''}</div></td>
+                <td style="min-width:200px;">${escapeHtml(r.cancelReason || '-')}</td>
+            </tr>`).join('') || '<tr><td colspan="7" class="table-empty">İptal edilen kayıt yok.</td></tr>';
+            const total = d ? d.totalElements : 0, pages = Math.max(1, d ? d.totalPages : 1);
+            $('cPagerInfo').textContent = total ? `${total} kayıt · Sayfa ${cancelledPage + 1} / ${pages}` : '0 kayıt';
+            $('cPrev').disabled = cancelledPage <= 0;
+            $('cNext').disabled = cancelledPage >= pages - 1;
+            const badge = $('cancelledCount');
+            if (!$('cFrom').value && !$('cTo').value) { badge.textContent = total; badge.hidden = !total; }
+            return true;
+        } catch (e) {
+            if (e.name !== 'AuthError') $('cancelledBody').innerHTML = `<tr><td colspan="7" class="table-empty">${escapeHtml(e.message)}</td></tr>`;
+            return false;
+        }
     }
 
     // ---- 5. Kaçaklar ----
@@ -846,16 +1300,6 @@
                 <td class="num">${fmtMinutes(s.activeMinutes)}</td>
                 <td class="right num"><b>${money(s.revenue)}</b></td>
             </tr>`).join('') || '<tr><td colspan="5" class="table-empty">Aktif personel bulunamadı.</td></tr>';
-
-            $('shiftsBody').innerHTML = shiftsData.map(s => `<tr>
-                <td><b>${escapeHtml(s.username)}</b></td>
-                <td>${escapeHtml(s.zoneName || streetNames[s.street] || '-')}</td>
-                <td><code title="${escapeHtml(s.deviceId || '')}">${escapeHtml(shortDevice(s.deviceId))}</code></td>
-                <td class="num">${s.startTime || s.lastLogin ? fmtTime(s.startTime || s.lastLogin) : '-'}</td>
-                <td class="num">${fmtMinutes(s.activeMinutes)}</td>
-                <td class="right num"><b>${money(s.revenue)}</b></td>
-                <td class="col-muted">—</td>
-            </tr>`).join('') || '<tr><td colspan="7" class="table-empty">Aktif vardiya yok.</td></tr>';
             return true;
         } catch (error) { console.error("Vardiya verisi hatası:", error); return false; }
     }
@@ -896,7 +1340,7 @@
         const btn = $("btnArchive");
         if (!select || !btn) return;
         const opt = select.selectedOptions[0];
-        btn.disabled = !!(opt && opt.dataset.archived === "true");
+        btn.disabled = !!(opt && opt.dataset.archived === "true") || isReadOnly();
         const info = $('periodInfo');
         if (info) {
             info.textContent = (select.value && opt)
@@ -942,7 +1386,7 @@
             "Cadde": streetNames[r.street] || r.street,
             "Saha": zoneOf(r),
             "Araç Tipi": vehicleLabel(r.vehicleType),
-            "Durum": r.status === 'PAID' ? 'ÖDENDİ' : 'KAÇTI',
+            "Durum": r.status === 'PAID' ? 'ÖDENDİ' : (r.status === 'CANCELLED' ? 'İPTAL' : 'KAÇTI'),
             "Yöntem": methodLabel(r.paymentMethod),
             "Tutar (TL)": r.fee || 0,
             "Giriş Zamanı": new Date(r.entryTime).toLocaleString('tr-TR'),
@@ -1110,6 +1554,12 @@
 
     // ---- Yenileme ----
     async function updateDashboard() {
+        if (currentRole() === 'DEVELOPER') {
+            // Geliştirici operasyonel verilere erişemez: yalnızca lisans ve kendi sayfası
+            await Promise.all([loadLicense(), loadMe()]);
+            if (currentSection) pageCall(currentSection, 'onShow');
+            return;
+        }
         try {
             const results = await Promise.all([
                 fetchActiveSpots(),
@@ -1119,8 +1569,10 @@
                 fetchHistoryTable(),
                 fetchShifts(),
                 loadTariffs(),
-                fetchUsers()
+                loadLicense(),
+                loadCancelled()
             ]);
+            if (currentSection) pageCall(currentSection, 'onShow');
             if (results.every(Boolean)) {
                 lastGoodTime = new Date();
                 if (live.state !== 'reconnecting' && live.state !== 'offline') setLive('online');
@@ -1251,7 +1703,7 @@
                 <div class="card-body" style="display:flex;flex-direction:column;gap:12px;">
                 <div class="alert alert-info"><b>${escapeHtml(fmtFull(up.effectiveFrom))}</b> tarihinde otomatik yürürlüğe girecek.</div>
                 ${tariffGrid(up)}
-                ${up.id != null ? `<div><button type="button" class="btn btn-danger-outline" data-act="cancel" data-id="${up.id}" data-kind="SCHEDULED"><i class="fa-solid fa-ban" aria-hidden="true"></i>Zamanlamayı iptal et</button></div>` : ''}
+                ${up.id != null ? `<div><button type="button" class="btn btn-danger-outline" data-write data-act="cancel" data-id="${up.id}" data-kind="SCHEDULED"><i class="fa-solid fa-ban" aria-hidden="true"></i>Zamanlamayı iptal et</button></div>` : ''}
                 </div>`;
         } else {
             box.hidden = true;
@@ -1264,9 +1716,9 @@
             const acts = [];
             if (t.status === 'DRAFT') {
                 acts.push(`<button type="button" class="btn btn-secondary" data-act="continue" data-id="${t.id}">Devam et</button>`);
-                acts.push(`<button type="button" class="btn btn-danger-outline" data-act="cancel" data-id="${t.id}" data-kind="DRAFT">Sil</button>`);
+                acts.push(`<button type="button" class="btn btn-danger-outline" data-write data-act="cancel" data-id="${t.id}" data-kind="DRAFT">Sil</button>`);
             } else if (t.status === 'SCHEDULED') {
-                acts.push(`<button type="button" class="btn btn-danger-outline" data-act="cancel" data-id="${t.id}" data-kind="SCHEDULED">İptal et</button>`);
+                acts.push(`<button type="button" class="btn btn-danger-outline" data-write data-act="cancel" data-id="${t.id}" data-kind="SCHEDULED">İptal et</button>`);
             }
             return `<tr>
                 <td class="num"><b>#${t.id}</b></td>
@@ -1321,7 +1773,7 @@
 
     function errBox() { return wiz.err ? `<div class="alert alert-danger" role="alert">${escapeHtml(wiz.err)}</div>` : ''; }
     function discardBtn() {
-        return wiz.id ? '<button type="button" class="btn btn-danger-outline" data-act="discard"><i class="fa-solid fa-trash" aria-hidden="true"></i>Taslağı sil</button>' : '';
+        return wiz.id ? '<button type="button" class="btn btn-danger-outline" data-write data-act="discard"><i class="fa-solid fa-trash" aria-hidden="true"></i>Taslağı sil</button>' : '';
     }
 
     function renderWizard() {
@@ -1353,7 +1805,7 @@
             </div>
             <div class="muted" style="font-size:14px;margin-top:8px;">Ücretli saat bitişi 00:00 ise gece yarısı sayılır. Abonelik fiyatı yeni abonelikler içindir.</div>
             <div class="wiz-actions"><span class="toolbar">${discardBtn()}</span>
-                <button type="button" class="btn btn-primary" data-act="save">Kaydet ve önizle<i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>`;
+                <button type="button" class="btn btn-primary" data-write data-act="save">Kaydet ve önizle<i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>`;
     }
 
     function diffHtml(cur, prop) {
@@ -1443,7 +1895,7 @@
                 <input id="wizPw" class="input" type="password" autocomplete="current-password"${wiz.pwErr ? ' aria-invalid="true"' : ''} aria-describedby="wizPwErr">
                 <div class="field-error" id="wizPwErr" ${wiz.pwErr ? '' : 'hidden'}>${escapeHtml(wiz.pwErr)}</div></div>
             <div class="wiz-actions"><span class="toolbar"><button type="button" class="btn btn-secondary" data-act="back">Geri</button>${discardBtn()}</span>
-                <button type="button" class="btn btn-success" data-act="schedule"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i>Tarifeyi zamanla</button></div>`;
+                <button type="button" class="btn btn-success" data-write data-act="schedule"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i>Tarifeyi zamanla</button></div>`;
     }
 
     // -- Sihirbaz eylemleri --
@@ -1581,51 +2033,11 @@
         else if (act === 'continue') continueDraft(Number(el.dataset.id));
     }
 
-    // ---- 13. Personel (aktif/pasif) ----
-    let usersData = [];
-    const ROLE_NAMES = { ADMIN: 'Yönetici', OFFICER: 'Memur' };
-    async function fetchUsers() {
-        try {
-            usersData = await apiJson('GET', '/api/admin/users');
-            renderUsers();
-            return true;
-        } catch (e) { if (e.name !== 'AuthError') console.error('Personel listesi hatası:', e); return false; }
-    }
-    function renderUsers() {
-        const me = localStorage.getItem('username');
-        $('usersBody').innerHTML = usersData.map(u => `<tr>
-            <td><b>${escapeHtml(u.username)}</b></td>
-            <td>${escapeHtml(ROLE_NAMES[u.role] || u.role)}</td>
-            <td>${escapeHtml(u.zoneName || '-')}</td>
-            <td class="num col-muted">${u.lastLoginTime ? escapeHtml(fmtDateTime(u.lastLoginTime)) : '-'}</td>
-            <td><label class="check"><input type="checkbox" role="switch" data-uid="${u.id}" ${u.active ? 'checked' : ''} ${u.username === me ? 'disabled title="Kendi hesabınızı pasife alamazsınız"' : ''}> ${u.active ? 'Aktif' : 'Pasif'}</label></td>
-        </tr>`).join('') || '<tr><td colspan="5" class="table-empty">Kullanıcı bulunamadı.</td></tr>';
-    }
-    async function onUserToggle(e) {
-        const cb = e.target.closest('input[data-uid]');
-        if (!cb) return;
-        const want = cb.checked;
-        cb.checked = !want; // onaylanana kadar eski durum görünür
-        const u = usersData.find(x => String(x.id) === cb.dataset.uid);
-        if (!u) return;
-        const ok = await confirmDialog({
-            title: want ? 'Personeli aktifleştir' : 'Personeli pasife al',
-            message: want ? `${u.username} yeniden giriş yapabilecek.` : `${u.username} oturumdan atılacak, açık vardiyaları kapanacak ve yeniden giriş yapamayacak.`,
-            confirmLabel: want ? 'Aktifleştir' : 'Pasife al',
-            danger: !want
-        });
-        if (!ok) return;
-        try {
-            await apiJson('PUT', `/api/admin/users/${u.id}/active`, { active: want });
-            toast(want ? 'Personel aktifleştirildi.' : 'Personel pasife alındı.');
-        } catch (err) {
-            if (err.name !== 'AuthError') toast('Hata: ' + err.message, true);
-        }
-        fetchUsers();
-    }
+    // ---- 13. Personel: js/personel.js ----
 
     // ---- 14. Canlı akış (SSE) ----
-    const LIVE_EVENTS = ['HELLO', 'HEARTBEAT', 'RESET', 'VEHICLE_ENTERED', 'VEHICLE_EXITED', 'VEHICLE_RUNAWAY', 'TARIFF_UPDATED', 'USER_DEACTIVATED'];
+    const LIVE_EVENTS = ['HELLO', 'HEARTBEAT', 'RESET', 'VEHICLE_ENTERED', 'VEHICLE_EXITED', 'VEHICLE_RUNAWAY', 'TARIFF_UPDATED', 'USER_DEACTIVATED',
+        'USER_UPDATED', 'VEHICLE_CANCELLED', 'RECORD_CANCELLED', 'LICENSE_UPDATED'];
     const WATCHDOG_MS = 60000;
     const live = { gen: 0, stopped: true, es: null, version: 0, userId: null, state: 'idle', retry: 0, fails: 0, watchdog: null, reconnect: null, vehicleTimer: null, catching: false };
 
@@ -1652,15 +2064,23 @@
     // Oturum başlangıcı: sürümü al, tüm veriyi bir kez yükle, sonra akışı aç
     async function startSession() {
         liveStop();
+        sessionReady = false;
         const gen = live.gen;
         live.stopped = false;
         wiz = newWiz();
+        if (currentRole() === 'DEVELOPER') {
+            // Geliştiricinin SSE ve senkron yetkisi yok; veriler sayfa açılınca çekilir
+            await updateDashboard();
+            if (gen === live.gen) sessionReady = true;
+            return;
+        }
         try {
             await syncVersion();
             await loadStreets();
             await updateDashboard();
         } catch (e) { return; }
         if (gen !== live.gen || live.stopped) return;
+        sessionReady = true;
         liveConnect();
     }
 
@@ -1758,12 +2178,22 @@
                 if (mine) {
                     clearSession();
                     showLogin('Hesabınız pasife alındı. Oturum kapatıldı.');
-                } else {
-                    fetchUsers();
+                    return;
                 }
                 break;
             }
+            case 'VEHICLE_CANCELLED':
+                scheduleVehicleRefresh();
+                break;
+            case 'RECORD_CANCELLED':
+                scheduleVehicleRefresh();
+                loadCancelled();
+                break;
+            case 'LICENSE_UPDATED':
+                loadLicense();
+                break;
         }
+        pagesBroadcast('onEvent', d.type, p, d);
     }
 
     // Kaçırılan olaylar /api/sync ile tamamlanır
@@ -1811,15 +2241,35 @@
 
     $('tarClick').addEventListener('click', onTariffClick);
     $('tarClick').addEventListener('input', e => { if (e.target.id === 'wizEff') wiz.eff = e.target.value; else if (e.target.id && e.target.id.startsWith('tf_')) wiz.dirty = true; });
-    $('usersBody').addEventListener('change', onUserToggle);
+    $('recordsBody').addEventListener('click', e => {
+        const b = e.target.closest('button[data-cancel-id]');
+        if (b) { e.stopPropagation(); openCancelDialog(Number(b.dataset.cancelId)); }
+    }, true);
+    $('tabRecAll').addEventListener('click', () => setRecTab('all'));
+    $('tabRecCancelled').addEventListener('click', () => setRecTab('cancelled'));
+    ['cFrom', 'cTo'].forEach(id => $(id).addEventListener('change', () => { cancelledPage = 0; loadCancelled(); }));
+    $('cClear').addEventListener('click', () => { $('cFrom').value = ''; $('cTo').value = ''; cancelledPage = 0; loadCancelled(); });
+    $('cPrev').addEventListener('click', () => { cancelledPage--; loadCancelled(); });
+    $('cNext').addEventListener('click', () => { cancelledPage++; loadCancelled(); });
+    $('cancelReason').addEventListener('input', () => { if ($('cancelReason').value.trim().length >= 5) setFieldError('cancelReason', 'cancelErr', ''); });
+    $('pwForm').addEventListener('submit', changePassword);
+    ['pwNew', 'pwCurrent'].forEach(id => $(id).addEventListener('input', updatePwRules));
 
     applyStoredTheme();
     document.querySelectorAll('.live-pill').forEach(p => { p.className = 'status-pill live-pill status-offline'; p.textContent = 'Yükleniyor…'; });
-    if (localStorage.getItem('token')) {
-        showDashboard();
-    } else {
-        showLogin();
-    }
+    // Sayfa modülleri (js/*.js) bu betikten sonra yüklenir; açılış hepsi kaydolunca yapılır
+    document.addEventListener('DOMContentLoaded', () => {
+        if (localStorage.getItem('token')) {
+            showDashboard();
+        } else {
+            showLogin();
+        }
+    });
 </script>
+<script src="js/vardiyalar.js"></script>
+<script src="js/personel.js"></script>
+<script src="js/raporlar.js"></script>
+<script src="js/denetim.js"></script>
+<script src="js/gelistirici.js"></script>
 </body>
 </html>

@@ -83,13 +83,27 @@ Veriler `bilpark_demo_pgdata` volume'unda kalır. Her şeyi silip baştan başla
 docker compose down -v
 ```
 
+**2.5. Var olan demoyu yeni sürüme güncelle:**
+
+Kodu çektikten sonra aynı komut yeterli; veritabanı şeması açılışta kendiliğinden yükseltilir (Flyway), veriler kalır:
+
+```bash
+docker compose up -d --build
+```
+
+Geliştirici (bakım) hesabı için `.env.demo` dosyasına bir satır ekle, ardından yukarıdaki komutu tekrar çalıştır. Hesap `gelistirici` adıyla açılışta bir kez oluşur; lisans uzatma, sistem sağlığı ve yönetici şifresi sıfırlama ekranını görür. Satır yoksa geliştirici hesabı oluşmaz.
+
+```
+DEVELOPER_PASSWORD=<en az 8 karakter, harf ve rakam>
+```
+
 ---
 
 ## 3. Yönetim paneli ve vatandaş sayfası
 
 `docker compose up` aynı zamanda `web/` klasörünü küçük bir nginx sunucusuyla 5500 portunda yayınlar:
 
-- Yönetim paneli: http://localhost:5500/admin-panel.html → kullanıcı `admin`, şifre `.env.demo` içindeki `ADMIN_PASSWORD`.
+- Yönetim paneli: http://localhost:5500/admin-panel.html → kullanıcı `admin`, şifre `.env.demo` içindeki `ADMIN_PASSWORD`. Aynı adresten `gelistirici` (şifre `DEVELOPER_PASSWORD`) ile girilince yalnızca Geliştirici ve Hesabım sayfaları açılır.
 - Vatandaş sayfası: http://localhost:5500/customer-payment.html → park halindeki bir aracın güncel ücretini gösterir. Örnek veri yüklediysen `11DE4521` (büyük araç) veya abone `11CC1923` plakasını sorgula.
 
 Kaçak kaydı (`11KCK47`) panelde "Açık kaçak borcu" kartında ve Kaçaklar sekmesinde görünür; telefonda bu plakayla yeni giriş yapınca birikmiş borç uyarısı çıkar.
