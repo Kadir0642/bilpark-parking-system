@@ -124,12 +124,13 @@ Kullanıcı nesnesi (eski alanlar korunuyor, yenileri: `fullName`, `createdAt`, 
 | İstek | Gövde | Not |
 |---|---|---|
 | `GET /api/admin/users` | | Geliştirici hesabı da listelenir (`role: DEVELOPER`), ama değiştirilemez |
-| `POST /api/admin/users` | `{"username","fullName","password","role":"OFFICER"\|"ADMIN","zoneId"}` | Kullanıcı adı küçük harfe çevrilir, 3-50 karakter, `[a-z0-9._-]`. OFFICER için `zoneId` zorunlu. Kullanıcı adı alınmışsa `409 USERNAME_TAKEN`. |
-| `PUT /api/admin/users/{id}` | `{"fullName"?, "role"?, "zoneId"?}` | Kısmi güncelleme. Yönetici kendi rolünü değiştiremez. |
-| `PUT /api/admin/users/{id}/zone` | `{"zoneId": 3}` | Saha atama |
+| `POST /api/admin/users` | `{"username","fullName","password","role":"OFFICER"\|"ADMIN","zoneId"}` | `201` döner. Kullanıcı adı küçük harfe çevrilir, 3-50 karakter, `[a-z0-9._-]`. OFFICER için `zoneId` zorunlu (yoksa 400, bilinmiyorsa 404). ADMIN için gönderilen `zoneId` yok sayılır. Kullanıcı adı alınmışsa `409 USERNAME_TAKEN`. `DEVELOPER` rolü verilemez. |
+| `PUT /api/admin/users/{id}` | `{"fullName"?, "role"?, "zoneId"?}` | Kısmi güncelleme: yalnızca gövdedeki alanlar değişir; `"zoneId": null` sahayı boşaltır. Yönetici kendi rolünü değiştiremez. ADMIN'e çevrilen kullanıcının sahası boşaltılır. OFFICER'lıktan çıkarılan kullanıcının açık vardiyaları kapanır. |
+| `PUT /api/admin/users/{id}/zone` | `{"zoneId": 3}` | Saha atama, yalnızca OFFICER |
 | `PUT /api/admin/users/{id}/active` | `{"active": false}` | Pasife alma (Aşama 3'ten beri var). Açık vardiyaları kapatır, SSE'de `USER_DEACTIVATED` gönderir ve kullanıcının akışlarını kapatır. |
-| `POST /api/admin/users/{id}/reset-password` | `{"newPassword"}` | Yalnızca OFFICER hesapları. Hedefin eski token'ları geçersiz olur. |
+| `POST /api/admin/users/{id}/reset-password` | `{"newPassword"}` | Yalnızca OFFICER hesapları; diğerlerinde `400 PROTECTED_ACCOUNT`. Yanıt: kullanıcı nesnesi + `message`. Hedefin eski token'ları geçersiz olur ve SSE akışları kapanır. |
 
+- Geliştirici hesabını değiştiren her istek `403 PROTECTED_ACCOUNT` alır.
 - Rol veya saha değişince hedef kullanıcıya SSE `USER_UPDATED` olayı gider (`{userId, username, zoneId, role}`). Saha uygulaması bu olayda kullanıcı bilgisini (`GET /api/me`) ve sahasını yeniden yüklemeli. Açık vardiya eski sahasında kalır; bir sonraki girişte yeni sahada vardiya açılır.
 - `USER_DEACTIVATED` olayını alan saha uygulaması oturumu kapatıp giriş ekranına dönmeli.
 - Her işlem denetim kaydına düşer: `USER_CREATED`, `USER_UPDATED`, `USER_ZONE_ASSIGNED`, `USER_DEACTIVATED`/`USER_ACTIVATED`, `USER_PASSWORD_RESET`. Şifreler kayda yazılmaz.
@@ -163,7 +164,7 @@ Kullanıcı nesnesi (eski alanlar korunuyor, yenileri: `fullName`, `createdAt`, 
 { "reason": "Aynı araç iki kez kapatıldı, mükerrer fiş" }
 ```
 
-→ `200` iptal edilmiş kayıt nesnesi (aşağıdaki liste öğesiyle aynı biçim). Kayıt zaten iptal edilmişse `409 ALREADY_CANCELLED`. SSE: o sahaya `RECORD_CANCELLED` (`{recordId, plate, previousStatus, fee}`).
+→ `200` iptal edilmiş kayıt nesnesi (aşağıdaki liste öğesiyle aynı biçim). Kayıt zaten iptal edilmişse `409 ALREADY_CANCELLED`, durumu PAID veya RUNAWAY değilse `400 BAD_REQUEST`, kayıt yoksa `404`. Gerekçe eksikse `400 VALIDATION_ERROR`. SSE: o sahaya `RECORD_CANCELLED` (`{recordId, plate, previousStatus, fee}`).
 
 ### `POST /api/parking/spots/cancel?plate=34ABC123` (OFFICER kendi sahasında, ADMIN): yanlış girilen aktif araç
 
@@ -175,13 +176,13 @@ Aktif araç kaldırılır ve `CANCELLED` durumlu bir kayıt oluşur. Ücret 0, �
 
 ### `GET /api/admin/records/cancelled?from&to&page&size` (ADMIN)
 
-Filtre iptal zamanına uygulanır. Sıralama en yeni önce.
+Filtre iptal zamanına uygulanır. `from` ve `to` isteğe bağlıdır; verilmezse tarih sınırı yoktur. Sıralama en yeni önce.
 
 ```json
 { "content": [
     { "id": 812, "plate": "34ABC123", "street": "TEVFIK_BEY", "zoneId": 1, "zoneName": "Tevfik Bey - Bölüm 1",
       "entryTime": "2026-10-30T09:10:00", "exitTime": "2026-10-30T10:40:00", "fee": 40.0,
-      "vehicleType": "SMALL", "paymentMethod": "CASH", "previousStatus": "PAID",
+      "vehicleType": "SMALL", "paymentMethod": "CASH", "status": "CANCELLED", "previousStatus": "PAID",
       "cancelledAt": "2026-10-30T11:02:00", "cancelledBy": "admin",
       "cancelReason": "Aynı araç iki kez kapatıldı, mükerrer fiş", "collectedBy": "tevfik" } ],
   "page": 0, "size": 50, "totalElements": 1, "totalPages": 1 }
@@ -209,7 +210,9 @@ Tüm filtreler isteğe bağlıdır. `from` ve `to` varsayılan olarak son 30 gü
 - `before` ve `after`, işlemden önceki ve sonraki özetin JSON nesnesidir (ör. tarife alanları, `{plate, fee, paymentMethod}`). Şifre ve kişisel iletişim bilgisi yazılmaz.
 - Geliştirici işlemlerini görmek için `actorRole=DEVELOPER` filtresi kullanılır.
 - `GET /api/admin/audit/actions`: filtre listesi için `[{ "action": "VEHICLE_CHECK_OUT", "label": "Araç çıkışı" }, ...]`.
-- `GET /api/admin/audit/export?<aynı filtreler>&format=csv|xlsx`: en fazla 50 000 satır.
+- `GET /api/admin/audit/export?<aynı filtreler>&format=csv|xlsx`: en fazla 50 000 satır. Dosya adı `denetim-kaydi.csv` veya `denetim-kaydi.xlsx`.
+- Bilinmeyen `action` adı veya hatalı tarih `400 VALIDATION_ERROR` döner. `actor` kullanıcı adında, `q` özette içerir araması yapar.
+- Başarısız girişte (`LOGIN_FAILED`) `actorUsername` denenen kullanıcı adıdır, `actorRole` boştur. Giriş kaydının `after` alanında `{deviceId, shiftId}` bulunur.
 
 Kayda alınan işlemler (`action`):
 
@@ -252,13 +255,30 @@ Kira, 3 caddenin tek ihalesi olduğu için toplam tutar olarak girilir ve yıl b
 
 ## 8. Raporlar (ADMIN, Excel/CSV)
 
-Tüm raporlar okunur modda da çalışır. Her indirme `REPORT_EXPORTED` olarak denetim kaydına düşer.
+Tüm raporlar okunur modda da çalışır. Her indirme `REPORT_EXPORTED` olarak denetim kaydına düşer (`entityType: "Report"`). `format` yalnızca `xlsx` veya `csv` olabilir; geçersiz `format` veya `sheet` değeri `400 VALIDATION_ERROR` döner.
+
+Dosya adları: `personel-raporu-2026-10.xlsx`, `kacak-raporu-<from>_<to>`, `donem-raporu-<from>_<to>`, `kayitlar-<from>_<to>`.
+
+Excel biçimi:
+
+- Kalın başlık satırı, dondurulmuş başlık ve otomatik filtre.
+- Tutarlar `#,##0.00 "TL"` biçimli sayı hücresidir; tarihler gerçek tarih hücresidir.
+- Toplam satırları kalındır.
 
 ### 8.1 Aylık personel raporu
 
 `GET /api/admin/reports/personnel?month=2026-10&format=xlsx`
-CSV: `&format=csv&sheet=summary` (varsayılan) veya `&sheet=shifts`
+CSV: `&format=csv&sheet=summary` (varsayılan), `&sheet=shifts` veya `&sheet=method`
 Panel için JSON: `GET /api/admin/reports/personnel/summary?month=2026-10`
+
+JSON dizisi şu anahtarları içerir: `username, fullName, zoneId, zoneName, workDays, shiftCount, hours, onTimeRate, transactions, throughput, collectionTotal, collectionPerHour, cash, pos, subscriptionCount, otherMethod, runawayCount, runawayRate, cancelCount, cancelRate, score, rating`. `onTimeRate`, `runawayRate` ve `cancelRate` yüzde değeridir (0-100).
+
+Hesaplama ayrıntıları:
+
+- Ay sınırını aşan vardiyanın yalnızca ay içindeki kısmı saate sayılır.
+- Mesai günü, vardiya sayısı ve zamanında başlama yalnızca ay içinde başlayan vardiyalardan hesaplanır.
+- Kayıtlar personele `collectedByUsername` ile, vardiyalar kullanıcı adıyla bağlanır.
+- Sonradan iptal edilen PAID veya RUNAWAY kaydı işlem sayısına girer. İptali o aya düşüyorsa iptal sayısına da girer.
 
 Sayfalar:
 
@@ -280,7 +300,9 @@ Puan hesabı. Puanı yalnızca yönetici görür; saha uygulamasında gösterilm
 
 `GET /api/admin/reports/runaways?from=2026-10-01&to=2026-10-31&format=xlsx[&street=TEVFIK_BEY][&unpaidOnly=true]`
 
-Sütunlar: Plaka, Cadde, Saha, Giriş tarih-saat, Çıkış (kaçak işaretleme) tarih-saat, Tutar, Memur, Borç durumu. Son satırda toplam vardır. İptal edilen kaçak kayıtları rapora girmez.
+Excel sayfası "Kaçak Araçlar"dır; üstte bir başlık satırı bulunur.
+
+Sütunlar: Plaka, Cadde, Saha, Giriş tarih-saat, Çıkış (kaçak işaretleme) tarih-saat, Tutar, Memur, Borç durumu. Son satır "Toplam (N kayıt)"tır. İptal edilen kaçak kayıtları rapora girmez. `street` cadde kodudur; geçersiz kod `400` döner.
 
 ### 8.3 Dönem raporu (ciro, kira, net)
 
@@ -293,12 +315,14 @@ Panel için JSON: `GET /api/admin/reports/period/summary?from&to`
   - Kira payı: o yılın kirası / 12, dönemin ay içindeki gün oranıyla. Ayrıca aylık kira payı.
   - **Net kalan** = toplam ciro − kira payı.
   - Bilgi amaçlı: iptal edilen kayıtlar, ödenmemiş kaçak borç.
-- **Saha bazında:** saha başına nakit, POS, diğer, toplam, işlem ve kaçak sayısı.
-- **Günlük:** gün başına ciro.
+- Kira girilmemiş yıllarda o yılın payı 0 sayılır. Excel'e "Not: <yıl> için kira bedeli girilmemiş" satırı eklenir.
+- JSON anahtarları: `from, to, cashRevenue, posRevenue, subscriptionSales, otherRevenue, totalRevenue, subscriptionExitCount, rentShare, rentMonths[{month, overlapDays, monthlyShare, share}], rentMissingYears[], netRemaining, cancelledCount, cancelledFees, unpaidRunawayCount, unpaidRunawayDebt`.
+- **Saha bazında:** saha başına nakit, POS, diğer, toplam, işlem ve kaçak sayısı. Abonelikle çıkış işlem sayısına girer, ciroya girmez.
+- **Günlük:** gün başına ciro. Kayıt olmayan günler 0 olarak listelenir.
 
 ### 8.4 Kayıt dökümü (dönem bazında, silmeden)
 
-`GET /api/admin/reports/records?from&to&format`: giriş zamanı dönemde olan tüm kayıtlar, iptaller dahil. En fazla 100 000 satır.
+`GET /api/admin/reports/records?from&to&format`: giriş zamanı dönemde olan tüm kayıtlar, iptaller dahil. Excel sayfası "Kayıtlar"dır. 100 000 satırı aşarsa `400` döner; dönemi bölerek indirin.
 
 ---
 
@@ -307,9 +331,9 @@ Panel için JSON: `GET /api/admin/reports/period/summary?from&to`
 | İstek | Gövde / yanıt |
 |---|---|
 | `PUT /api/developer/license` | `{"expiresOn":"2027-11-01","graceDays":15,"licensee"?,"note"?}` → lisans durumu (bkz. §1). Denetim kaydı: `LICENSE_UPDATED`, önce/sonra. |
-| `GET /api/developer/health` | Çalışma süresi, Java sürümü, bellek, veritabanı erişimi ve gecikmesi, Flyway sürümü, kayıt sayıları, lisans, son 24 saatteki hata sayısı, son saklama işi. Denetim kaydı: `DEV_HEALTH_VIEWED`. |
-| `GET /api/developer/errors?limit=50` | Son beklenmeyen hatalar: zaman, yöntem, adres, hata sınıfı, mesaj, kısa yığın. Denetim kaydı: `DEV_ERRORS_VIEWED`. |
-| `POST /api/developer/admin-password-reset` | `{"username":"admin","newPassword":"..."}`. Yalnızca ADMIN hesapları. Denetim kaydı: `DEV_ADMIN_PASSWORD_RESET`. |
+| `GET /api/developer/health` | `{status: UP\|DEGRADED, time, uptimeSeconds, javaVersion, memory{usedMb,maxMb}, database{ok,latencyMs}, flywayVersion, counts{activeSpots,parkingRecords,users,openShifts}, license, errorsLast24h, lastRetentionRun}`. Veritabanına ulaşılamazsa hata vermez: `database.ok=false` döner. Denetim kaydı: `DEV_HEALTH_VIEWED`. |
+| `GET /api/developer/errors?limit=50` | `[{id, createdAt, method, path, errorCode, exceptionClass, message, stackExcerpt, username}]`. Denetim kaydı: `DEV_ERRORS_VIEWED`. |
+| `POST /api/developer/admin-password-reset` | `{"username":"admin","newPassword":"..."}` → `{message, username}`. Yalnızca ADMIN hesapları (`400 PROTECTED_ACCOUNT`; bilinmeyen kullanıcıda `404`). Denetim kaydı: `DEV_ADMIN_PASSWORD_RESET`. |
 
 Geliştiricinin başka yetkisi yoktur. Gizli bir kapatma, kilitleme veya silme uç noktası bulunmaz.
 
@@ -317,7 +341,7 @@ Geliştiricinin başka yetkisi yoktur. Gizli bir kapatma, kilitleme veya silme u
 
 ## 10. Saklama gece işi
 
-Her gece 02:30'da (Europe/Istanbul) çalışır ve idempotenttir: aynı gün tekrar çalışırsa hiçbir şeyi değiştirmez.
+Her gece 02:30'da (Europe/Istanbul) çalışır ve idempotenttir: aynı gün tekrar çalışırsa hiçbir şeyi değiştirmez. Aktif abonelikler ve aktif araçlar hiç değiştirilmez.
 
 | Kural | İşlem |
 |---|---|
