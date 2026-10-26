@@ -1,5 +1,6 @@
 package com.bilpark.backend.service;
 
+import com.bilpark.backend.audit.AuditService;
 import com.bilpark.backend.common.ApiException;
 import com.bilpark.backend.common.ErrorCodes;
 import com.bilpark.backend.common.PlateNormalizer;
@@ -7,6 +8,7 @@ import com.bilpark.backend.fee.DaySegment;
 import com.bilpark.backend.fee.FeeBreakdown;
 import com.bilpark.backend.fee.FeeEngine;
 import com.bilpark.backend.fee.TariffRules;
+import com.bilpark.backend.model.AuditAction;
 import com.bilpark.backend.model.ParkSpot;
 import com.bilpark.backend.model.ParkingRecord;
 import com.bilpark.backend.model.ParkingStatus;
@@ -27,6 +29,8 @@ import com.bilpark.backend.repository.ZoneRepository;
 import com.bilpark.backend.sync.ChangePublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -56,6 +60,7 @@ public class ParkingService
     private final SubscriptionRepository subscriptionRepository;
     private final TariffService tariffService; // geçerli tarife
     private final ChangePublisher changePublisher; // canlı olaylar
+    private final AuditService auditService;
     private final Clock clock;
 
     public ParkingService(ParkSpotRepository parkSpotRepository,
@@ -64,6 +69,7 @@ public class ParkingService
                           SubscriptionRepository subscriptionRepository,
                           TariffService tariffService,
                           ChangePublisher changePublisher,
+                          AuditService auditService,
                           Clock clock)
     {
         this.parkSpotRepository=parkSpotRepository;
@@ -72,6 +78,7 @@ public class ParkingService
         this.subscriptionRepository = subscriptionRepository;
         this.tariffService = tariffService;
         this.changePublisher = changePublisher;
+        this.auditService = auditService;
         this.clock = clock;
     }
 
@@ -168,6 +175,14 @@ public class ParkingService
                     plate + " plakalı araç zaten sistemde aktif.");
         }
         ParkSpot result = saved != null ? saved : newSpot;
+        Map<String, Object> after = new LinkedHashMap<>();
+        after.put("plate", plate);
+        after.put("zoneId", zoneIdOf(result));
+        after.put("street", street != null ? street.name() : null);
+        after.put("vehicleType", type.name());
+        auditService.log(AuditAction.VEHICLE_CHECK_IN, "ParkSpot", result.getId(),
+                plate + " giriş: " + (zone != null ? zone.getZoneName() : (street != null ? street.getDisplayName() : "-")),
+                null, after);
         publishEntered(result);
         return result;
     }
@@ -241,6 +256,14 @@ public class ParkingService
         parkSpotRepository.delete(spot);
         parkSpotRepository.flush();
 
+        Map<String, Object> aud = new LinkedHashMap<>();
+        aud.put("plate", record.getLicensePlate());
+        aud.put("fee", fee);
+        aud.put("paymentMethod", effective.name());
+        aud.put("zoneId", zoneIdOf(spot));
+        auditService.log(AuditAction.VEHICLE_CHECK_OUT, "ParkingRecord", record.getId(),
+                record.getLicensePlate() + " çıkış: " + money(fee) + " TL (" + effective.name() + ")", null, aud);
+
         Map<String, Object> ev = new HashMap<>();
         ev.put("plate", record.getLicensePlate());
         ev.put("recordId", record.getId());
@@ -294,6 +317,12 @@ public class ParkingService
         parkSpotRepository.delete(spot);
         parkSpotRepository.flush();
 
+        Map<String, Object> aud = new LinkedHashMap<>();
+        aud.put("plate", record.getLicensePlate());
+        aud.put("debt", debt);
+        auditService.log(AuditAction.VEHICLE_RUNAWAY, "ParkingRecord", record.getId(),
+                record.getLicensePlate() + " kaçak: " + money(debt) + " TL borç", null, aud);
+
         Map<String, Object> ev = new HashMap<>();
         ev.put("plate", record.getLicensePlate());
         ev.put("recordId", record.getId());
@@ -346,13 +375,143 @@ public class ParkingService
         if (last.isPresent() && last.get().getExitTime() != null
                 && last.get().getExitTime().isAfter(LocalDateTime.now(clock).minusMinutes(10))) {
             ParkingRecord r = last.get();
-            String what = r.getStatus() == ParkingStatus.RUNAWAY ? "Kaçak" : "Ödendi";
+            String what = r.getStatus() == ParkingStatus.RUNAWAY ? "Kaçak"
+                    : r.getStatus() == ParkingStatus.CANCELLED ? "İptal" : "Ödendi";
             String time = r.getExitTime().format(DateTimeFormatter.ofPattern("HH:mm"));
             return ApiException.conflict(ErrorCodes.ALREADY_PROCESSED,
                     plate + " az önce başka bir işlemle kapatıldı (" + what + ", " + time + ").");
         }
         return ApiException.notFound(ErrorCodes.VEHICLE_NOT_FOUND,
                 plate + " plakalı araç aktif otoparkta bulunamadı.");
+    }
+
+
+    // --- CANCELLATION (soft delete: the row stays, status = CANCELLED) ---
+
+    private static String money(double v) {
+        return String.format(Locale.forLanguageTag("tr-TR"), "%.2f", v);
+    }
+
+    private static String cleanReason(String reason) {
+        String r = reason == null ? "" : reason.trim();
+        if (r.length() < 5 || r.length() > 500) {
+            throw ApiException.badRequest(ErrorCodes.VALIDATION_ERROR,
+                    "İptal gerekçesi zorunludur (en az 5 karakter).");
+        }
+        return r;
+    }
+
+    /** Admin: cancels a closed (PAID / RUNAWAY) record. Leaves revenue / unpaid debt, the row is kept. */
+    @Transactional
+    public Map<String, Object> cancelRecord(Long id, String reason, User admin) {
+        String why = cleanReason(reason);
+        ParkingRecord r = parkingRecordRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound(ErrorCodes.NOT_FOUND, "Kayıt bulunamadı: " + id));
+        if (r.getStatus() == ParkingStatus.CANCELLED) {
+            throw ApiException.conflict(ErrorCodes.ALREADY_CANCELLED, "Bu kayıt zaten iptal edilmiş.");
+        }
+        if (r.getStatus() != ParkingStatus.PAID && r.getStatus() != ParkingStatus.RUNAWAY) {
+            throw ApiException.badRequest(ErrorCodes.BAD_REQUEST, "Yalnızca ödenmiş veya kaçak kayıtlar iptal edilebilir.");
+        }
+        ParkingStatus previous = r.getStatus();
+        Map<String, Object> before = new LinkedHashMap<>();
+        before.put("status", previous.name());
+        before.put("fee", r.getFee());
+
+        r.setCancelledFromStatus(previous);
+        r.setStatus(ParkingStatus.CANCELLED);
+        r.setCancelledAt(LocalDateTime.now(clock));
+        r.setCancelledByUsername(admin != null ? admin.getUsername() : null);
+        r.setCancelReason(why);
+        parkingRecordRepository.saveAndFlush(r);
+
+        Map<String, Object> after = new LinkedHashMap<>();
+        after.put("status", "CANCELLED");
+        after.put("reason", why);
+        auditService.log(AuditAction.RECORD_CANCELLED, "ParkingRecord", r.getId(),
+                r.getLicensePlate() + " kaydı iptal edildi (" + previous.name() + ", "
+                        + money(r.getFee() != null ? r.getFee() : 0.0) + " TL): " + why, before, after);
+
+        Map<String, Object> ev = new LinkedHashMap<>();
+        ev.put("recordId", r.getId());
+        ev.put("plate", r.getLicensePlate());
+        ev.put("previousStatus", previous.name());
+        ev.put("fee", r.getFee());
+        changePublisher.zoneEvent(SyncEventType.RECORD_CANCELLED, zoneIdOf(r), r.getStreet(), ev);
+        return recordMap(r);
+    }
+
+    /** Officer (own zone) or admin: cancels a wrong ACTIVE entry; a CANCELLED record is written, the spot removed. */
+    @Transactional
+    public Map<String, Object> cancelActiveEntry(String plate, String reason, User actor, String deviceId) {
+        String why = cleanReason(reason);
+        String p = PlateNormalizer.forLookup(plate);
+        ParkSpot spot = parkSpotRepository.findByPlateForUpdate(p)
+                .orElseThrow(() -> notActive(p));
+        checkSpotAccess(actor, spot);
+
+        LocalDateTime now = LocalDateTime.now(clock);
+        ParkingRecord record = newRecord(spot, now);
+        record.setFee(0.0);
+        record.setStatus(ParkingStatus.CANCELLED);
+        record.setCancelledFromStatus(ParkingStatus.ACTIVE);
+        record.setCancelledAt(now);
+        record.setCancelledByUsername(actor != null ? actor.getUsername() : null);
+        record.setCancelReason(why);
+        stampCollector(record, actor, deviceId);
+        parkingRecordRepository.save(record);
+        parkSpotRepository.delete(spot);
+        parkSpotRepository.flush();
+
+        Map<String, Object> before = new LinkedHashMap<>();
+        before.put("status", "ACTIVE");
+        before.put("plate", record.getLicensePlate());
+        before.put("zoneId", zoneIdOf(spot));
+        Map<String, Object> after = new LinkedHashMap<>();
+        after.put("status", "CANCELLED");
+        after.put("reason", why);
+        auditService.log(AuditAction.SPOT_CANCELLED, "ParkingRecord", record.getId(),
+                record.getLicensePlate() + " giriş kaydı iptal edildi: " + why, before, after);
+
+        Map<String, Object> ev = new LinkedHashMap<>();
+        ev.put("plate", record.getLicensePlate());
+        ev.put("recordId", record.getId());
+        ev.put("zoneId", zoneIdOf(spot));
+        ev.put("street", spot.getStreet() != null ? spot.getStreet().name() : null);
+        changePublisher.zoneEvent(SyncEventType.VEHICLE_CANCELLED, zoneIdOf(spot), spot.getStreet(), ev);
+        return recordMap(record);
+    }
+
+    /** Cancelled records by cancelledAt desc, as response maps (lazy zone is read inside the transaction). */
+    @Transactional(readOnly = true)
+    public Page<Map<String, Object>> listCancelled(LocalDateTime from, LocalDateTime toExclusive, int page, int size) {
+        return parkingRecordRepository.findCancelled(from, toExclusive, PageRequest.of(page, size))
+                .map(this::recordMap);
+    }
+
+    private Long zoneIdOf(ParkingRecord r) {
+        return r.getZone() != null ? r.getZone().getId() : null;
+    }
+
+    public Map<String, Object> recordMap(ParkingRecord r) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", r.getId());
+        m.put("plate", r.getLicensePlate());
+        m.put("street", r.getStreet() != null ? r.getStreet().name() : null);
+        m.put("zoneId", zoneIdOf(r));
+        m.put("zoneName", r.getZone() != null ? r.getZone().getZoneName() : null);
+        m.put("entryTime", r.getEntryTime());
+        m.put("exitTime", r.getExitTime());
+        m.put("fee", r.getFee());
+        m.put("vehicleType", r.getVehicleType() != null ? r.getVehicleType().name() : null);
+        m.put("paymentMethod", r.getPaymentMethod() != null ? r.getPaymentMethod().name() : null);
+        m.put("previousStatus", r.getCancelledFromStatus() != null ? r.getCancelledFromStatus().name() : null);
+        m.put("status", r.getStatus() != null ? r.getStatus().name() : null);
+        m.put("cancelledAt", r.getCancelledAt());
+        m.put("cancelledBy", r.getCancelledByUsername());
+        m.put("cancelReason", r.getCancelReason());
+        m.put("collectedBy", r.getCollectedByUsername());
+        return m;
     }
 
     // --- Görevli bölge kısıtı (actor null veya ADMIN ise serbest) ---

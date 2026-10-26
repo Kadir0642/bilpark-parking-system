@@ -1,8 +1,10 @@
 package com.bilpark.backend.service;
 
+import com.bilpark.backend.audit.AuditService;
 import com.bilpark.backend.common.ApiException;
 import com.bilpark.backend.common.ErrorCodes;
 import com.bilpark.backend.common.PlateNormalizer;
+import com.bilpark.backend.model.AuditAction;
 import com.bilpark.backend.model.Subscription;
 import com.bilpark.backend.model.SubscriptionStatus;
 import com.bilpark.backend.model.Tariff;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -30,7 +33,11 @@ public class SubscriptionService {
 
     private final TariffService tariffService;
 
-    public SubscriptionService(SubscriptionRepository subscriptionRepository, TariffService tariffService) {
+    private final AuditService auditService;
+
+    public SubscriptionService(SubscriptionRepository subscriptionRepository, TariffService tariffService,
+                               AuditService auditService) {
+        this.auditService = auditService;
         this.subscriptionRepository = subscriptionRepository;
         this.tariffService = tariffService;
     }
@@ -71,7 +78,16 @@ public class SubscriptionService {
         sub.setMonthlyFee(type == VehicleType.LARGE
                 ? tariff.getSubscriptionLargeMonthly() : tariff.getSubscriptionSmallMonthly());
         try {
-            return subscriptionRepository.saveAndFlush(sub);
+            Subscription saved = subscriptionRepository.saveAndFlush(sub);
+            Map<String, Object> after = new LinkedHashMap<>(); // no owner name / phone
+            after.put("plate", saved.getLicensePlate());
+            after.put("vehicleType", saved.getVehicleType().name());
+            after.put("startDate", String.valueOf(saved.getStartDate()));
+            after.put("endDate", String.valueOf(saved.getEndDate()));
+            after.put("monthlyFee", saved.getMonthlyFee());
+            auditService.log(AuditAction.SUBSCRIPTION_CREATED, "Subscription", saved.getId(),
+                    saved.getLicensePlate() + " için abonelik oluşturuldu", null, after);
+            return saved;
         } catch (DataIntegrityViolationException e) {
             throw ApiException.conflict(ErrorCodes.SUBSCRIPTION_EXISTS,
                     "Bu plakaya ait aktif bir abonelik zaten mevcut.");
@@ -125,7 +141,16 @@ public class SubscriptionService {
         }
         actives.forEach(s -> s.setStatus(SubscriptionStatus.CANCELLED));
         subscriptionRepository.saveAll(actives);
-        return actives.get(0);
+        Subscription first = actives.get(0);
+        Map<String, Object> before = new LinkedHashMap<>();
+        before.put("plate", first.getLicensePlate());
+        before.put("status", "ACTIVE");
+        Map<String, Object> after = new LinkedHashMap<>();
+        after.put("plate", first.getLicensePlate());
+        after.put("status", "CANCELLED");
+        auditService.log(AuditAction.SUBSCRIPTION_CANCELLED, "Subscription", first.getId(),
+                first.getLicensePlate() + " aboneliği iptal edildi", before, after);
+        return first;
     }
 
     /**
