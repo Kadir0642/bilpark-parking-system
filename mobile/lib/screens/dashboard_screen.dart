@@ -4,6 +4,7 @@ import '../core/api_client.dart';
 import '../core/constants.dart';
 import '../core/format.dart';
 import '../core/tariff.dart';
+import '../core/vehicle_types.dart';
 import '../core/theme.dart';
 import '../widgets/bp_header.dart';
 import '../widgets/connection_banner.dart';
@@ -58,7 +59,8 @@ class DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> refresh() async {
-    await Future.wait([_fetchStats(), _fetchSummary()]);
+    // Araç tipleri de her yenilemede tazelenir (giriş formu güncel kalsın)
+    await Future.wait([_fetchStats(), _fetchSummary(), VehicleTypeStore.load()]);
   }
 
   Future<void> _fetchStats() async {
@@ -253,8 +255,8 @@ class DashboardScreenState extends State<DashboardScreen> {
       valueListenable: TariffStore.current,
       builder: (_, t, _) {
         if (t == null) return const SizedBox.shrink();
-        String line(Tariff x, String label, String type) =>
-            '$label: İlk saat ${formatMoney(x.firstHour(type))} · sonraki ${formatMoney(x.extraHour(type))}';
+        String line(Tariff x, TariffTypePrice p) =>
+            '${p.info.displayName}: İlk saat ${formatMoney(x.firstHour(p.code))} · sonraki ${formatMoney(x.extraHour(p.code))}';
         final end = t.paidEnd == '00:00' ? '24:00' : t.paidEnd;
         final up = t.upcoming;
         final from = up?.effectiveFrom;
@@ -270,9 +272,10 @@ class DashboardScreenState extends State<DashboardScreen> {
             children: [
               const Text('Güncel tarife', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
               const SizedBox(height: 10),
-              Text(line(t, 'Otomobil', 'SMALL'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 4),
-              Text(line(t, 'Kamyonet', 'LARGE'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              for (final p in t.enabledTypes) ...[
+                Text(line(t, p), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+              ],
               const SizedBox(height: 6),
               Text('İlk ${t.freeMinutes} dk ücretsiz · ücretli ${t.paidStart}–$end',
                   style: TextStyle(fontSize: 14, color: c.text2)),
@@ -283,8 +286,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                   decoration: BoxDecoration(color: c.warningSoft, borderRadius: BorderRadius.circular(BpSize.rSm)),
                   child: Text(
                     '${formatDayMonth(from)} ${formatHm(from)} itibarıyla yeni tarife: '
-                    'Otomobil ${formatMoney(up.smallFirstHour)}/${formatMoney(up.smallExtraHour)} · '
-                    'Kamyonet ${formatMoney(up.largeFirstHour)}/${formatMoney(up.largeExtraHour)}',
+                    '${up.enabledTypes.map((p) => '${p.info.displayName} ${formatMoney(up.firstHour(p.code))}/${formatMoney(up.extraHour(p.code))}').join(' · ')}',
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c.onWarningSoft),
                   ),
                 ),

@@ -4,11 +4,43 @@
 import 'package:flutter/foundation.dart';
 import 'api_client.dart';
 import 'format.dart';
+import 'vehicle_types.dart';
 
 /// Saat dilimi eki olmayan yerel saat; toLocal/UTC dönüşümü yapılmaz.
 DateTime? _parseLocal(dynamic v) => v is String ? DateTime.tryParse(v) : null;
 
 double _num(dynamic v, [double def = 0]) => v is num ? v.toDouble() : def;
+
+/// Tarife sürümündeki tek bir araç tipinin satırı (`vehicleTypes` öğesi).
+class TariffTypePrice {
+  final VehicleTypeInfo info;
+  final bool enabled;
+  final double? firstHour, extraHour, subscriptionMonthly;
+
+  const TariffTypePrice({
+    required this.info,
+    this.enabled = true,
+    this.firstHour,
+    this.extraHour,
+    this.subscriptionMonthly,
+  });
+
+  String get code => info.code;
+
+  static TariffTypePrice? tryParse(dynamic j) {
+    final info = VehicleTypeInfo.tryParse(j);
+    if (info == null) return null;
+    final m = j as Map;
+    double? n(dynamic v) => v is num ? v.toDouble() : null;
+    return TariffTypePrice(
+      info: info,
+      enabled: m['enabled'] != false,
+      firstHour: n(m['firstHour']),
+      extraHour: n(m['extraHour']),
+      subscriptionMonthly: n(m['subscriptionMonthly']),
+    );
+  }
+}
 
 class Tariff {
   final int id;
@@ -21,20 +53,24 @@ class Tariff {
   final double subscriptionSmall, subscriptionLarge;
   final Tariff? upcoming;
 
+  /// Sunucudaki `vehicleTypes` (pasifler dahil); null: eski sunucu, small/large alanları geçerli.
+  final List<TariffTypePrice>? vehicleTypes;
+
   const Tariff({
     required this.id,
     required this.status,
     this.effectiveFrom,
-    required this.smallFirstHour,
-    required this.smallExtraHour,
-    required this.largeFirstHour,
-    required this.largeExtraHour,
+    this.smallFirstHour = 0,
+    this.smallExtraHour = 0,
+    this.largeFirstHour = 0,
+    this.largeExtraHour = 0,
     required this.freeMinutes,
     required this.paidStart,
     required this.paidEnd,
-    required this.subscriptionSmall,
-    required this.subscriptionLarge,
+    this.subscriptionSmall = 0,
+    this.subscriptionLarge = 0,
     this.upcoming,
+    this.vehicleTypes,
   });
 
   factory Tariff.fromJson(Map<String, dynamic> j) {
@@ -42,6 +78,14 @@ class Tariff {
     final large = j['large'] is Map ? j['large'] as Map : const {};
     final sub = j['subscription'] is Map ? j['subscription'] as Map : const {};
     final up = j['upcoming'];
+    List<TariffTypePrice>? types;
+    if (j['vehicleTypes'] is List) {
+      types = [
+        for (final e in j['vehicleTypes'] as List)
+          ?TariffTypePrice.tryParse(e),
+      ];
+      if (types.isEmpty) types = null;
+    }
     return Tariff(
       id: (j['id'] as num?)?.toInt() ?? 0,
       status: (j['status'] as String?) ?? 'ACTIVE',
@@ -56,11 +100,46 @@ class Tariff {
       subscriptionSmall: _num(sub['small']),
       subscriptionLarge: _num(sub['large']),
       upcoming: up is Map ? Tariff.fromJson(Map<String, dynamic>.from(up)) : null,
+      vehicleTypes: types,
     );
   }
 
-  double firstHour(String vehicleType) => vehicleType == 'LARGE' ? largeFirstHour : smallFirstHour;
-  double extraHour(String vehicleType) => vehicleType == 'LARGE' ? largeExtraHour : smallExtraHour;
+  /// Bu sürümde fiyatı gösterilecek tipler: `enabled` olanlar; eski sunucuda SMALL + LARGE.
+  List<TariffTypePrice> get enabledTypes {
+    final t = vehicleTypes;
+    if (t == null) {
+      return [
+        for (final i in kFallbackVehicleTypes)
+          TariffTypePrice(
+            info: i,
+            firstHour: firstHour(i.code),
+            extraHour: extraHour(i.code),
+            subscriptionMonthly: i.code == 'LARGE' ? subscriptionLarge : subscriptionSmall,
+          ),
+      ];
+    }
+    return t.where((e) => e.enabled).toList();
+  }
+
+  TariffTypePrice? _row(String? code) {
+    final t = vehicleTypes;
+    if (t == null) return null;
+    for (final e in t) {
+      if (e.code == code) return e;
+    }
+    return null;
+  }
+
+  /// Sunucu kuralı: kod null/bilinmiyor ya da fiyat yoksa SMALL fiyatı.
+  double firstHour(String? vehicleType) {
+    if (vehicleTypes == null) return vehicleType == 'LARGE' ? largeFirstHour : smallFirstHour;
+    return _row(vehicleType)?.firstHour ?? _row('SMALL')?.firstHour ?? smallFirstHour;
+  }
+
+  double extraHour(String? vehicleType) {
+    if (vehicleTypes == null) return vehicleType == 'LARGE' ? largeExtraHour : smallExtraHour;
+    return _row(vehicleType)?.extraHour ?? _row('SMALL')?.extraHour ?? smallExtraHour;
+  }
 }
 
 /// Günün tek bir ücretli/ücretsiz parçası.
@@ -211,7 +290,7 @@ class TariffStore {
   static Future<Tariff?> load() async {
     try {
       final data = await ApiClient.get('/tariff/current', auth: false);
-      if (data is Map) current.value = Tariff.fromJson(Map<String, dynamic>.from(data));
+      if (data is Map) applyPayload(Map<String, dynamic>.from(data));
     } catch (_) {}
     return current.value;
   }
@@ -219,7 +298,10 @@ class TariffStore {
   /// TARIFF_UPDATED olayının payload'ı (current ile aynı biçim).
   static void applyPayload(Map<String, dynamic> payload) {
     try {
-      current.value = Tariff.fromJson(payload);
+      final t = Tariff.fromJson(payload);
+      // Pasif tiplerin adı/ikonu da öğrenilir (park hâlindeki araç kartı için)
+      VehicleTypeStore.learn(t.vehicleTypes?.map((e) => e.info) ?? const []);
+      current.value = t;
     } catch (_) {}
   }
 

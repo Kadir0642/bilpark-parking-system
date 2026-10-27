@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import '../core/format.dart';
 import '../core/theme.dart';
+import '../core/vehicle_types.dart';
 import 'license_banner.dart';
 import 'status_badge.dart';
 import 'toggle_tile.dart';
 
 class EntryResult {
   final String plate;
-  final String type; // SMALL | LARGE
+  final String type; // vehicle_types kodu (SMALL, LARGE, MOTORCYCLE...)
   final String side; // LEFT | RIGHT
   const EntryResult(this.plate, this.type, this.side);
 }
@@ -31,7 +32,12 @@ class _EntrySheet extends StatefulWidget {
 
 class _EntrySheetState extends State<_EntrySheet> {
   late final TextEditingController _plate = TextEditingController(text: widget.initialPlate);
-  String _type = 'SMALL';
+  late String _type = _firstActive();
+
+  static String _firstActive() {
+    final l = VehicleTypeStore.active.value;
+    return l.isEmpty ? 'SMALL' : l.first.code;
+  }
 
   @override
   void dispose() {
@@ -76,26 +82,28 @@ class _EntrySheetState extends State<_EntrySheet> {
             const SizedBox(height: 16),
             Text('Araç türü', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: c.text2)),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: BpToggleTile(
-                    label: 'Otomobil',
-                    icon: Icons.directions_car_outlined,
-                    selected: _type == 'SMALL',
-                    onTap: () => setState(() => _type = 'SMALL'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: BpToggleTile(
-                    label: 'Kamyonet',
-                    icon: Icons.local_shipping_outlined,
-                    selected: _type == 'LARGE',
-                    onTap: () => setState(() => _type = 'LARGE'),
-                  ),
-                ),
-              ],
+            // Seçenekler sunucudaki etkin tiplerden gelir; sayfa açıkken liste değişirse yeniden kurulur
+            ValueListenableBuilder<List<VehicleTypeInfo>>(
+              valueListenable: VehicleTypeStore.active,
+              builder: (_, types, _) {
+                // Seçili tip listeden düştüyse ilk etkin tipe dönülür
+                if (types.isNotEmpty && !types.any((t) => t.code == _type)) _type = types.first.code;
+                return Row(
+                  children: [
+                    for (var i = 0; i < types.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      Expanded(
+                        child: BpToggleTile(
+                          label: types[i].displayName,
+                          icon: iconFor(types[i].iconKey),
+                          selected: _type == types[i].code,
+                          onTap: () => setState(() => _type = types[i].code),
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 20),
             ReadOnlyGate(

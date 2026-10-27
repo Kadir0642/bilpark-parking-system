@@ -9,6 +9,7 @@ import 'core/license.dart';
 import 'core/live_sync.dart';
 import 'core/tariff.dart';
 import 'core/user_update.dart';
+import 'core/vehicle_types.dart';
 import 'core/theme.dart';
 import 'screens/auth_screen.dart';
 import 'screens/dashboard_screen.dart';
@@ -122,11 +123,13 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     TariffStore.load();
+    VehicleTypeStore.load();
     LicenseStore.attach();
     LicenseStore.load();
     _eventSub = liveSync.events.listen(_onEvent);
     _reloadSub = liveSync.reloads.listen((_) {
       TariffStore.load();
+      VehicleTypeStore.load();
       LicenseStore.load();
       _scheduleRefresh();
     });
@@ -165,6 +168,8 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
       case 'TARIFF_UPDATED':
         final before = TariffStore.current.value;
         TariffStore.applyPayload(e.payload);
+        // Etkin tip kümesi tarife akışıyla değişir; olay ayrıca gelse de liste sunucudan tazelenir
+        VehicleTypeStore.load();
         final now = TariffStore.current.value;
         final up = now?.upcoming;
         final from = up?.effectiveFrom;
@@ -180,6 +185,9 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
         ScaffoldMessenger.of(context)
           ..clearSnackBars()
           ..showSnackBar(bpSnackBar(context, msg));
+      case 'VEHICLE_TYPES_UPDATED':
+        VehicleTypeStore.applyPayload(e.payload);
+        VehicleTypeStore.load();
       case 'LICENSE_UPDATED':
         LicenseStore.load();
       case 'USER_UPDATED':

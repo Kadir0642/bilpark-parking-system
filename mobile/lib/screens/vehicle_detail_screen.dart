@@ -5,6 +5,7 @@ import '../core/api_client.dart';
 import '../core/format.dart';
 import '../core/tariff.dart';
 import '../core/theme.dart';
+import '../core/vehicle_types.dart';
 import '../widgets/bp_header.dart';
 import '../widgets/bp_snack.dart';
 import '../widgets/cancel_entry_dialog.dart';
@@ -62,8 +63,6 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
   String? _error;
   DateTime? _lastFetch;
   double? _estAtFetch; // son istekteki yerel tahmin: aynı tahmin için tekrar istek atılmaz
-
-  bool get _isLarge => _type == 'LARGE';
 
   Future<Map<String, dynamic>> _defaultPreview(String plate) async {
     final data = await ApiClient.get('/parking/fee-preview', query: {'plate': plate});
@@ -266,11 +265,11 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Icon(_isLarge ? Icons.local_shipping_outlined : Icons.directions_car_outlined, size: 20, color: c.text2),
+                      Icon(iconForCode(_type), size: 20, color: c.text2),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          '${_isLarge ? 'Kamyonet' : 'Otomobil'} · $side · Giriş ${formatDayMonth(_entry)} ${formatHm(_entry)}',
+                          '${labelFor(_type)} · $side · Giriş ${formatDayMonth(_entry)} ${formatHm(_entry)}',
                           style: TextStyle(fontSize: 14, color: c.text2),
                         ),
                       ),

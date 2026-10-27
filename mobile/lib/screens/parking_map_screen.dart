@@ -9,6 +9,7 @@ import '../core/license.dart';
 import '../core/live_sync.dart';
 import '../core/tariff.dart';
 import '../core/theme.dart';
+import '../core/vehicle_types.dart';
 import '../widgets/bp_header.dart';
 import '../widgets/bp_snack.dart';
 import '../widgets/connection_banner.dart';
@@ -190,6 +191,8 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
       if (e.isUnauthorized) return;
       _showSnack(e.message, tone: BadgeTone.danger, duration: const Duration(seconds: 6));
       if (e.code == 'ALREADY_PARKED') scheduleRefresh();
+      // Tip tarifede pasifleşmiş/bilinmiyor: liste tazelenir, görevli güncel seçeneklerle tekrar dener
+      if (e.code == 'VEHICLE_TYPE_INACTIVE' || e.code == 'UNKNOWN_VEHICLE_TYPE') VehicleTypeStore.load();
     }
   }
 
@@ -366,7 +369,6 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
     if (vehicle == null) return const SizedBox.shrink();
     final c = context.bp;
     final String plate = vehicle['currentPlate'];
-    final isLarge = vehicle['currentType'] == 'LARGE';
     final entry = DateTime.parse(vehicle['entryTime']).toLocal();
     final inside = DateTime.now().difference(entry);
     final isLong = inside >= _longStay;
@@ -404,7 +406,7 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
                       children: [
                         Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: PlateBadge(plate))),
                         const SizedBox(width: 4),
-                        Icon(isLarge ? Icons.local_shipping_outlined : Icons.directions_car_outlined, size: 20, color: c.text2),
+                        Icon(iconForCode(vehicle['currentType']), size: 20, color: c.text2),
                       ],
                     ),
                     const SizedBox(height: 6),
