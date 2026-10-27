@@ -285,6 +285,7 @@
             const net = Number(d.netRemaining) || 0;
             const missing = d.rentMissingYears || [];
             const months = d.rentMonths || [];
+            const byType = Array.isArray(d.byVehicleType) ? d.byVehicleType : [];
             out.innerHTML = `
             ${missing.length ? `<div class="alert alert-warning" style="margin-bottom:12px;">${escapeHtml(missing.join(', '))} için kira bedeli girilmemiş; o yılın payı 0 sayıldı. Ayarlar sekmesindeki Kira bölümünden girin.</div>` : ''}
             <div class="grid grid-kpi">
@@ -301,6 +302,10 @@
                 <div class="tar-item"><dt>İptal edilen kayıt</dt><dd>${d.cancelledCount ?? 0} kayıt · ${money(d.cancelledFees)}</dd></div>
                 <div class="tar-item"><dt>Ödenmemiş kaçak</dt><dd>${d.unpaidRunawayCount ?? 0} araç · ${money(d.unpaidRunawayDebt)}</dd></div>
             </dl>
+            ${byType.length ? `<div class="sub-h" style="margin-top:12px;">Araç tipine göre</div>
+            <div class="table-wrap"><table class="table"><thead><tr><th>Tip</th><th class="right">İşlem</th><th class="right">Ciro</th></tr></thead>
+            <tbody>${byType.map(t => `<tr><td>${escapeHtml(t.displayName || (typeof vehicleLabel === 'function' ? vehicleLabel(t.code) : t.code))}</td><td class="right num">${t.transactions ?? 0}</td>
+                <td class="right num">${money(t.income)}</td></tr>`).join('')}</tbody></table></div>` : ''}
             ${months.length ? `<div class="sub-h" style="margin-top:12px;">Kira payı ayrıntısı</div>
             <div class="table-wrap"><table class="table"><thead><tr><th>Ay</th><th class="right">Gün</th><th class="right">Aylık pay</th><th class="right">Dönem payı</th></tr></thead>
             <tbody>${months.map(m => `<tr><td>${escapeHtml(m.month)}</td><td class="right num">${m.overlapDays ?? 0}</td>

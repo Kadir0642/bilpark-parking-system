@@ -270,16 +270,28 @@
     }
 
     // Tarife özeti; hata/eksik veri durumunda kart sessizce gizlenir
+    // Etkin araç tiplerinin ücret satırları; vehicleTypes yoksa (eski sunucu) small/large'a düşülür
+    function tariffRows(t) {
+        if (!t) return [];
+        if (Array.isArray(t.vehicleTypes) && t.vehicleTypes.length) {
+            return t.vehicleTypes.filter(v => v && v.enabled && v.firstHour != null)
+                .slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+                .map(v => ({ name: v.displayName || v.code, firstHour: v.firstHour, extraHour: v.extraHour }));
+        }
+        const rows = [];
+        if (t.small) rows.push({ name: 'Otomobil', firstHour: t.small.firstHour, extraHour: t.small.extraHour });
+        if (t.large) rows.push({ name: 'Kamyonet', firstHour: t.large.firstHour, extraHour: t.large.extraHour });
+        return rows;
+    }
     function tariffText(t) {
-        return 'Otomobil: ilk saat ' + fmtMoney(t.small.firstHour) + ', sonraki her saat ' + fmtMoney(t.small.extraHour)
-            + ' · Kamyonet: ilk saat ' + fmtMoney(t.large.firstHour) + ', sonraki her saat ' + fmtMoney(t.large.extraHour);
+        return tariffRows(t).map(r => r.name + ': ilk saat ' + fmtMoney(r.firstHour) + ', sonraki her saat ' + fmtMoney(r.extraHour)).join(' · ');
     }
     function renderTariff(t, tariffId) {
         const card = $('tariffCard'), body = $('tariffBody');
         body.textContent = '';
         $('tariffNote').hidden = true;
         try {
-            if (!t || !t.small || !t.large) throw new Error('tarife yok');
+            if (!t || !tariffRows(t).length) throw new Error('tarife yok');
             // Tutar farklı bir tarife sürümüyle hesaplandıysa özet gösterilmez
             if (tariffId != null && t.id != null && tariffId !== t.id) {
                 $('tariffNote').hidden = false;
@@ -295,7 +307,7 @@
             body.appendChild(p1);
             body.appendChild(p2);
             const u = t.upcoming;
-            if (u && u.small && u.large && u.effectiveFrom) {
+            if (u && tariffRows(u).length && u.effectiveFrom) {
                 const p3 = document.createElement('p');
                 p3.className = 'alert alert-info';
                 p3.textContent = fmtDate(u.effectiveFrom) + ' ' + hhmm(u.effectiveFrom) + ' itibarıyla yeni tarife: ' + tariffText(u);
@@ -365,7 +377,7 @@
             const data = debt.data;
             if (debt.ok && !data.error) {
                 // Borç yanıtı kendi tarifesini taşıyorsa o kullanılır
-                renderResult(data, (data.tariff && data.tariff.small) ? data.tariff : tariff);
+                renderResult(data, (data.tariff && tariffRows(data.tariff).length) ? data.tariff : tariff);
             } else {
                 showView('view-search');
                 showError(data.error || 'Bu plakaya ait aktif park kaydı bulunamadı.');

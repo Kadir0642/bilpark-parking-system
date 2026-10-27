@@ -97,6 +97,11 @@
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: var(--s-4); }
         .form-wide { grid-column: 1 / -1; }
         .wiz-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); }
+        .vt-block { grid-column: 1 / -1; border: 1px solid var(--border); border-radius: var(--r-sm); padding: var(--s-3) var(--s-4); display: flex; flex-direction: column; gap: var(--s-3); }
+        .vt-block.vt-off { background: var(--surface-2); }
+        .vt-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); }
+        .vt-price { white-space: normal; min-width: 170px; }
+        .vt-price div { white-space: nowrap; }
         .tar-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--s-3); margin: 0; }
         .tar-item dt { font-size: 13px; color: var(--text-2); font-weight: 600; }
         .tar-item dd { margin: 2px 0 0; font-weight: 700; font-size: 17px; }
@@ -410,7 +415,7 @@
                     <div class="card-head"><h2>Tarife geçmişi</h2></div>
                     <div class="table-wrap">
                         <table class="table">
-                            <thead><tr><th>Sürüm</th><th>Durum</th><th>Otomobil (ilk / ek)</th><th>Kamyonet (ilk / ek)</th><th>Ücretli saat</th><th>Yürürlük</th><th>Etkinleşme</th><th>Arşiv</th><th>Oluşturan</th><th>Not</th><th></th></tr></thead>
+                            <thead><tr><th>Sürüm</th><th>Durum</th><th>Ücretler (ilk / ek)</th><th>Ücretli saat</th><th>Yürürlük</th><th>Etkinleşme</th><th>Arşiv</th><th>Oluşturan</th><th>Not</th><th></th></tr></thead>
                             <tbody id="tarHistoryBody"></tbody>
                         </table>
                     </div>
@@ -521,7 +526,45 @@
         return (r.zone && r.zone.zoneName) || r.zoneName || streetNames[r.street] || r.street || '-';
     }
     function recKey(r, i) { return r.id != null ? 'id' + r.id : 'k' + r.licensePlate + '|' + r.entryTime; }
-    function vehicleLabel(t) { return t === 'LARGE' ? 'Kamyonet' : 'Otomobil'; }
+    // Araç tipi kataloğu: kod -> {displayName, iconKey, sortOrder, active} (GET /api/admin/vehicle-types)
+    let vehicleTypes = {};
+    function vehicleLabel(c) {
+        const v = c != null ? vehicleTypes[c] : null;
+        if (v && v.displayName) return v.displayName;
+        if (c === 'LARGE') return 'Kamyonet';
+        if (c == null || c === '' || c === 'SMALL' || c === 'CAR') return 'Otomobil';
+        return String(c);
+    }
+    const VT_ICONS = { car: 'fa-car', truck: 'fa-truck', motorcycle: 'fa-motorcycle' };
+    function vehicleIcon(iconKey) { return VT_ICONS[iconKey] || 'fa-car-side'; }
+    function vehicleIconHtml(iconKey) { return `<i class="fa-solid ${vehicleIcon(iconKey)}" aria-hidden="true"></i>`; }
+    async function loadVehicleTypes() {
+        try {
+            const list = await apiJson('GET', '/api/admin/vehicle-types');
+            if (!Array.isArray(list)) return false;
+            const map = {};
+            list.forEach(v => { if (v && v.code) map[v.code] = v; });
+            vehicleTypes = map;
+            return true;
+        } catch (e) {
+            if (e.name !== 'AuthError') console.error('Araç tipleri alınamadı, varsayılan kullanılıyor:', e);
+            return false;
+        }
+    }
+    // Tarifenin araç tipi satırları (sıralı). vehicleTypes yoksa (eski sunucu) small/large'dan kurulur.
+    function tariffTypes(t) {
+        if (!t) return [];
+        if (Array.isArray(t.vehicleTypes)) {
+            return t.vehicleTypes.slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+        }
+        const sub = t.subscription || {};
+        const out = [];
+        if (t.small) out.push({ code: 'SMALL', displayName: 'Otomobil', iconKey: 'car', sortOrder: 10, enabled: true, firstHour: t.small.firstHour, extraHour: t.small.extraHour, subscriptionMonthly: sub.small });
+        if (t.large) out.push({ code: 'LARGE', displayName: 'Kamyonet', iconKey: 'truck', sortOrder: 20, enabled: true, firstHour: t.large.firstHour, extraHour: t.large.extraHour, subscriptionMonthly: sub.large });
+        return out;
+    }
+    function hasTariff(t) { return !!t && (Array.isArray(t.vehicleTypes) ? t.vehicleTypes.length > 0 : !!(t.small && t.large)); }
+    function typeName(v) { return v.displayName || vehicleLabel(v.code); }
     function methodLabel(m) { return methodNames[m] || m || '-'; }
     // 11KM4471 -> 11 KM 4471 (tabeladaki gibi okunur)
     function fmtPlate(p) {
@@ -995,9 +1038,17 @@
     // ---- 2. Grafik ----
     async function fetchBICharts() {
         try {
-            const res = await fetchWithAuth(`${BASE_URL}/bi/income-by-type`);
-            if (!res.ok) return false;
-            incomeData = await res.json();
+            let res = await fetchWithAuth(`${BASE_URL}/bi/income-by-type/details`);
+            if (res.ok) {
+                const list = await res.json();
+                incomeData = (Array.isArray(list) ? list : []).map(x => ({ label: x.displayName || vehicleLabel(x.code), value: Number(x.income) || 0 }));
+            } else {
+                // Eski sunucu: ayrıntı ucu yok, ad -> ciro haritasına düş
+                res = await fetchWithAuth(`${BASE_URL}/bi/income-by-type`);
+                if (!res.ok) return false;
+                const map = await res.json();
+                incomeData = Object.keys(map).map(k => ({ label: vehicleLabel(k), value: Number(map[k]) || 0 }));
+            }
             renderIncomeChart();
             return true;
         } catch (error) { console.error("Grafik verisi hatası:", error); return false; }
@@ -1012,15 +1063,15 @@
         Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
         Chart.defaults.color = text2;
         if (incomeChart) incomeChart.destroy();
-        const keys = Object.keys(incomeData);
+        const keys = incomeData;
         const colors = [cssVar('--primary'), cssVar('--success'), cssVar('--warning'), cssVar('--sub')];
         incomeChart = new Chart(canvas.getContext('2d'), {
             type: 'bar',
             data: {
-                labels: keys.map(k => k === 'LARGE' ? 'Kamyonet' : (k === 'SMALL' || k === 'CAR' ? 'Otomobil' : k)),
+                labels: keys.map(k => k.label),
                 datasets: [{
                     label: 'Ciro (₺)',
-                    data: Object.values(incomeData),
+                    data: keys.map(k => k.value),
                     backgroundColor: keys.map((k, i) => colors[i % colors.length]),
                     borderRadius: 6
                 }]
@@ -1644,13 +1695,12 @@
         DRAFT: ['badge-neutral', 'Taslak'], SCHEDULED: ['badge-warning', 'Zamanlandı'],
         ACTIVE: ['badge-success', 'Yürürlükte'], ARCHIVED: ['badge-neutral', 'Arşiv']
     };
+    // Ortak alanlar; araç tipi alanları (tf_<KOD>_firstHour / _extraHour / _subscriptionMonthly / _enabled) dinamik çizilir
     const TF_FIELDS = [
-        ['smallFirstHour', 'Otomobil · ilk saat (₺)', 'num'], ['smallExtraHour', 'Otomobil · sonraki saat (₺)', 'num'],
-        ['largeFirstHour', 'Kamyonet · ilk saat (₺)', 'num'], ['largeExtraHour', 'Kamyonet · sonraki saat (₺)', 'num'],
         ['freeMinutes', 'Ücretsiz süre (dk)', 'int'],
-        ['paidStart', 'Ücretli saat başlangıcı', 'time'], ['paidEnd', 'Ücretli saat bitişi', 'time'],
-        ['subscriptionSmallMonthly', 'Aylık abonelik · otomobil (₺)', 'num'], ['subscriptionLargeMonthly', 'Aylık abonelik · kamyonet (₺)', 'num']
+        ['paidStart', 'Ücretli saat başlangıcı', 'time'], ['paidEnd', 'Ücretli saat bitişi', 'time']
     ];
+    const VT_FIELDS = [['firstHour', 'İlk saat (₺)'], ['extraHour', 'Sonraki saat (₺)'], ['subscriptionMonthly', 'Aylık abonelik (₺)']];
     let tariffCurrent = null;
     let tariffList = [];
     let wiz = newWiz();
@@ -1660,10 +1710,11 @@
     }
     function formFromTariff(t) {
         return {
-            smallFirstHour: t.small.firstHour, smallExtraHour: t.small.extraHour,
-            largeFirstHour: t.large.firstHour, largeExtraHour: t.large.extraHour,
+            types: tariffTypes(t).map(v => ({
+                code: v.code, displayName: v.displayName, iconKey: v.iconKey, enabled: !!v.enabled,
+                firstHour: v.firstHour, extraHour: v.extraHour, subscriptionMonthly: v.subscriptionMonthly
+            })),
             freeMinutes: t.freeMinutes, paidStart: t.paidStart, paidEnd: t.paidEnd,
-            subscriptionSmallMonthly: t.subscription.small, subscriptionLargeMonthly: t.subscription.large,
             note: t.note || ''
         };
     }
@@ -1675,12 +1726,13 @@
         return `<span class="badge ${b[0]}">${escapeHtml(b[1])}</span>`;
     }
     function tariffItems(t) {
-        return [
-            ['Otomobil · ilk saat', money(t.small.firstHour)], ['Otomobil · sonraki saat', money(t.small.extraHour)],
-            ['Kamyonet · ilk saat', money(t.large.firstHour)], ['Kamyonet · sonraki saat', money(t.large.extraHour)],
-            ['Ücretsiz süre', `${t.freeMinutes} dk`], ['Ücretli saatler', paidRange(t)],
-            ['Abonelik · otomobil', money(t.subscription.small) + ' / ay'], ['Abonelik · kamyonet', money(t.subscription.large) + ' / ay']
-        ];
+        const types = tariffTypes(t), on = types.filter(v => v.enabled), off = types.filter(v => !v.enabled);
+        const items = [];
+        on.forEach(v => { items.push([`${typeName(v)} · ilk saat`, money(v.firstHour)], [`${typeName(v)} · sonraki saat`, money(v.extraHour)]); });
+        items.push(['Ücretsiz süre', `${t.freeMinutes} dk`], ['Ücretli saatler', paidRange(t)]);
+        on.forEach(v => { items.push([`Abonelik · ${typeName(v)}`, money(v.subscriptionMonthly) + ' / ay']); });
+        if (off.length) items.push(['Pasif araç tipleri', off.map(typeName).join(', ')]);
+        return items;
     }
     function tariffGrid(t) {
         return '<dl class="tar-grid">' + tariffItems(t).map(([k, v]) => `<div class="tar-item"><dt>${escapeHtml(k)}</dt><dd class="num">${escapeHtml(v)}</dd></div>`).join('') + '</dl>';
@@ -1688,7 +1740,7 @@
 
     function renderTariffCards() {
         const cur = $('tarCurrent');
-        if (tariffCurrent && tariffCurrent.small) {
+        if (hasTariff(tariffCurrent)) {
             cur.innerHTML = `<div class="card-head"><h2>Yürürlükteki tarife</h2>${statusBadge('ACTIVE')}</div>
                 <div class="card-body">${tariffGrid(tariffCurrent)}
                 <div class="muted" style="margin-top:12px;font-size:14px;">Yürürlük başlangıcı: <b>${escapeHtml(fmtFull(tariffCurrent.effectiveFrom))}</b></div></div>`;
@@ -1697,7 +1749,7 @@
         }
         const up = tariffUpcoming();
         const box = $('tarUpcoming');
-        if (up && up.small) {
+        if (hasTariff(up)) {
             box.hidden = false;
             box.innerHTML = `<div class="card-head"><h2>Zamanlanmış tarife</h2>${statusBadge('SCHEDULED')}</div>
                 <div class="card-body" style="display:flex;flex-direction:column;gap:12px;">
@@ -1723,8 +1775,7 @@
             return `<tr>
                 <td class="num"><b>#${t.id}</b></td>
                 <td>${statusBadge(t.status)}</td>
-                <td class="num">${money(t.small.firstHour)} / ${money(t.small.extraHour)}</td>
-                <td class="num">${money(t.large.firstHour)} / ${money(t.large.extraHour)}</td>
+                <td class="num vt-price">${tariffTypes(t).filter(v => v.enabled).map(v => `<div>${escapeHtml(typeName(v))} ${money(v.firstHour)} / ${money(v.extraHour)}</div>`).join('') || '-'}</td>
                 <td class="num">${escapeHtml(paidRange(t))}</td>
                 <td class="num col-muted">${t.effectiveFrom ? escapeHtml(fmtFull(t.effectiveFrom)) : '-'}</td>
                 <td class="num col-muted">${t.activatedAt ? escapeHtml(fmtFull(t.activatedAt)) : '-'}</td>
@@ -1734,7 +1785,7 @@
                 <td><span class="toolbar">${acts.join('')}</span></td>
             </tr>`;
         }).join('');
-        $('tarHistoryBody').innerHTML = rows || '<tr><td colspan="11" class="table-empty">Tarife kaydı yok.</td></tr>';
+        $('tarHistoryBody').innerHTML = rows || '<tr><td colspan="10" class="table-empty">Tarife kaydı yok.</td></tr>';
     }
 
     async function loadTariffs() {
@@ -1756,7 +1807,7 @@
     function applyTariffUi() {
         renderTariffCards();
         renderTariffHistory();
-        if (wiz.step === 1 && !wiz.id && !wiz.dirty && tariffCurrent && tariffCurrent.small) {
+        if (wiz.step === 1 && !wiz.id && !wiz.dirty && hasTariff(tariffCurrent)) {
             wiz.form = formFromTariff(tariffCurrent);
         }
         renderWizard();
@@ -1787,23 +1838,50 @@
         $('wizBody').innerHTML = html;
     }
 
+    function typeBlock(v) {
+        const c = v.code, on = !!v.enabled;
+        const wasActive = tariffTypes(tariffCurrent).some(x => x.code === c && x.enabled);
+        const state = on
+            ? (wasActive ? '<span class="badge badge-success">Etkin</span>' : '<span class="badge badge-primary">Yeni etkinleşecek</span>')
+            : (wasActive ? '<span class="badge badge-warning">Pasifleşecek</span>' : '<span class="badge badge-neutral">Pasif</span>');
+        const hint = on ? '' : (wasActive
+            ? '<div class="muted" style="font-size:14px;">Bu tarifeyle pasifleşecek: yürürlük tarihinden sonra yeni giriş alınmaz. Fiyatlar saklanır.</div>'
+            : '<div class="muted" style="font-size:14px;"><b>Pasif — bu tarifeyle etkinleştirebilirsiniz.</b> Etkinleştirme yürürlük tarihinde, şifre onayından sonra geçerli olur.</div>');
+        const fields = VT_FIELDS.map(([k, label]) => {
+            const key = c + '_' + k, err = wiz.fieldErrs[key];
+            const val = v[k] == null || Number.isNaN(v[k]) ? '' : v[k];
+            return `<div class="field"><label for="tf_${escapeHtml(key)}">${escapeHtml(label)}</label>
+                <input id="tf_${escapeHtml(key)}" class="input" type="number" inputmode="decimal" step="0.01" min="0" value="${escapeHtml(val)}"${on ? '' : ' disabled'}${err ? ' aria-invalid="true"' : ''} aria-describedby="tfe_${escapeHtml(key)}">
+                <div class="field-error" id="tfe_${escapeHtml(key)}" ${err ? '' : 'hidden'}>${escapeHtml(err || '')}</div></div>`;
+        }).join('');
+        return `<div class="vt-block${on ? '' : ' vt-off'}">
+            <div class="vt-head"><label class="check"><input type="checkbox" id="tf_${escapeHtml(c)}_enabled"${on ? ' checked' : ''}> ${vehicleIconHtml(v.iconKey)} ${escapeHtml(typeName(v))} · Etkin</label>${state}</div>
+            ${hint}
+            <div class="form-grid">${fields}</div></div>`;
+    }
+
     function wizStep1() {
         if (!wiz.form) return '<div class="muted">Mevcut tarife yükleniyor…</div>';
         const f = wiz.form;
+        const blocks = f.types.map(typeBlock).join('');
+        const typesErr = wiz.fieldErrs._types;
         const fields = TF_FIELDS.map(([k, label, kind]) => {
             const err = wiz.fieldErrs[k];
-            const v = f[k] == null ? '' : f[k];
+            const v = f[k] == null || Number.isNaN(f[k]) ? '' : f[k];
             const attrs = kind === 'time' ? 'type="time"' : (kind === 'int' ? 'type="number" inputmode="numeric" step="1" min="0" max="120"' : 'type="number" inputmode="decimal" step="0.01" min="0"');
             return `<div class="field"><label for="tf_${k}">${escapeHtml(label)}</label>
                 <input id="tf_${k}" class="input" ${attrs} value="${escapeHtml(v)}"${err ? ' aria-invalid="true"' : ''} aria-describedby="tfe_${k}">
                 <div class="field-error" id="tfe_${k}" ${err ? '' : 'hidden'}>${escapeHtml(err || '')}</div></div>`;
         }).join('');
         return `${errBox()}
-            <div class="form-grid">${fields}
+            <h3 class="sub-h" style="margin-bottom:8px;">Araç tipleri ve ücretler</h3>
+            <div class="field-error" id="tfe_types" role="alert" ${typesErr ? '' : 'hidden'}>${escapeHtml(typesErr || '')}</div>
+            <div class="form-grid">${blocks}</div>
+            <div class="form-grid" style="margin-top:16px;">${fields}
                 <div class="field form-wide"><label for="tf_note">Not (isteğe bağlı)</label>
                 <input id="tf_note" class="input" type="text" maxlength="200" value="${escapeHtml(f.note)}" placeholder="Örn: 2027 tarifesi"></div>
             </div>
-            <div class="muted" style="font-size:14px;margin-top:8px;">Ücretli saat bitişi 00:00 ise gece yarısı sayılır. Abonelik fiyatı yeni abonelikler içindir.</div>
+            <div class="muted" style="font-size:14px;margin-top:8px;">Ücretli saat bitişi 00:00 ise gece yarısı sayılır. Abonelik fiyatı yeni abonelikler içindir. Araç tipini etkinleştirme/pasifleştirme yalnızca tarife yürürlüğe girdiğinde geçerli olur.</div>
             <div class="wiz-actions"><span class="toolbar">${discardBtn()}</span>
                 <button type="button" class="btn btn-primary" data-write data-act="save">Kaydet ve önizle<i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>`;
     }
@@ -1825,39 +1903,79 @@
         }).join('') + '</ul>';
     }
 
+    function fmtCmp(v, kind) {
+        if (v == null) return '—';
+        return kind === 'money' ? money(v) : (kind === 'min' ? v + ' dk' : v);
+    }
     function wizStep2() {
         const p = wiz.preview;
         if (!p) return `${errBox()}<div class="muted">Önizleme yüklenemedi.</div><div class="wiz-actions"><button type="button" class="btn btn-secondary" data-act="back">Geri</button></div>`;
         const c = p.current, n = p.proposed;
-        const cmp = [
-            ['Otomobil · ilk saat', c.small.firstHour, n.small.firstHour, 'money'], ['Otomobil · sonraki saat', c.small.extraHour, n.small.extraHour, 'money'],
-            ['Kamyonet · ilk saat', c.large.firstHour, n.large.firstHour, 'money'], ['Kamyonet · sonraki saat', c.large.extraHour, n.large.extraHour, 'money'],
-            ['Ücretsiz süre', c.freeMinutes, n.freeMinutes, 'min'], ['Ücretli saatler', paidRange(c), paidRange(n), 'text'],
-            ['Abonelik · otomobil', c.subscription.small, n.subscription.small, 'money'], ['Abonelik · kamyonet', c.subscription.large, n.subscription.large, 'money']
-        ].map(([label, a, b, kind]) => {
-            const fa = kind === 'money' ? money(a) : (kind === 'min' ? a + ' dk' : a);
-            const fb = kind === 'money' ? money(b) : (kind === 'min' ? b + ' dk' : b);
-            const diff = kind === 'money' ? diffHtml(a, b) : (a === b ? '<span class="diff-same">Değişmedi</span>' : '<span class="diff-up">Değişti</span>');
-            return `<tr><td>${escapeHtml(label)}</td><td class="num">${escapeHtml(fa)}</td><td class="num">${escapeHtml(fb)}</td><td>${diff}</td></tr>`;
+        const ct = tariffTypes(c), nt = tariffTypes(n);
+        const codes = [];
+        ct.concat(nt).forEach(v => { if (!codes.includes(v.code)) codes.push(v.code); });
+        const find = (arr, code) => arr.find(v => v.code === code);
+        const order = code => { const v = find(nt, code) || find(ct, code); return v ? (v.sortOrder || 0) : 0; };
+        codes.sort((a, b) => order(a) - order(b));
+        const priceRows = [], subRows = [];
+        codes.forEach(code => {
+            const a = find(ct, code), b = find(nt, code);
+            if (!(a && a.enabled) && !(b && b.enabled)) return;
+            const name = typeName(b || a);
+            const av = k => (a && a.enabled ? a[k] : null), bv = k => (b && b.enabled ? b[k] : null);
+            priceRows.push([`${name} · ilk saat`, av('firstHour'), bv('firstHour'), 'money'], [`${name} · sonraki saat`, av('extraHour'), bv('extraHour'), 'money']);
+            subRows.push([`Abonelik · ${name}`, av('subscriptionMonthly'), bv('subscriptionMonthly'), 'money']);
+        });
+        const cmp = priceRows.concat([
+            ['Ücretsiz süre', c.freeMinutes, n.freeMinutes, 'min'], ['Ücretli saatler', paidRange(c), paidRange(n), 'text']
+        ], subRows).map(([label, a, b, kind]) => {
+            const diff = kind === 'money'
+                ? (a == null && b == null ? '<span class="diff-same">—</span>'
+                    : a == null ? '<span class="diff-up">Yeni</span>'
+                    : b == null ? '<span class="diff-down">Pasif</span>' : diffHtml(a, b))
+                : (a === b ? '<span class="diff-same">Değişmedi</span>' : '<span class="diff-up">Değişti</span>');
+            return `<tr><td>${escapeHtml(label)}</td><td class="num">${escapeHtml(fmtCmp(a, kind))}</td><td class="num">${escapeHtml(fmtCmp(b, kind))}</td><td>${diff}</td></tr>`;
         }).join('');
-        const rows = (p.rows || []).map((r, i) => {
-            const open = !!wiz.open[i];
-            const detail = open ? `<tr class="row-detail"><td colspan="5">
-                <div class="muted" style="font-size:13px;margin-bottom:6px;">Giriş ${escapeHtml(fmtDateTime(r.entry))} · Çıkış ${escapeHtml(fmtDateTime(r.exit))} · Ücretli süre ${fmtMinutes(r.proposed.paidMinutes)}</div>
-                ${segmentsHtml(r)}</td></tr>` : '';
-            return `<tr>
-                <td><button type="button" class="link-btn" data-act="toggleRow" data-i="${i}" aria-expanded="${open}"><i class="fa-solid ${open ? 'fa-chevron-down' : 'fa-chevron-right'}" aria-hidden="true"></i>${escapeHtml(r.label)}</button></td>
-                <td class="col-muted">${vehicleLabel(r.vehicleType)}</td>
-                <td class="right num">${money(r.current.fee)}</td>
-                <td class="right num"><b>${money(r.proposed.fee)}</b></td>
-                <td class="right num">${diffHtml(r.current.fee, r.proposed.fee)}</td>
-            </tr>${detail}`;
+        const notices = (p.typeChanges || []).map(ch => {
+            const name = ch.displayName || vehicleLabel(ch.code);
+            if (ch.proposedEnabled && !ch.currentEnabled) {
+                return `<div class="alert alert-info" role="status"><b>${escapeHtml(name)}</b> bu tarifeyle etkinleşecek. Yürürlük tarihinden itibaren ${escapeHtml(name)} için giriş ve abonelik alınabilir.</div>`;
+            }
+            if (!ch.proposedEnabled && ch.currentEnabled) {
+                return `<div class="alert alert-warning" role="status"><b>${escapeHtml(name)}</b> bu tarifeyle pasifleşecek. Yürürlük tarihinden sonra yeni giriş alınmaz; içerideki araçlar çıkış yapabilir.</div>`;
+            }
+            return '';
+        }).join('');
+        // Örnek ücretler araç tipine göre gruplanır (gerçek satır sırası toggleRow için korunur)
+        const groups = [];
+        (p.rows || []).forEach((r, i) => {
+            let g = groups.find(x => x.code === r.vehicleType);
+            if (!g) { g = { code: r.vehicleType, name: r.displayName || vehicleLabel(r.vehicleType), items: [] }; groups.push(g); }
+            g.items.push([r, i]);
+        });
+        const feeCell = x => x ? money(x.fee) : '—';
+        const rows = groups.map(g => {
+            const head = `<tr><td colspan="4" class="col-muted"><b>${vehicleIconHtml((vehicleTypes[g.code] || {}).iconKey)} ${escapeHtml(g.name)}</b></td></tr>`;
+            return head + g.items.map(([r, i]) => {
+                const open = !!wiz.open[i];
+                const detail = open ? `<tr class="row-detail"><td colspan="4">
+                    <div class="muted" style="font-size:13px;margin-bottom:6px;">Giriş ${escapeHtml(fmtDateTime(r.entry))} · Çıkış ${escapeHtml(fmtDateTime(r.exit))}${r.proposed ? ' · Ücretli süre ' + fmtMinutes(r.proposed.paidMinutes) : ''}</div>
+                    ${segmentsHtml(r)}</td></tr>` : '';
+                const diff = r.current && r.proposed ? diffHtml(r.current.fee, r.proposed.fee) : '<span class="muted">—</span>';
+                return `<tr>
+                    <td><button type="button" class="link-btn" data-act="toggleRow" data-i="${i}" aria-expanded="${open}"><i class="fa-solid ${open ? 'fa-chevron-down' : 'fa-chevron-right'}" aria-hidden="true"></i>${escapeHtml(r.label)}</button></td>
+                    <td class="right num">${feeCell(r.current)}</td>
+                    <td class="right num"><b>${feeCell(r.proposed)}</b></td>
+                    <td class="right num">${diff}</td>
+                </tr>${detail}`;
+            }).join('');
         }).join('');
         return `${errBox()}
+            ${notices}
             <h3 class="sub-h">Tarife değerleri</h3>
             <div class="table-wrap"><table class="table"><thead><tr><th>Kalem</th><th>Yürürlükteki</th><th>Önerilen</th><th>Fark</th></tr></thead><tbody>${cmp}</tbody></table></div>
             <h3 class="sub-h">Örnek ücretler</h3>
-            <div class="table-wrap"><table class="table"><thead><tr><th>Örnek (satıra tıklayın)</th><th>Araç</th><th class="right">Yürürlükteki</th><th class="right">Önerilen</th><th class="right">Fark</th></tr></thead><tbody>${rows}</tbody></table></div>
+            <div class="table-wrap"><table class="table"><thead><tr><th>Örnek (satıra tıklayın)</th><th class="right">Yürürlükteki</th><th class="right">Önerilen</th><th class="right">Fark</th></tr></thead><tbody>${rows}</tbody></table></div>
             <div class="wiz-actions"><span class="toolbar"><button type="button" class="btn btn-secondary" data-act="back">Geri</button>${discardBtn()}</span>
                 <button type="button" class="btn btn-primary" data-act="toStep3">Devam<i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>`;
     }
@@ -1900,7 +2018,18 @@
 
     // -- Sihirbaz eylemleri --
     function readForm() {
-        const f = {};
+        const f = { types: [] };
+        const prev = (wiz.form && wiz.form.types) || [];
+        prev.forEach(pv => {
+            const c = pv.code, t = Object.assign({}, pv);
+            const cb = $(`tf_${c}_enabled`);
+            if (cb) t.enabled = cb.checked;
+            VT_FIELDS.forEach(([k]) => {
+                const el = $(`tf_${c}_${k}`);
+                if (el) { const v = el.value.trim(); t[k] = v === '' ? NaN : Number(v); }
+            });
+            f.types.push(t);
+        });
         TF_FIELDS.forEach(([k, , kind]) => {
             const v = $('tf_' + k).value.trim();
             f[k] = kind === 'time' ? v : (v === '' ? NaN : Number(v));
@@ -1910,8 +2039,13 @@
     }
     function validateForm(f) {
         const e = {};
-        ['smallFirstHour', 'largeFirstHour', 'subscriptionSmallMonthly', 'subscriptionLargeMonthly'].forEach(k => { if (!(f[k] > 0)) e[k] = "0'dan büyük olmalı."; });
-        ['smallExtraHour', 'largeExtraHour'].forEach(k => { if (!(f[k] >= 0)) e[k] = '0 veya daha büyük olmalı.'; });
+        const on = f.types.filter(t => t.enabled);
+        if (!on.length) e._types = 'En az bir araç tipi etkin olmalı.';
+        on.forEach(t => {
+            if (!(t.firstHour > 0)) e[t.code + '_firstHour'] = "0'dan büyük olmalı.";
+            if (!(t.extraHour >= 0)) e[t.code + '_extraHour'] = '0 veya daha büyük olmalı.';
+            if (!(t.subscriptionMonthly > 0)) e[t.code + '_subscriptionMonthly'] = "0'dan büyük olmalı.";
+        });
         if (!(Number.isInteger(f.freeMinutes) && f.freeMinutes >= 0 && f.freeMinutes <= 120)) e.freeMinutes = '0 ile 120 arasında tam sayı olmalı.';
         if (!f.paidStart) e.paidStart = 'Saat seçin.';
         if (!f.paidEnd) e.paidEnd = 'Saat seçin.';
@@ -1925,12 +2059,20 @@
         wiz.fieldErrs = validateForm(f);
         if (Object.keys(wiz.fieldErrs).length) {
             renderWizard();
-            const first = TF_FIELDS.find(([k]) => wiz.fieldErrs[k]);
-            if (first) $('tf_' + first[0]).focus();
+            const k = Object.keys(wiz.fieldErrs)[0];
+            const el = $(k === '_types' ? 'tf_' + (f.types[0] ? f.types[0].code : '') + '_enabled' : 'tf_' + k);
+            if (el) el.focus();
             return;
         }
-        const body = Object.assign({}, f);
-        if (!body.note) delete body.note;
+        const num = v => Number.isFinite(v) ? v : null;
+        const body = {
+            freeMinutes: f.freeMinutes, paidStart: f.paidStart, paidEnd: f.paidEnd,
+            vehicleTypes: f.types.map(t => ({
+                code: t.code, enabled: !!t.enabled,
+                firstHour: num(t.firstHour), extraHour: num(t.extraHour), subscriptionMonthly: num(t.subscriptionMonthly)
+            }))
+        };
+        if (f.note) body.note = f.note;
         btn.disabled = true;
         try {
             const draft = wiz.id
@@ -2036,7 +2178,7 @@
     // ---- 13. Personel: js/personel.js ----
 
     // ---- 14. Canlı akış (SSE) ----
-    const LIVE_EVENTS = ['HELLO', 'HEARTBEAT', 'RESET', 'VEHICLE_ENTERED', 'VEHICLE_EXITED', 'VEHICLE_RUNAWAY', 'TARIFF_UPDATED', 'USER_DEACTIVATED',
+    const LIVE_EVENTS = ['HELLO', 'HEARTBEAT', 'RESET', 'VEHICLE_ENTERED', 'VEHICLE_EXITED', 'VEHICLE_RUNAWAY', 'TARIFF_UPDATED', 'VEHICLE_TYPES_UPDATED', 'USER_DEACTIVATED',
         'USER_UPDATED', 'VEHICLE_CANCELLED', 'RECORD_CANCELLED', 'LICENSE_UPDATED'];
     const WATCHDOG_MS = 60000;
     const live = { gen: 0, stopped: true, es: null, version: 0, userId: null, state: 'idle', retry: 0, fails: 0, watchdog: null, reconnect: null, vehicleTimer: null, catching: false };
@@ -2077,6 +2219,7 @@
         try {
             await syncVersion();
             await loadStreets();
+            await loadVehicleTypes();
             await updateDashboard();
         } catch (e) { return; }
         if (gen !== live.gen || live.stopped) return;
@@ -2086,6 +2229,7 @@
 
     async function fullReload() {
         try { await syncVersion(); } catch (e) { return; }
+        await loadVehicleTypes();
         await updateDashboard();
     }
     async function manualRefresh() {
@@ -2169,7 +2313,12 @@
                 scheduleVehicleRefresh();
                 break;
             case 'TARIFF_UPDATED':
-                if (p && p.small) { tariffCurrent = p; renderTariffCards(); }
+                if (hasTariff(p)) { tariffCurrent = p; renderTariffCards(); }
+                loadVehicleTypes().then(() => { renderRecords(); fetchBICharts(); });
+                loadTariffs();
+                break;
+            case 'VEHICLE_TYPES_UPDATED':
+                loadVehicleTypes().then(() => { renderRecords(); renderTariffCards(); renderTariffHistory(); fetchBICharts(); });
                 loadTariffs();
                 break;
             case 'USER_DEACTIVATED': {
@@ -2241,6 +2390,13 @@
 
     $('tarClick').addEventListener('click', onTariffClick);
     $('tarClick').addEventListener('input', e => { if (e.target.id === 'wizEff') wiz.eff = e.target.value; else if (e.target.id && e.target.id.startsWith('tf_')) wiz.dirty = true; });
+    // Araç tipi "Etkin" anahtarı: girilen değerler korunarak form yeniden çizilir (pasif tipin alanları kilitlenir)
+    $('tarClick').addEventListener('change', e => {
+        if (!e.target.id || !/^tf_.+_enabled$/.test(e.target.id)) return;
+        wiz.form = readForm(); wiz.dirty = true; wiz.fieldErrs = {};
+        renderWizard();
+        const el = $(e.target.id); if (el) el.focus();
+    });
     $('recordsBody').addEventListener('click', e => {
         const b = e.target.closest('button[data-cancel-id]');
         if (b) { e.stopPropagation(); openCancelDialog(Number(b.dataset.cancelId)); }
