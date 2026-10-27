@@ -90,12 +90,12 @@ class FlywayBaselinePostgresTest {
 
         MigrateResult result = flyway(url).migrate();
         assertTrue(result.success);
-        assertEquals(3, result.migrationsExecuted, "V2, V3 and V4 should run");
+        assertEquals(4, result.migrationsExecuted, "V2, V3, V4 and V5 should run");
 
         try (Connection c = conn(url); Statement st = c.createStatement()) {
             List<String> hist = strings(c,
                     "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank");
-            assertEquals(List.of("BASELINE:1", "SQL:2", "SQL:3", "SQL:4"), hist);
+            assertEquals(List.of("BASELINE:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5"), hist);
 
             assertEquals(0, count(c, "SELECT count(*) FROM pg_constraint WHERE conname = 'ukabc123xyz'"));
             assertEquals(1, count(c, "SELECT count(*) FROM pg_indexes WHERE indexname = 'ux_subscriptions_active_plate'"));
@@ -129,19 +129,21 @@ class FlywayBaselinePostgresTest {
             assertEquals(6, count(c, "SELECT count(*) FROM zones"));
             assertEquals(1, count(c, "SELECT count(*) FROM pg_constraint WHERE conname='fk_zones_street'"));
             assertEquals(1, count(c, "SELECT count(*) FROM tariffs WHERE status='ACTIVE'"));
-            assertEquals(1, count(c, "SELECT count(*) FROM tariffs WHERE status='ACTIVE' AND small_first_hour=25 "
-                    + "AND small_extra_hour=15 AND large_first_hour=50 AND large_extra_hour=30 AND free_minutes=5 "
-                    + "AND paid_start='08:00' AND paid_end='22:00' "
-                    + "AND subscription_small_monthly=2500 AND subscription_large_monthly=3000"));
+            // the V3 seed prices now live in tariff_vehicle_prices (moved by V5)
+            assertEquals(1, count(c, "SELECT count(*) FROM tariffs WHERE status='ACTIVE' AND free_minutes=5 "
+                    + "AND paid_start='08:00' AND paid_end='22:00'"));
+            assertEquals(2, count(c, "SELECT count(*) FROM tariff_vehicle_prices p JOIN tariffs t ON t.id = p.tariff_id "
+                    + "WHERE t.status='ACTIVE' AND p.enabled AND ("
+                    + "(p.vehicle_type='SMALL' AND p.first_hour=25 AND p.extra_hour=15 AND p.subscription_monthly=2500) OR "
+                    + "(p.vehicle_type='LARGE' AND p.first_hour=50 AND p.extra_hour=30 AND p.subscription_monthly=3000))"));
             assertEquals(2, count(c, "SELECT count(*) FROM information_schema.columns WHERE table_name='parking_records' "
                     + "AND column_name IN ('tariff_id','paid_minutes')"));
             assertEquals(1, count(c, "SELECT count(*) FROM parking_records WHERE tariff_id IS NULL AND paid_minutes IS NULL"));
             assertEquals(1, count(c, "SELECT count(*) FROM users WHERE username='admin' AND active"));
             assertEquals(1, count(c, "SELECT count(*) FROM information_schema.tables WHERE table_name='sync_events'"));
             assertThrows(SQLException.class, () -> st.execute(
-                    "INSERT INTO tariffs (status, small_first_hour, small_extra_hour, large_first_hour, large_extra_hour, "
-                            + "free_minutes, paid_start, paid_end, subscription_small_monthly, subscription_large_monthly, "
-                            + "created_by_username, created_at) VALUES ('ACTIVE',1,1,1,1,5,'08:00','22:00',1,1,'t',now())"));
+                    "INSERT INTO tariffs (status, free_minutes, paid_start, paid_end, created_by_username, created_at) "
+                            + "VALUES ('ACTIVE',5,'08:00','22:00','t',now())"));
 
             // ---- V4 ----
             assertEquals(3, count(c, "SELECT count(*) FROM information_schema.columns WHERE table_name='users' "
@@ -176,6 +178,24 @@ class FlywayBaselinePostgresTest {
             st.execute("INSERT INTO audit_logs(created_at, actor_username, action, summary) "
                     + "VALUES (now(), 'system', 'RETENTION_RUN', 'x')");
             assertEquals(1, count(c, "SELECT count(*) FROM audit_logs"));
+        }
+
+        try (Connection c = conn(url); Statement st = c.createStatement()) {
+            // ---- V5 ----
+            assertEquals(List.of("SMALL:true", "LARGE:true", "MOTORCYCLE:false"),
+                    strings(c, "SELECT code || ':' || active FROM vehicle_types ORDER BY sort_order"));
+            // the seeded V3 tariff (25/15/50/30, 2500/3000) moved into rows
+            assertEquals(List.of("LARGE:true:50:30:3000", "SMALL:true:25:15:2500"),
+                    strings(c, "SELECT vehicle_type || ':' || enabled || ':' || first_hour || ':' || extra_hour || ':' "
+                            + "|| subscription_monthly FROM tariff_vehicle_prices ORDER BY vehicle_type"));
+            assertEquals(0, count(c, "SELECT count(*) FROM information_schema.columns WHERE table_name='tariffs' "
+                    + "AND column_name IN ('small_first_hour','small_extra_hour','large_first_hour','large_extra_hour',"
+                    + "'subscription_small_monthly','subscription_large_monthly')"));
+            assertEquals(3, count(c, "SELECT count(*) FROM pg_constraint WHERE contype='f' AND conname IN "
+                    + "('fk_active_park_spots_vehicle_type','fk_parking_records_vehicle_type','fk_subscriptions_vehicle_type')"));
+            // unknown codes are rejected by the FK, MOTORCYCLE is accepted
+            assertThrows(SQLException.class, () -> st.execute(
+                    "INSERT INTO active_park_spots(current_plate, street, current_type) VALUES ('06ZZ1', 'TEVFIK_BEY', 'BUS')"));
         }
 
         // idempotent: second migrate is a no-op
@@ -225,10 +245,10 @@ class FlywayBaselinePostgresTest {
         String url = urlFor("fresh_db");
         MigrateResult result = flyway(url).migrate();
         assertTrue(result.success);
-        assertEquals(4, result.migrationsExecuted);
+        assertEquals(5, result.migrationsExecuted);
 
         try (Connection c = conn(url); Statement st = c.createStatement()) {
-            assertEquals(List.of("SQL:1", "SQL:2", "SQL:3", "SQL:4"),
+            assertEquals(List.of("SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5"),
                     strings(c, "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank"));
             assertEquals(0, count(c, "SELECT count(*) FROM pg_constraint c JOIN pg_class t ON t.oid=c.conrelid "
                     + "WHERE t.relname='subscriptions' AND c.contype='u'"));

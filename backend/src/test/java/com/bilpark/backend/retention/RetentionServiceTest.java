@@ -42,7 +42,7 @@ class RetentionServiceTest {
     }
 
     private Subscription sub(String plate, LocalDate end, SubscriptionStatus status) {
-        Subscription s = new Subscription(plate, VehicleType.SMALL, end.minusMonths(1), "Ali Veli", "5551112233");
+        Subscription s = new Subscription(plate, "SMALL", end.minusMonths(1), "Ali Veli", "5551112233");
         s.setEndDate(end);
         s.setStatus(status);
         return subscriptionRepository.save(s);

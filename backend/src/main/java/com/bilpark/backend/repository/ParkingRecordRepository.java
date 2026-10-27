@@ -37,8 +37,8 @@ public interface ParkingRecordRepository extends JpaRepository<ParkingRecord, Lo
                                          @Param("start") LocalDateTime start,
                                          @Param("end") LocalDateTime end);
 
-    // 2.2 Araç tipine göre ciro: [VehicleType, Double] satırları (vehicleType null olabilir)
-    @Query("SELECT r.vehicleType, COALESCE(SUM(r.fee), 0) FROM ParkingRecord r WHERE r.status = com.bilpark.backend.model.ParkingStatus.PAID GROUP BY r.vehicleType")
+    // 2.2 Araç tipine göre ciro: [kod, ciro, kayıt sayısı] satırları (kod null olabilir)
+    @Query("SELECT r.vehicleType, COALESCE(SUM(r.fee), 0), COUNT(r) FROM ParkingRecord r WHERE r.status = com.bilpark.backend.model.ParkingStatus.PAID GROUP BY r.vehicleType")
     List<Object[]> sumPaidIncomeByVehicleType();
 
     // 2.3 Duruma göre kayıt sayısı: [ParkingStatus, Long] satırları

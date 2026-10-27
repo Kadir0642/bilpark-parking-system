@@ -4,6 +4,7 @@ import com.bilpark.backend.audit.AuditService;
 import com.bilpark.backend.common.ApiException;
 import com.bilpark.backend.common.ErrorCodes;
 import com.bilpark.backend.dto.TariffRequest;
+import com.bilpark.backend.dto.VehiclePriceRequest;
 import com.bilpark.backend.fee.DaySegment;
 import com.bilpark.backend.fee.FeeBreakdown;
 import com.bilpark.backend.fee.FeeEngine;
@@ -12,8 +13,10 @@ import com.bilpark.backend.model.AuditAction;
 import com.bilpark.backend.model.SyncEventType;
 import com.bilpark.backend.model.Tariff;
 import com.bilpark.backend.model.TariffStatus;
+import com.bilpark.backend.model.TariffVehiclePrice;
 import com.bilpark.backend.model.User;
 import com.bilpark.backend.model.VehicleType;
+import com.bilpark.backend.model.VehicleTypes;
 import com.bilpark.backend.repository.TariffRepository;
 import com.bilpark.backend.sync.ChangePublisher;
 import org.slf4j.Logger;
@@ -37,6 +40,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 
@@ -59,6 +63,7 @@ public class TariffService {
     private final TaskScheduler taskScheduler;
     private final TransactionTemplate tx;
     private final AuditService auditService;
+    private final VehicleTypeService vehicleTypeService;
 
     private volatile Tariff active;
     private volatile Tariff scheduled;
@@ -66,8 +71,10 @@ public class TariffService {
 
     public TariffService(TariffRepository tariffRepository, ChangePublisher changePublisher, Clock clock,
                          PasswordEncoder passwordEncoder, TaskScheduler taskScheduler,
-                         PlatformTransactionManager txManager, AuditService auditService) {
+                         PlatformTransactionManager txManager, AuditService auditService,
+                         VehicleTypeService vehicleTypeService) {
         this.auditService = auditService;
+        this.vehicleTypeService = vehicleTypeService;
         this.tariffRepository = tariffRepository;
         this.changePublisher = changePublisher;
         this.clock = clock;
@@ -80,12 +87,17 @@ public class TariffService {
 
     @EventListener(ApplicationReadyEvent.class)
     public void init() {
+        // Vehicle types first: the default tariff seed below needs the SMALL/LARGE rows to exist (FKs)
+        vehicleTypeService.ensureSeeded();
         tx.executeWithoutResult(s -> {
             // H2 tests run without Flyway: seed the default tariff if the table is empty
             if (tariffRepository.count() == 0) {
                 tariffRepository.save(defaultTariff());
             }
             refreshCache();
+            if (active != null) {
+                vehicleTypeService.syncActiveFrom(active);
+            }
         });
         Tariff s = scheduled;
         if (s != null) {
@@ -131,15 +143,29 @@ public class TariffService {
         m.put("id", t.getId());
         m.put("status", t.getStatus() != null ? t.getStatus().name() : null);
         m.put("effectiveFrom", t.getEffectiveFrom() != null ? ISO.format(t.getEffectiveFrom()) : null);
-        m.put("small", priceMap(t.getSmallFirstHour(), t.getSmallExtraHour()));
-        m.put("large", priceMap(t.getLargeFirstHour(), t.getLargeExtraHour()));
+        TariffVehiclePrice small = t.priceOf(VehicleTypes.SMALL);
+        TariffVehiclePrice large = t.priceOf(VehicleTypes.LARGE);
+        // legacy fields: null when the type has no row in this version
+        m.put("small", small != null ? priceMap(small.getFirstHour(), small.getExtraHour()) : null);
+        m.put("large", large != null ? priceMap(large.getFirstHour(), large.getExtraHour()) : null);
         m.put("freeMinutes", t.getFreeMinutes());
         m.put("paidStart", t.getPaidStart().format(HHMM));
         m.put("paidEnd", t.getPaidEnd().format(HHMM));
         Map<String, Object> sub = new LinkedHashMap<>();
-        sub.put("small", t.getSubscriptionSmallMonthly());
-        sub.put("large", t.getSubscriptionLargeMonthly());
+        sub.put("small", small != null ? small.getSubscriptionMonthly() : null);
+        sub.put("large", large != null ? large.getSubscriptionMonthly() : null);
         m.put("subscription", sub);
+        List<Map<String, Object>> types = new ArrayList<>();
+        for (VehicleType vt : vehicleTypeService.all()) {
+            TariffVehiclePrice p = t.priceOf(vt.getCode());
+            Map<String, Object> e = VehicleTypeService.toMap(vt, false);
+            e.put("enabled", p != null && p.isEnabled());
+            e.put("firstHour", p != null ? p.getFirstHour() : null);
+            e.put("extraHour", p != null ? p.getExtraHour() : null);
+            e.put("subscriptionMonthly", p != null ? p.getSubscriptionMonthly() : null);
+            types.add(e);
+        }
+        m.put("vehicleTypes", types);
         return m;
     }
 
@@ -213,22 +239,43 @@ public class TariffService {
         samples.add(new Sample("Gece (20:00 - ertesi gün 10:00)", day.atTime(20, 0), day.plusDays(1).atTime(10, 0)));
 
         List<Map<String, Object>> rows = new ArrayList<>();
-        for (VehicleType type : VehicleType.values()) {
+        List<Map<String, Object>> typeChanges = new ArrayList<>();
+        for (VehicleType type : vehicleTypeService.all()) {
+            TariffVehiclePrice cp = cur.priceOf(type.getCode());
+            TariffVehiclePrice pp = proposed.priceOf(type.getCode());
+            boolean curOn = cp != null && cp.isEnabled();
+            boolean newOn = pp != null && pp.isEnabled();
+            if (curOn != newOn) {
+                Map<String, Object> ch = new LinkedHashMap<>();
+                ch.put("code", type.getCode());
+                ch.put("displayName", type.getDisplayName());
+                ch.put("currentEnabled", curOn);
+                ch.put("proposedEnabled", newOn);
+                typeChanges.add(ch);
+            }
+            if (!curOn && !newOn) continue;
             for (Sample s : samples) {
-                FeeBreakdown a = FeeEngine.calculate(curRules, type, s.entry(), s.exit());
-                FeeBreakdown b = FeeEngine.calculate(newRules, type, s.entry(), s.exit());
                 Map<String, Object> row = new LinkedHashMap<>();
                 row.put("label", s.label());
-                row.put("vehicleType", type.name());
+                row.put("vehicleType", type.getCode());
+                row.put("displayName", type.getDisplayName());
                 row.put("entry", ISO.format(s.entry()));
                 row.put("exit", ISO.format(s.exit()));
-                Map<String, Object> c = new LinkedHashMap<>();
-                c.put("fee", a.fee());
-                c.put("paidMinutes", a.paidMinutes());
-                Map<String, Object> p = new LinkedHashMap<>();
-                p.put("fee", b.fee());
-                p.put("paidMinutes", b.paidMinutes());
-                p.put("segments", DaySegment.toMaps(b.segments()));
+                Map<String, Object> c = null;
+                if (curOn) {
+                    FeeBreakdown a = FeeEngine.calculate(curRules, type.getCode(), s.entry(), s.exit());
+                    c = new LinkedHashMap<>();
+                    c.put("fee", a.fee());
+                    c.put("paidMinutes", a.paidMinutes());
+                }
+                Map<String, Object> p = null;
+                if (newOn) {
+                    FeeBreakdown b = FeeEngine.calculate(newRules, type.getCode(), s.entry(), s.exit());
+                    p = new LinkedHashMap<>();
+                    p.put("fee", b.fee());
+                    p.put("paidMinutes", b.paidMinutes());
+                    p.put("segments", DaySegment.toMaps(b.segments()));
+                }
                 row.put("current", c);
                 row.put("proposed", p);
                 rows.add(row);
@@ -238,6 +285,7 @@ public class TariffService {
         result.put("current", toPublicMap(cur));
         result.put("proposed", toPublicMap(proposed));
         result.put("rows", rows);
+        result.put("typeChanges", typeChanges);
         return result;
     }
 
@@ -314,9 +362,18 @@ public class TariffService {
             next.setActivatedAt(now);
             tariffRepository.saveAndFlush(next);
             refreshCache();
+            VehicleTypeService.Change change = vehicleTypeService.syncActiveFrom(next);
             changePublisher.globalEvent(SyncEventType.TARIFF_UPDATED, currentWithUpcoming());
+            if (!change.isEmpty()) {
+                Map<String, Object> payload = new LinkedHashMap<>();
+                payload.put("vehicleTypes", vehicleTypeService.activePublicList());
+                changePublisher.globalEvent(SyncEventType.VEHICLE_TYPES_UPDATED, payload);
+            }
+            String desc = "Zamanlanmış tarife yürürlüğe girdi (#" + next.getId() + ")";
+            if (!change.enabled().isEmpty()) desc += "; etkinleşen: " + String.join(", ", change.enabled());
+            if (!change.disabled().isEmpty()) desc += "; pasifleşen: " + String.join(", ", change.disabled());
             auditService.logSystem(AuditAction.TARIFF_ACTIVATED, "Tariff", next.getId(),
-                    "Zamanlanmış tarife yürürlüğe girdi (#" + next.getId() + ")", null, toPublicMap(next));
+                    desc, null, toPublicMap(next));
             return true;
         });
         if (Boolean.TRUE.equals(done)) {
@@ -361,17 +418,52 @@ public class TariffService {
     }
 
     private void apply(Tariff t, TariffRequest r) {
-        t.setSmallFirstHour(r.getSmallFirstHour());
-        t.setSmallExtraHour(r.getSmallExtraHour());
-        t.setLargeFirstHour(r.getLargeFirstHour());
-        t.setLargeExtraHour(r.getLargeExtraHour());
         t.setFreeMinutes(r.getFreeMinutes());
         t.setPaidStart(parseTime(r.getPaidStart(), "Ücretli saat başlangıcı"));
         t.setPaidEnd(parseTime(r.getPaidEnd(), "Ücretli saat bitişi"));
-        t.setSubscriptionSmallMonthly(r.getSubscriptionSmallMonthly());
-        t.setSubscriptionLargeMonthly(r.getSubscriptionLargeMonthly());
         t.setNote(r.getNote());
+        applyPrices(t, r);
         validate(t);
+    }
+
+    /** Builds the price rows: from the request, or from the legacy fields; missing types copy the ACTIVE tariff. */
+    private void applyPrices(Tariff t, TariffRequest r) {
+        Map<String, TariffVehiclePrice> wanted = new LinkedHashMap<>();
+        if (r.getVehicleTypes() != null && !r.getVehicleTypes().isEmpty()) {
+            for (VehiclePriceRequest v : r.getVehicleTypes()) {
+                String code = v.getCode() == null ? "" : v.getCode().trim().toUpperCase(Locale.ROOT);
+                if (vehicleTypeService.find(code) == null) {
+                    throw invalid("Bilinmeyen araç tipi: " + v.getCode());
+                }
+                wanted.put(code, new TariffVehiclePrice(t, code, v.getEnabled() == null || v.getEnabled(),
+                        v.getFirstHour(), v.getExtraHour(), v.getSubscriptionMonthly()));
+            }
+        } else {
+            wanted.put(VehicleTypes.SMALL, new TariffVehiclePrice(t, VehicleTypes.SMALL, true,
+                    r.getSmallFirstHour(), r.getSmallExtraHour(), r.getSubscriptionSmallMonthly()));
+            wanted.put(VehicleTypes.LARGE, new TariffVehiclePrice(t, VehicleTypes.LARGE, true,
+                    r.getLargeFirstHour(), r.getLargeExtraHour(), r.getSubscriptionLargeMonthly()));
+        }
+        Tariff act = active;
+        if (act != null) {
+            for (TariffVehiclePrice p : act.getPrices()) {
+                wanted.computeIfAbsent(p.getVehicleType(), c -> new TariffVehiclePrice(t, c, p.isEnabled(),
+                        p.getFirstHour(), p.getExtraHour(), p.getSubscriptionMonthly()));
+            }
+        }
+        // update in place (a removed + re-added row with the same key would collide on flush)
+        t.getPrices().removeIf(p -> !wanted.containsKey(p.getVehicleType()));
+        for (TariffVehiclePrice w : wanted.values()) {
+            TariffVehiclePrice existing = t.priceOf(w.getVehicleType());
+            if (existing == null) {
+                t.getPrices().add(w);
+            } else {
+                existing.setEnabled(w.isEnabled());
+                existing.setFirstHour(w.getFirstHour());
+                existing.setExtraHour(w.getExtraHour());
+                existing.setSubscriptionMonthly(w.getSubscriptionMonthly());
+            }
+        }
     }
 
     private LocalTime parseTime(String s, String what) {
@@ -385,10 +477,16 @@ public class TariffService {
 
     /** Throws 400 INVALID_TARIFF on any bad field. */
     private void validate(Tariff t) {
-        requirePositive(t.getSmallFirstHour(), "Küçük araç ilk saat ücreti");
-        requireNonNegative(t.getSmallExtraHour(), "Küçük araç ek saat ücreti");
-        requirePositive(t.getLargeFirstHour(), "Büyük araç ilk saat ücreti");
-        requireNonNegative(t.getLargeExtraHour(), "Büyük araç ek saat ücreti");
+        boolean anyEnabled = false;
+        for (TariffVehiclePrice p : t.getPrices()) {
+            if (!p.isEnabled()) continue;
+            anyEnabled = true;
+            String name = vehicleTypeService.displayName(p.getVehicleType());
+            requirePositive(p.getFirstHour(), name + " ilk saat ücreti");
+            requireNonNegative(p.getExtraHour(), name + " ek saat ücreti");
+            requirePositive(p.getSubscriptionMonthly(), name + " abonelik ücreti");
+        }
+        if (!anyEnabled) throw invalid("En az bir araç tipi etkin olmalıdır.");
         if (t.getFreeMinutes() == null || t.getFreeMinutes() < 0 || t.getFreeMinutes() > 120) {
             throw invalid("Ücretsiz süre 0 ile 120 dakika arasında olmalıdır.");
         }
@@ -399,8 +497,6 @@ public class TariffService {
         if (!LocalTime.MIDNIGHT.equals(end) && !start.isBefore(end)) {
             throw invalid("Ücretli saat başlangıcı bitişten önce olmalıdır (bitiş 00:00 gece yarısıdır).");
         }
-        requirePositive(t.getSubscriptionSmallMonthly(), "Küçük araç abonelik ücreti");
-        requirePositive(t.getSubscriptionLargeMonthly(), "Büyük araç abonelik ücreti");
     }
 
     private void requirePositive(Double v, String what) {
@@ -420,15 +516,11 @@ public class TariffService {
         LocalDateTime now = LocalDateTime.now(clock);
         Tariff t = new Tariff();
         t.setStatus(TariffStatus.ACTIVE);
-        t.setSmallFirstHour(25.0);
-        t.setSmallExtraHour(15.0);
-        t.setLargeFirstHour(50.0);
-        t.setLargeExtraHour(30.0);
+        t.getPrices().add(new TariffVehiclePrice(t, VehicleTypes.SMALL, true, 25.0, 15.0, 2500.0));
+        t.getPrices().add(new TariffVehiclePrice(t, VehicleTypes.LARGE, true, 50.0, 30.0, 3000.0));
         t.setFreeMinutes(5);
         t.setPaidStart(LocalTime.of(8, 0));
         t.setPaidEnd(LocalTime.of(22, 0));
-        t.setSubscriptionSmallMonthly(2500.0);
-        t.setSubscriptionLargeMonthly(3000.0);
         t.setEffectiveFrom(now);
         t.setActivatedAt(now);
         t.setCreatedByUsername("system");

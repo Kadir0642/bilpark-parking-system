@@ -59,6 +59,7 @@ class TariffServiceTest {
     private PasswordEncoder encoder;
     private TariffService service;
     private User admin;
+    private VehicleTypeService vehicleTypes;
 
     @BeforeEach
     void setUp() {
@@ -84,7 +85,8 @@ class TariffServiceTest {
         scheduler = mock(TaskScheduler.class);
         future = mock(ScheduledFuture.class);
         doReturn(future).when(scheduler).schedule(any(Runnable.class), any(Instant.class));
-        service = new TariffService(repo, publisher, clock, encoder, scheduler, mock(PlatformTransactionManager.class), mock(AuditService.class));
+        vehicleTypes = TestVehicleTypes.service();
+        service = new TariffService(repo, publisher, clock, encoder, scheduler, mock(PlatformTransactionManager.class), mock(AuditService.class), vehicleTypes);
         service.init(); // seeds the default ACTIVE tariff (empty table)
     }
 
@@ -122,7 +124,7 @@ class TariffServiceTest {
         assertEquals(1, store.size());
         Tariff t = service.current();
         assertEquals(TariffStatus.ACTIVE, t.getStatus());
-        assertEquals(25.0, t.getSmallFirstHour());
+        assertEquals(25.0, t.priceOf("SMALL").getFirstHour());
         assertEquals("system", t.getCreatedByUsername());
     }
 
@@ -235,7 +237,7 @@ class TariffServiceTest {
         verify(publisher).globalEvent(eq(SyncEventType.TARIFF_UPDATED), argThatUpcomingId(id));
         assertNotNull(service.upcoming());
         // not yet due: the old tariff still applies
-        assertEquals(25.0, service.current().getSmallFirstHour());
+        assertEquals(25.0, service.current().priceOf("SMALL").getFirstHour());
     }
 
     private Map<String, Object> argThatUpcomingId(Long id) {
@@ -272,7 +274,7 @@ class TariffServiceTest {
         clock.set(LocalDateTime.of(2026, 11, 2, 9, 0));
 
         assertEquals(id, service.current().getId());
-        assertEquals(30.0, service.current().getSmallFirstHour());
+        assertEquals(30.0, service.current().priceOf("SMALL").getFirstHour());
     }
 
     @Test
@@ -281,7 +283,7 @@ class TariffServiceTest {
         service.schedule(id, LocalDateTime.of(2026, 11, 1, 0, 0), "secret", admin);
         clock.set(LocalDateTime.of(2026, 11, 5, 9, 0)); // app was down over the effective time
 
-        TariffService restarted = new TariffService(repo, publisher, clock, encoder, scheduler, mock(PlatformTransactionManager.class), mock(AuditService.class));
+        TariffService restarted = new TariffService(repo, publisher, clock, encoder, scheduler, mock(PlatformTransactionManager.class), mock(AuditService.class), vehicleTypes);
         restarted.init();
 
         assertEquals(id, restarted.current().getId());

@@ -31,4 +31,8 @@ public final class ErrorCodes {
     public static final String PROTECTED_ACCOUNT = "PROTECTED_ACCOUNT";   // bu hesap bu uç noktayla değiştirilemez
     public static final String ALREADY_CANCELLED = "ALREADY_CANCELLED";
     public static final String INVALID_SETTINGS = "INVALID_SETTINGS";
+
+    // Araç tipleri
+    public static final String UNKNOWN_VEHICLE_TYPE = "UNKNOWN_VEHICLE_TYPE";
+    public static final String VEHICLE_TYPE_INACTIVE = "VEHICLE_TYPE_INACTIVE"; // tip tarifede etkin değil
 }

@@ -8,7 +8,8 @@ import com.bilpark.backend.model.AuditAction;
 import com.bilpark.backend.model.Subscription;
 import com.bilpark.backend.model.SubscriptionStatus;
 import com.bilpark.backend.model.Tariff;
-import com.bilpark.backend.model.VehicleType;
+import com.bilpark.backend.model.TariffVehiclePrice;
+import com.bilpark.backend.model.VehicleTypes;
 import com.bilpark.backend.repository.SubscriptionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,8 +36,11 @@ public class SubscriptionService {
 
     private final AuditService auditService;
 
+    private final VehicleTypeService vehicleTypeService;
+
     public SubscriptionService(SubscriptionRepository subscriptionRepository, TariffService tariffService,
-                               AuditService auditService) {
+                               AuditService auditService, VehicleTypeService vehicleTypeService) {
+        this.vehicleTypeService = vehicleTypeService;
         this.auditService = auditService;
         this.subscriptionRepository = subscriptionRepository;
         this.tariffService = tariffService;
@@ -65,23 +69,24 @@ public class SubscriptionService {
             subscriptionRepository.saveAllAndFlush(actives);
         }
 
-        VehicleType type;
-        try {
-            type = VehicleType.valueOf(vehicleTypeStr.toUpperCase(Locale.ROOT));
-        } catch (Exception e) {
-            type = VehicleType.SMALL;
-        }
+        String type = (vehicleTypeStr == null || vehicleTypeStr.isBlank())
+                ? VehicleTypes.SMALL : vehicleTypeStr.trim().toUpperCase(Locale.ROOT);
+        vehicleTypeService.requireActive(type);
 
-        Subscription sub = new Subscription(plate, type, LocalDate.now(), ownerName, ownerPhone);
-        // Aylık ücret geçerli tarifeden gelir
+        // Aylık ücret geçerli tarifedeki tip satırından gelir
         Tariff tariff = tariffService.current();
-        sub.setMonthlyFee(type == VehicleType.LARGE
-                ? tariff.getSubscriptionLargeMonthly() : tariff.getSubscriptionSmallMonthly());
+        TariffVehiclePrice price = tariff.priceOf(type);
+        if (price == null || !price.isEnabled() || price.getSubscriptionMonthly() == null) {
+            throw ApiException.badRequest(ErrorCodes.INVALID_TARIFF,
+                    vehicleTypeService.displayName(type) + " için tarifede abonelik ücreti tanımlı değil.");
+        }
+        Subscription sub = new Subscription(plate, type, LocalDate.now(), ownerName, ownerPhone);
+        sub.setMonthlyFee(price.getSubscriptionMonthly());
         try {
             Subscription saved = subscriptionRepository.saveAndFlush(sub);
             Map<String, Object> after = new LinkedHashMap<>(); // no owner name / phone
             after.put("plate", saved.getLicensePlate());
-            after.put("vehicleType", saved.getVehicleType().name());
+            after.put("vehicleType", saved.getVehicleType());
             after.put("startDate", String.valueOf(saved.getStartDate()));
             after.put("endDate", String.valueOf(saved.getEndDate()));
             after.put("monthlyFee", saved.getMonthlyFee());
@@ -111,7 +116,7 @@ public class SubscriptionService {
         return Map.of(
                 "hasSubscription", true,
                 "licensePlate",    sub.getLicensePlate(),
-                "vehicleType",     sub.getVehicleType().name(),
+                "vehicleType",     sub.getVehicleType(),
                 "startDate",       sub.getStartDate().toString(),
                 "endDate",         sub.getEndDate().toString(),
                 "ownerName",       sub.getOwnerName() != null ? sub.getOwnerName() : "",

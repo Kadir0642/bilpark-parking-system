@@ -62,7 +62,7 @@ class RetentionPostgresTest {
         fresh.setStatus(ParkingStatus.PAID);
         fresh = recordRepository.save(fresh);
 
-        Subscription sub = new Subscription("34SUB333", VehicleType.SMALL, today.minusYears(6).minusMonths(1), "Ayşe", "555");
+        Subscription sub = new Subscription("34SUB333", "SMALL", today.minusYears(6).minusMonths(1), "Ayşe", "555");
         sub.setEndDate(today.minusYears(6));
         sub.setStatus(SubscriptionStatus.EXPIRED);
         sub = subscriptionRepository.save(sub);

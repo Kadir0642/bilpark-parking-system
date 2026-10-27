@@ -3,10 +3,14 @@ package com.bilpark.backend.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * One version of the parking tariff. The id is the tariff version stored on parking records.
@@ -27,17 +31,12 @@ public class Tariff {
     @Column(nullable = false, length = 20)
     private TariffStatus status = TariffStatus.DRAFT;
 
-    @Column(name = "small_first_hour", nullable = false)
-    private Double smallFirstHour;
-
-    @Column(name = "small_extra_hour", nullable = false)
-    private Double smallExtraHour;
-
-    @Column(name = "large_first_hour", nullable = false)
-    private Double largeFirstHour;
-
-    @Column(name = "large_extra_hour", nullable = false)
-    private Double largeExtraHour;
+    // EAGER on purpose: Tariff instances are cached in memory across transactions
+    @OneToMany(mappedBy = "tariff", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OrderBy("vehicleType")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<TariffVehiclePrice> prices = new ArrayList<>();
 
     @Column(name = "free_minutes", nullable = false)
     private Integer freeMinutes;
@@ -47,12 +46,6 @@ public class Tariff {
 
     @Column(name = "paid_end", nullable = false)
     private LocalTime paidEnd;
-
-    @Column(name = "subscription_small_monthly", nullable = false)
-    private Double subscriptionSmallMonthly;
-
-    @Column(name = "subscription_large_monthly", nullable = false)
-    private Double subscriptionLargeMonthly;
 
     @Column(name = "effective_from")
     private LocalDateTime effectiveFrom;
@@ -76,4 +69,12 @@ public class Tariff {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    /** Price row of a type, or null when the type has no row in this version. */
+    public TariffVehiclePrice priceOf(String code) {
+        for (TariffVehiclePrice p : prices) {
+            if (p.getVehicleType().equals(code)) return p;
+        }
+        return null;
+    }
 }

@@ -1,6 +1,5 @@
 package com.bilpark.backend.fee;
 
-import com.bilpark.backend.model.VehicleType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -9,13 +8,20 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class FeeEngineTest {
 
-    private static final TariffRules DEFAULT =
-            new TariffRules(25, 15, 50, 30, 5, LocalTime.of(8, 0), LocalTime.of(22, 0));
+    private static TariffRules rules(int free, LocalTime start, LocalTime end) {
+        return new TariffRules(Map.of(
+                "SMALL", new TariffRules.Price(25, 15),
+                "LARGE", new TariffRules.Price(50, 30),
+                "MOTORCYCLE", new TariffRules.Price(10, 5)), free, start, end);
+    }
+
+    private static final TariffRules DEFAULT = rules(5, LocalTime.of(8, 0), LocalTime.of(22, 0));
 
     private static LocalDateTime t(String s) { return LocalDateTime.parse(s); }
 
@@ -54,7 +60,7 @@ class FeeEngineTest {
             "LARGE, 2026-10-21T10:00, 2026-10-21T10:05, 5, 0",
             "LARGE, 2026-10-21T10:00, 2026-10-23T10:00, 1680, 860",
     })
-    void defaultTariff(VehicleType type, String entry, String exit, long paid, double fee) {
+    void defaultTariff(String type, String entry, String exit, long paid, double fee) {
         FeeBreakdown b = FeeEngine.calculate(DEFAULT, type, t(entry), t(exit));
         assertEquals(paid, b.paidMinutes());
         assertEquals(fee, b.fee());
@@ -65,7 +71,7 @@ class FeeEngineTest {
 
     @Test
     void exitBeforeEntryIsZero() {
-        FeeBreakdown b = FeeEngine.calculate(DEFAULT, VehicleType.SMALL, t("2026-10-21T12:00"), t("2026-10-21T10:00"));
+        FeeBreakdown b = FeeEngine.calculate(DEFAULT, "SMALL", t("2026-10-21T12:00"), t("2026-10-21T10:00"));
         assertEquals(0, b.paidMinutes());
         assertEquals(0, b.totalMinutes());
         assertEquals(0.0, b.fee());
@@ -74,7 +80,7 @@ class FeeEngineTest {
 
     @Test
     void overnightSegmentsSplitAtMidnightAndWindowEdges() {
-        FeeBreakdown b = FeeEngine.calculate(DEFAULT, VehicleType.SMALL, t("2026-10-21T20:00"), t("2026-10-22T10:00"));
+        FeeBreakdown b = FeeEngine.calculate(DEFAULT, "SMALL", t("2026-10-21T20:00"), t("2026-10-22T10:00"));
         List<DaySegment> s = b.segments();
         assertEquals(4, s.size());
         assertSegment(s.get(0), "2026-10-21T20:00", "2026-10-21T22:00", true, 120);
@@ -91,8 +97,8 @@ class FeeEngineTest {
 
     @Test
     void customWindowNineToEighteen() {
-        TariffRules r = new TariffRules(25, 15, 50, 30, 5, LocalTime.of(9, 0), LocalTime.of(18, 0));
-        FeeBreakdown b = FeeEngine.calculate(r, VehicleType.SMALL, t("2026-10-21T08:00"), t("2026-10-21T19:00"));
+        TariffRules r = rules(5, LocalTime.of(9, 0), LocalTime.of(18, 0));
+        FeeBreakdown b = FeeEngine.calculate(r, "SMALL", t("2026-10-21T08:00"), t("2026-10-21T19:00"));
         assertEquals(540, b.paidMinutes());
         assertEquals(25 + 8 * 15, b.fee());
         assertEquals(3, b.segments().size());
@@ -104,8 +110,8 @@ class FeeEngineTest {
 
     @Test
     void paidEndMidnightMeansEndOfDay() {
-        TariffRules r = new TariffRules(25, 15, 50, 30, 5, LocalTime.of(8, 0), LocalTime.MIDNIGHT);
-        FeeBreakdown b = FeeEngine.calculate(r, VehicleType.SMALL, t("2026-10-21T21:00"), t("2026-10-22T01:00"));
+        TariffRules r = rules(5, LocalTime.of(8, 0), LocalTime.MIDNIGHT);
+        FeeBreakdown b = FeeEngine.calculate(r, "SMALL", t("2026-10-21T21:00"), t("2026-10-22T01:00"));
         assertEquals(180, b.paidMinutes()); // 21:00-24:00 paid, 00:00-01:00 free
         assertEquals(25 + 2 * 15, b.fee());
         assertEquals(2, b.segments().size());
@@ -115,8 +121,8 @@ class FeeEngineTest {
 
     @Test
     void midnightToMidnightIsWholeDayPaid() {
-        TariffRules r = new TariffRules(25, 15, 50, 30, 5, LocalTime.MIDNIGHT, LocalTime.MIDNIGHT);
-        FeeBreakdown b = FeeEngine.calculate(r, VehicleType.SMALL, t("2026-10-21T23:00"), t("2026-10-22T01:00"));
+        TariffRules r = rules(5, LocalTime.MIDNIGHT, LocalTime.MIDNIGHT);
+        FeeBreakdown b = FeeEngine.calculate(r, "SMALL", t("2026-10-21T23:00"), t("2026-10-22T01:00"));
         assertEquals(120, b.paidMinutes());
         assertEquals(40.0, b.fee());
         assertEquals(2, b.segments().size());
@@ -125,10 +131,10 @@ class FeeEngineTest {
 
     @Test
     void priceForUsesPaidMinutesOnly() {
-        assertEquals(0.0, FeeEngine.priceFor(DEFAULT, VehicleType.SMALL, 5));
-        assertEquals(25.0, FeeEngine.priceFor(DEFAULT, VehicleType.SMALL, 6));
-        assertEquals(50.0, FeeEngine.priceFor(DEFAULT, VehicleType.LARGE, 60));
-        assertEquals(80.0, FeeEngine.priceFor(DEFAULT, VehicleType.LARGE, 61));
+        assertEquals(0.0, FeeEngine.priceFor(DEFAULT, "SMALL", 5));
+        assertEquals(25.0, FeeEngine.priceFor(DEFAULT, "SMALL", 6));
+        assertEquals(50.0, FeeEngine.priceFor(DEFAULT, "LARGE", 60));
+        assertEquals(80.0, FeeEngine.priceFor(DEFAULT, "LARGE", 61));
     }
 
     private static void assertSegment(DaySegment s, String start, String end, boolean paid, long minutes) {
@@ -149,5 +155,20 @@ class FeeEngineTest {
         for (int i = 1; i < s.size(); i++) {
             assertEquals(s.get(i - 1).end(), s.get(i).start());
         }
+    }
+
+    @Test
+    void motorcycleUsesItsOwnPrice() {
+        assertEquals(10.0, FeeEngine.priceFor(DEFAULT, "MOTORCYCLE", 60));
+        assertEquals(15.0, FeeEngine.priceFor(DEFAULT, "MOTORCYCLE", 61));
+    }
+
+    @Test
+    void nullOrMissingTypeFallsBackToSmall() {
+        assertEquals(25.0, FeeEngine.priceFor(DEFAULT, null, 30));
+        assertEquals(25.0, FeeEngine.priceFor(DEFAULT, "BUS", 30));
+        TariffRules onlyLarge = new TariffRules(Map.of("LARGE", new TariffRules.Price(50, 30)), 5,
+                LocalTime.of(8, 0), LocalTime.of(22, 0));
+        assertEquals(50.0, FeeEngine.priceFor(onlyLarge, "SMALL", 30)); // any available price, never throws
     }
 }

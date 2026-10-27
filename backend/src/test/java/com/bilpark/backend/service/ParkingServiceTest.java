@@ -16,7 +16,6 @@ import com.bilpark.backend.model.TariffStatus;
 import com.bilpark.backend.sync.ChangePublisher;
 import com.bilpark.backend.model.SubscriptionStatus;
 import com.bilpark.backend.model.User;
-import com.bilpark.backend.model.VehicleType;
 import com.bilpark.backend.model.Zone;
 import com.bilpark.backend.repository.ParkSpotRepository;
 import com.bilpark.backend.repository.ParkingRecordRepository;
@@ -81,19 +80,17 @@ public class ParkingServiceTest {
         Tariff t = new Tariff();
         t.setId(7L);
         t.setStatus(TariffStatus.ACTIVE);
-        t.setSmallFirstHour(25.0);
-        t.setSmallExtraHour(15.0);
-        t.setLargeFirstHour(50.0);
-        t.setLargeExtraHour(30.0);
+        TestVehicleTypes.price(t, "SMALL", 25.0, 15.0, 2500.0);
+        TestVehicleTypes.price(t, "LARGE", 50.0, 30.0, 3000.0);
         t.setFreeMinutes(5);
         t.setPaidStart(LocalTime.of(8, 0));
         t.setPaidEnd(LocalTime.of(22, 0));
         when(tariffService.current()).thenReturn(t);
         parkingService = new ParkingService(parkSpotRepository, parkingRecordRepository, zoneRepository,
-                subscriptionRepository, tariffService, changePublisher, mock(AuditService.class), clock);
+                subscriptionRepository, tariffService, changePublisher, mock(AuditService.class), clock, TestVehicleTypes.service());
     }
 
-    private ParkSpot spot(String plate, VehicleType type, Zone zone, int minutesAgo) {
+    private ParkSpot spot(String plate, String type, Zone zone, int minutesAgo) {
         ParkSpot s = new ParkSpot(plate, StreetLocation.CUMHURIYET, type, "Merkez", "Bilecik", "RIGHT", zone);
         s.setEntryTime(LocalDateTime.now(clock).minusMinutes(minutesAgo));
         return s;
@@ -117,7 +114,7 @@ public class ParkingServiceTest {
         ParkSpot spot = parkingService.checkInVehicle("34ABC123", "SMALL", StreetLocation.TEVFIK_BEY, "LEFT", null);
 
         assertEquals("34ABC123", spot.getCurrentPlate());
-        assertEquals(VehicleType.SMALL, spot.getCurrentType());
+        assertEquals("SMALL", spot.getCurrentType());
         assertEquals(StreetLocation.TEVFIK_BEY, spot.getStreet());
         assertEquals("LEFT", spot.getSide());
         verify(parkSpotRepository, times(1)).saveAndFlush(any(ParkSpot.class));
@@ -145,7 +142,7 @@ public class ParkingServiceTest {
     @Test
     void testCheckInVehicle_FailIfAlreadyParked() {
         Zone z = zone(3, StreetLocation.TEVFIK_BEY, 3);
-        ParkSpot existing = new ParkSpot("34ABC123", StreetLocation.TEVFIK_BEY, VehicleType.SMALL, "Merkez", "Bilecik", "LEFT", z);
+        ParkSpot existing = new ParkSpot("34ABC123", StreetLocation.TEVFIK_BEY, "SMALL", "Merkez", "Bilecik", "LEFT", z);
         when(parkSpotRepository.findByPlateForUpdate("34ABC123")).thenReturn(Optional.of(existing));
 
         ApiException ex = thrown(() ->
@@ -191,14 +188,14 @@ public class ParkingServiceTest {
     }
 
     private Subscription activeSub(String plate) {
-        return new Subscription(plate, VehicleType.SMALL, LocalDate.now(), "T", "5");
+        return new Subscription(plate, "SMALL", LocalDate.now(), "T", "5");
     }
 
     @Test
     void testCheckOutVehicle_Success() {
         String plate = "34XYZ789";
         // 1.5 saat: 50 (base) + 30 (extra) = 80
-        ParkSpot spot = spot(plate, VehicleType.LARGE, null, 90);
+        ParkSpot spot = spot(plate, "LARGE", null, 90);
         when(parkSpotRepository.findByPlateForUpdate(plate)).thenReturn(Optional.of(spot));
         when(parkingRecordRepository.save(any(ParkingRecord.class))).thenAnswer(i -> i.getArguments()[0]);
 
@@ -206,7 +203,7 @@ public class ParkingServiceTest {
 
         assertEquals(plate, record.getLicensePlate());
         assertEquals(ParkingStatus.PAID, record.getStatus());
-        assertEquals(VehicleType.LARGE, record.getVehicleType());
+        assertEquals("LARGE", record.getVehicleType());
         assertEquals(80.0, record.getFee());
         assertEquals(PaymentMethod.CASH, record.getPaymentMethod());
         verify(parkSpotRepository, times(1)).delete(spot);
@@ -215,7 +212,7 @@ public class ParkingServiceTest {
 
     @Test
     void testCheckOut_PosRecordsMethodCollectorAndDevice() {
-        ParkSpot spot = spot("34XYZ789", VehicleType.SMALL, null, 30);
+        ParkSpot spot = spot("34XYZ789", "SMALL", null, 30);
         when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.of(spot));
         when(parkingRecordRepository.save(any(ParkingRecord.class))).thenAnswer(i -> i.getArguments()[0]);
         User actor = admin();
@@ -231,7 +228,7 @@ public class ParkingServiceTest {
 
     @Test
     void testCheckOut_ActiveSubscriptionForcesSubscriptionAndZeroFee() {
-        ParkSpot spot = spot("34XYZ789", VehicleType.SMALL, null, 120);
+        ParkSpot spot = spot("34XYZ789", "SMALL", null, 120);
         when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.of(spot));
         when(subscriptionRepository.findFirstByLicensePlateAndStatusOrderByEndDateDesc("34XYZ789", SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(activeSub("34XYZ789")));
@@ -245,7 +242,7 @@ public class ParkingServiceTest {
 
     @Test
     void testCheckOut_SubscriptionWithoutSubscription_400() {
-        ParkSpot spot = spot("34XYZ789", VehicleType.SMALL, null, 120);
+        ParkSpot spot = spot("34XYZ789", "SMALL", null, 120);
         when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.of(spot));
 
         ApiException ex = thrown(() ->
@@ -308,7 +305,7 @@ public class ParkingServiceTest {
 
     @Test
     void testRunaway_RecordsCollectorDeviceAndNoPaymentMethod() {
-        ParkSpot spot = spot("34XYZ789", VehicleType.SMALL, null, 70);
+        ParkSpot spot = spot("34XYZ789", "SMALL", null, 70);
         when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.of(spot));
         when(parkingRecordRepository.save(any(ParkingRecord.class))).thenAnswer(i -> i.getArguments()[0]);
 
@@ -340,8 +337,8 @@ public class ParkingServiceTest {
     void testCheckOut_OvernightCarriesPaidMinutes() {
         // clock 09:00 next morning: yesterday 21:00-22:00 (60) + today 08:00-09:00 (60) = 120 paid minutes
         ParkingService svc = new ParkingService(parkSpotRepository, parkingRecordRepository, zoneRepository,
-                subscriptionRepository, tariffService, changePublisher, mock(AuditService.class), fixedClock(LocalDateTime.of(2026, 10, 21, 9, 0)));
-        ParkSpot s = new ParkSpot("34NGT003", StreetLocation.CUMHURIYET, VehicleType.SMALL, "Merkez", "Bilecik", "LEFT", null);
+                subscriptionRepository, tariffService, changePublisher, mock(AuditService.class), fixedClock(LocalDateTime.of(2026, 10, 21, 9, 0)), TestVehicleTypes.service());
+        ParkSpot s = new ParkSpot("34NGT003", StreetLocation.CUMHURIYET, "SMALL", "Merkez", "Bilecik", "LEFT", null);
         s.setEntryTime(LocalDateTime.of(2026, 10, 20, 21, 0));
         when(parkSpotRepository.findByPlateForUpdate("34NGT003")).thenReturn(Optional.of(s));
         when(parkingRecordRepository.save(any(ParkingRecord.class))).thenAnswer(i -> i.getArguments()[0]);
@@ -357,7 +354,7 @@ public class ParkingServiceTest {
     @Test
     void testCheckOut_NightMinutesAreFree() {
         // entry 07:00 (one free hour before the window), clock 14:00 => 360 paid minutes
-        ParkSpot s = new ParkSpot("34NGT002", StreetLocation.CUMHURIYET, VehicleType.SMALL, "Merkez", "Bilecik", "LEFT", null);
+        ParkSpot s = new ParkSpot("34NGT002", StreetLocation.CUMHURIYET, "SMALL", "Merkez", "Bilecik", "LEFT", null);
         s.setEntryTime(LocalDateTime.of(2026, 10, 21, 7, 0));
         when(parkSpotRepository.findByPlateForUpdate("34NGT002")).thenReturn(Optional.of(s));
         when(parkingRecordRepository.save(any(ParkingRecord.class))).thenAnswer(i -> i.getArguments()[0]);
@@ -370,7 +367,7 @@ public class ParkingServiceTest {
 
     @Test
     void testCheckOut_SubscriptionStoresTariffAndPaidMinutes() {
-        ParkSpot s = spot("34XYZ789", VehicleType.SMALL, null, 120);
+        ParkSpot s = spot("34XYZ789", "SMALL", null, 120);
         when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.of(s));
         when(subscriptionRepository.findFirstByLicensePlateAndStatusOrderByEndDateDesc("34XYZ789", SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(activeSub("34XYZ789")));
@@ -393,7 +390,7 @@ public class ParkingServiceTest {
                 "34ABC123".equals(m.get("plate")) && "SMALL".equals(m.get("vehicleType"))
                         && "TEVFIK_BEY".equals(m.get("street")) && Boolean.FALSE.equals(m.get("hasSubscription"))));
 
-        ParkSpot spot = spot("34XYZ789", VehicleType.SMALL, null, 70);
+        ParkSpot spot = spot("34XYZ789", "SMALL", null, 70);
         when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.of(spot));
         when(parkingRecordRepository.save(any(ParkingRecord.class))).thenAnswer(i -> i.getArguments()[0]);
         parkingService.checkOutVehicle("34XYZ789", PaymentMethod.POS, admin(), "d");
@@ -401,7 +398,7 @@ public class ParkingServiceTest {
                 "34XYZ789".equals(m.get("plate")) && Double.valueOf(40.0).equals(m.get("fee"))
                         && "POS".equals(m.get("paymentMethod"))));
 
-        ParkSpot spot2 = spot("34RUN001", VehicleType.SMALL, null, 70);
+        ParkSpot spot2 = spot("34RUN001", "SMALL", null, 70);
         when(parkSpotRepository.findByPlateForUpdate("34RUN001")).thenReturn(Optional.of(spot2));
         parkingService.markAsRunaway("34RUN001", admin(), "d");
         verify(changePublisher).zoneEvent(eq(SyncEventType.VEHICLE_RUNAWAY), any(), any(), argThat(m ->
@@ -410,7 +407,7 @@ public class ParkingServiceTest {
 
     @Test
     void testRunaway_StoresTariffAndPaidMinutes() {
-        ParkSpot spot = spot("34XYZ789", VehicleType.SMALL, null, 70);
+        ParkSpot spot = spot("34XYZ789", "SMALL", null, 70);
         when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.of(spot));
         when(parkingRecordRepository.save(any(ParkingRecord.class))).thenAnswer(i -> i.getArguments()[0]);
 
@@ -423,7 +420,7 @@ public class ParkingServiceTest {
 
     @Test
     void testDebtContainsSegmentsAndKeepsOldKeys() {
-        ParkSpot s = spot("34ABC123", VehicleType.SMALL, null, 90);
+        ParkSpot s = spot("34ABC123", "SMALL", null, 90);
         when(parkSpotRepository.findByCurrentPlate("34ABC123")).thenReturn(Optional.of(s));
 
         Map<String, Object> d = parkingService.getDebtByPlate("34 abc 123");
@@ -440,7 +437,7 @@ public class ParkingServiceTest {
     @Test
     void testFeePreview_OfficerOtherZone_Denied() {
         Zone other = zone(2, StreetLocation.TEVFIK_BEY, 2);
-        ParkSpot s = spot("34ABC123", VehicleType.SMALL, other, 30);
+        ParkSpot s = spot("34ABC123", "SMALL", other, 30);
         when(parkSpotRepository.findByCurrentPlate("34ABC123")).thenReturn(Optional.of(s));
         User off = officer(zone(1, StreetLocation.TEVFIK_BEY, 1));
 
@@ -455,9 +452,9 @@ public class ParkingServiceTest {
     @Test
     void testIncomeByVehicleType_MapsNullAndLarge() {
         when(parkingRecordRepository.sumPaidIncomeByVehicleType()).thenReturn(List.of(
-                new Object[]{null, 10.0},
-                new Object[]{VehicleType.SMALL, 15.0},
-                new Object[]{VehicleType.LARGE, 80.0}));
+                new Object[]{null, 10.0, 1L},
+                new Object[]{"SMALL", 15.0, 2L},
+                new Object[]{"LARGE", 80.0, 3L}));
 
         Map<String, Double> m = parkingService.calculateIncomeByVehicleType();
 
@@ -471,6 +468,7 @@ public class ParkingServiceTest {
         Map<String, Double> m = parkingService.calculateIncomeByVehicleType();
         assertEquals(0.0, m.get("Otomobil"));
         assertEquals(0.0, m.get("Kamyonet"));
+        assertFalse(m.containsKey("Motosiklet")); // inactive and no income
     }
 
     @Test
@@ -543,7 +541,7 @@ public class ParkingServiceTest {
     @Test
     void testOfficerCheckOut_OtherZone_Denied() {
         Zone other = zone(2, StreetLocation.TEVFIK_BEY, 2);
-        ParkSpot spot = new ParkSpot("34XYZ789", StreetLocation.TEVFIK_BEY, VehicleType.SMALL, "Merkez", "Bilecik", "LEFT", other);
+        ParkSpot spot = new ParkSpot("34XYZ789", StreetLocation.TEVFIK_BEY, "SMALL", "Merkez", "Bilecik", "LEFT", other);
         spot.setEntryTime(LocalDateTime.now(clock));
         when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.of(spot));
 
@@ -555,7 +553,7 @@ public class ParkingServiceTest {
 
     @Test
     void testOfficerCheckOut_LegacySpotWithoutZone_ChecksStreet() {
-        ParkSpot spot = new ParkSpot("34XYZ789", StreetLocation.CUMHURIYET, VehicleType.SMALL, "Merkez", "Bilecik", "LEFT", null);
+        ParkSpot spot = new ParkSpot("34XYZ789", StreetLocation.CUMHURIYET, "SMALL", "Merkez", "Bilecik", "LEFT", null);
         spot.setEntryTime(LocalDateTime.now(clock));
         when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.of(spot));
 
@@ -566,7 +564,7 @@ public class ParkingServiceTest {
     @Test
     void testAdmin_Unrestricted() {
         Zone other = zone(2, StreetLocation.TEVFIK_BEY, 2);
-        ParkSpot spot = new ParkSpot("34XYZ789", StreetLocation.TEVFIK_BEY, VehicleType.SMALL, "Merkez", "Bilecik", "LEFT", other);
+        ParkSpot spot = new ParkSpot("34XYZ789", StreetLocation.TEVFIK_BEY, "SMALL", "Merkez", "Bilecik", "LEFT", other);
         spot.setEntryTime(LocalDateTime.now(clock));
         when(parkSpotRepository.findByPlateForUpdate("34XYZ789")).thenReturn(Optional.of(spot));
         when(parkingRecordRepository.save(any(ParkingRecord.class))).thenAnswer(i -> i.getArguments()[0]);
@@ -577,9 +575,9 @@ public class ParkingServiceTest {
     // --- spot lists: subscription + runaway debt filled with one batch query each (no N+1) ---
     @Test
     void testGetAllSpots_FillsSubscriptionAndDebtInBatch() {
-        ParkSpot a = spot("34AAA001", VehicleType.SMALL, null, 10);
-        ParkSpot b = spot("34BBB002", VehicleType.SMALL, null, 10);
-        ParkSpot c = spot("34CCC003", VehicleType.LARGE, null, 10);
+        ParkSpot a = spot("34AAA001", "SMALL", null, 10);
+        ParkSpot b = spot("34BBB002", "SMALL", null, 10);
+        ParkSpot c = spot("34CCC003", "LARGE", null, 10);
         when(parkSpotRepository.findAll()).thenReturn(List.of(a, b, c));
         when(subscriptionRepository.findCurrentlyActivePlates(any(), eq(LocalDate.of(2026, 10, 21))))
                 .thenReturn(List.of("34BBB002"));

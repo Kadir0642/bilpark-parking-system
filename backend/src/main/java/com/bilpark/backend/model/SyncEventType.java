@@ -10,5 +10,6 @@ public enum SyncEventType {
     USER_UPDATED,      // zone/role/profile of the target user changed (stage 5)
     VEHICLE_CANCELLED, // an active vehicle entry was cancelled (wrong entry), zone scope
     RECORD_CANCELLED,  // a closed record was cancelled by the admin, zone scope
-    LICENSE_UPDATED    // license dates changed, global
+    LICENSE_UPDATED,   // license dates changed, global
+    VEHICLE_TYPES_UPDATED // the set of active vehicle types changed, global
 }

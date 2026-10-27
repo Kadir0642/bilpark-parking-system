@@ -32,8 +32,8 @@ public class ParkingRecord {
     private LocalDateTime entryTime;
     private LocalDateTime exitTime;
 
-    @Enumerated(EnumType.STRING)
-    private VehicleType vehicleType;
+    @Column(length = 30)
+    private String vehicleType; // vehicle_types.code
 
     private Double fee;
 

@@ -1,7 +1,5 @@
 package com.bilpark.backend.fee;
 
-import com.bilpark.backend.model.VehicleType;
-
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -17,7 +15,7 @@ public final class FeeEngine {
 
     private FeeEngine() {}
 
-    public static FeeBreakdown calculate(TariffRules rules, VehicleType type, LocalDateTime entry, LocalDateTime exit) {
+    public static FeeBreakdown calculate(TariffRules rules, String type, LocalDateTime entry, LocalDateTime exit) {
         if (entry == null || exit == null || !exit.isAfter(entry)) {
             return new FeeBreakdown(0, 0, 0, 0.0, List.of());
         }
@@ -54,11 +52,12 @@ public final class FeeEngine {
     }
 
     /** Fee for already-computed paid minutes. */
-    public static double priceFor(TariffRules rules, VehicleType type, long paidMinutes) {
+    public static double priceFor(TariffRules rules, String type, long paidMinutes) {
         if (paidMinutes <= rules.freeMinutes()) return 0.0;
-        boolean large = type == VehicleType.LARGE;
-        double first = large ? rules.largeFirstHour() : rules.smallFirstHour();
-        double extra = large ? rules.largeExtraHour() : rules.smallExtraHour();
+        TariffRules.Price price = rules.priceOf(type);
+        if (price == null) return 0.0; // no prices at all: never block checkout
+        double first = price.firstHour();
+        double extra = price.extraHour();
         if (paidMinutes <= 60) return first;
         long extraHours = (paidMinutes - 60 + 59) / 60;
         return first + extraHours * extra;

@@ -287,6 +287,12 @@ public class ParkingController {
         return parkingService.calculateIncomeByVehicleType();
     }
 
+    // GET /api/parking/bi/income-by-type/details
+    @GetMapping("/bi/income-by-type/details")
+    public java.util.List<Map<String, Object>> getIncomeByTypeDetails() {
+        return parkingService.incomeByVehicleTypeDetails();
+    }
+
     // GET /api/parking/bi/status-count
     @GetMapping("/bi/status-count")
     public Map<String, Long> getStatusCount() {

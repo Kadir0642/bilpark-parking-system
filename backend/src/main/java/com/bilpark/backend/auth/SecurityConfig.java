@@ -53,6 +53,7 @@ public class SecurityConfig {
                                 "/api/health",           // keep-alive / uptime check, never touches the DB
                                 "/api/streets",          // streets with their zones
                                 "/api/tariff/current",   // citizen page + apps show the live tariff
+                                "/api/vehicle-types",    // active vehicle types for the entry form
                                 "/api/parking/debt",
                                 "/api/zones",            // Officers need zones on login screen
                                 "/api/zones/by-street",  // Officers filter zones by street

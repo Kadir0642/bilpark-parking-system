@@ -1,22 +1,43 @@
 package com.bilpark.backend.model;
 
-public enum VehicleType
-{
-    SMALL, // Küçük araçlar 0
-    LARGE  // Büyük araçlar 1
-}
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
- /*
-    public class VehicleType
-    {
-    //Sabit nesneler
-    public static final VehicleType SMALL=new VehicleType("SMALL");
-    public static final VehicleType LARGE=new VehicleType("LARGE");
+/**
+ * A vehicle type row (Flyway V5). "active" is derived from the ACTIVE tariff's enabled set
+ * and is only changed by VehicleTypeService.syncActiveFrom.
+ */
+@Data
+@NoArgsConstructor
+@Entity
+@Table(name = "vehicle_types")
+public class VehicleType {
 
-    private final String name;
+    @Id
+    @Column(length = 30)
+    private String code;
 
-    //Private Constructer (Dışarıdan new lenmesin diye)
-    private VehicleType(String name)
-    {this.name=name;}
+    @Column(name = "display_name", nullable = false, length = 60)
+    private String displayName;
+
+    @Column(name = "icon_key", nullable = false, length = 30)
+    private String iconKey;
+
+    @Column(name = "sort_order", nullable = false)
+    private Integer sortOrder;
+
+    @Column(nullable = false)
+    private boolean active;
+
+    public VehicleType(String code, String displayName, String iconKey, int sortOrder, boolean active) {
+        this.code = code;
+        this.displayName = displayName;
+        this.iconKey = iconKey;
+        this.sortOrder = sortOrder;
+        this.active = active;
     }
-  */
+}

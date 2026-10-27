@@ -6,7 +6,6 @@ import com.bilpark.backend.common.ErrorCodes;
 import com.bilpark.backend.model.Subscription;
 import com.bilpark.backend.model.SubscriptionStatus;
 import com.bilpark.backend.model.Tariff;
-import com.bilpark.backend.model.VehicleType;
 import com.bilpark.backend.repository.SubscriptionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,10 +30,10 @@ class SubscriptionServiceTest {
         repo = mock(SubscriptionRepository.class);
         tariffService = mock(TariffService.class);
         Tariff t = new Tariff();
-        t.setSubscriptionSmallMonthly(2600.0);
-        t.setSubscriptionLargeMonthly(3100.0);
+        TestVehicleTypes.price(t, "SMALL", 25.0, 15.0, 2600.0);
+        TestVehicleTypes.price(t, "LARGE", 50.0, 30.0, 3100.0);
         when(tariffService.current()).thenReturn(t);
-        service = new SubscriptionService(repo, tariffService, mock(AuditService.class));
+        service = new SubscriptionService(repo, tariffService, mock(AuditService.class), TestVehicleTypes.service());
         when(repo.saveAndFlush(any(Subscription.class))).thenAnswer(i -> i.getArguments()[0]);
     }
 
@@ -55,7 +54,7 @@ class SubscriptionServiceTest {
 
     @Test
     void createWhenActiveExists_409() {
-        Subscription active = new Subscription("34ABC123", VehicleType.SMALL, LocalDate.now(), "o", "5");
+        Subscription active = new Subscription("34ABC123", "SMALL", LocalDate.now(), "o", "5");
         when(repo.findByPlateAndStatusForUpdate("34ABC123", SubscriptionStatus.ACTIVE)).thenReturn(List.of(active));
         ApiException ex = assertThrows(ApiException.class, () -> service.createSubscription("34ABC123", "SMALL", "o", "5"));
         assertEquals(HttpStatus.CONFLICT, ex.getStatus());
@@ -64,7 +63,7 @@ class SubscriptionServiceTest {
 
     @Test
     void staleActiveRowIsExpiredThenNewRowCreated() {
-        Subscription stale = new Subscription("34ABC123", VehicleType.SMALL, LocalDate.now().minusMonths(3), "o", "5");
+        Subscription stale = new Subscription("34ABC123", "SMALL", LocalDate.now().minusMonths(3), "o", "5");
         when(repo.findByPlateAndStatusForUpdate("34ABC123", SubscriptionStatus.ACTIVE)).thenReturn(List.of(stale));
         Subscription s = service.createSubscription("34ABC123", "SMALL", "o", "5");
         assertEquals(SubscriptionStatus.EXPIRED, stale.getStatus());

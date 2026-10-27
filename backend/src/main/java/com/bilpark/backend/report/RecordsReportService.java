@@ -3,6 +3,7 @@ package com.bilpark.backend.report;
 import com.bilpark.backend.model.ParkingStatus;
 import com.bilpark.backend.model.StreetLocation;
 import com.bilpark.backend.report.ReportSupport.Range;
+import com.bilpark.backend.service.VehicleTypeService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,10 +19,12 @@ public class RecordsReportService {
 
     private final ReportQueryRepository repo;
     private final ReportSupport support;
+    private final VehicleTypeService vehicleTypes;
 
-    public RecordsReportService(ReportQueryRepository repo, ReportSupport support) {
+    public RecordsReportService(ReportQueryRepository repo, ReportSupport support, VehicleTypeService vehicleTypes) {
         this.repo = repo;
         this.support = support;
+        this.vehicleTypes = vehicleTypes;
     }
 
     @Transactional(readOnly = true)
@@ -66,7 +69,7 @@ public class RecordsReportService {
             Long minutes = r.entryTime() != null && r.exitTime() != null
                     ? Math.max(0, Duration.between(r.entryTime(), r.exitTime()).toMinutes()) : null;
             sheet.add(r.id(), r.plate(), ReportSupport.street(names, r.street()), r.zoneName(),
-                    r.vehicleType() == null ? null : r.vehicleType().name(), r.entryTime(), r.exitTime(), minutes,
+                    vehicleTypes.displayName(r.vehicleType()), r.entryTime(), r.exitTime(), minutes,
                     r.paidMinutes(), r.fee() == null ? null : Money.of(r.fee()), status(r.status()),
                     r.paymentMethod() == null ? null : r.paymentMethod().name(), r.collectedBy(), r.deviceId(),
                     r.tariffId(), r.cancelReason());

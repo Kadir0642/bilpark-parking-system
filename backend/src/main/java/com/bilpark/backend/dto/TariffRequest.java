@@ -2,7 +2,12 @@ package com.bilpark.backend.dto;
 
 import lombok.Data;
 
-/** Admin tariff form. Values are validated in TariffService (400 INVALID_TARIFF). */
+import java.util.List;
+
+/**
+ * Admin tariff form. Values are validated in TariffService (400 INVALID_TARIFF).
+ * vehicleTypes is the current form; the small/large fields are legacy (used only when vehicleTypes is absent).
+ */
 @Data
 public class TariffRequest {
     private Double smallFirstHour;
@@ -15,4 +20,5 @@ public class TariffRequest {
     private Double subscriptionSmallMonthly;
     private Double subscriptionLargeMonthly;
     private String note;
+    private List<VehiclePriceRequest> vehicleTypes;
 }

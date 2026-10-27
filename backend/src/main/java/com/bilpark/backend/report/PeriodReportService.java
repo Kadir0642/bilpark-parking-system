@@ -2,7 +2,10 @@ package com.bilpark.backend.report;
 
 import com.bilpark.backend.model.ParkingStatus;
 import com.bilpark.backend.model.StreetLocation;
+import com.bilpark.backend.model.VehicleType;
+import com.bilpark.backend.model.VehicleTypes;
 import com.bilpark.backend.report.ReportSupport.Range;
+import com.bilpark.backend.service.VehicleTypeService;
 import com.bilpark.backend.settings.SettingsService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,8 +21,11 @@ public class PeriodReportService {
     private final ReportQueryRepository repo;
     private final SettingsService settings;
     private final ReportSupport support;
+    private final VehicleTypeService vehicleTypes;
 
-    public PeriodReportService(ReportQueryRepository repo, SettingsService settings, ReportSupport support) {
+    public PeriodReportService(ReportQueryRepository repo, SettingsService settings, ReportSupport support,
+                               VehicleTypeService vehicleTypes) {
+        this.vehicleTypes = vehicleTypes;
         this.repo = repo;
         this.settings = settings;
         this.support = support;
@@ -35,10 +41,12 @@ public class PeriodReportService {
         double total() { return cash + pos + other; }
     }
 
+    public record TypeLine(String code, String displayName, int transactions, double income) {}
+
     public record Report(Range range, double cash, double pos, double subscriptionSales, double other,
                          int subscriptionExits, List<MonthRent> rents, int cancelledCount, double cancelledFees,
                          int unpaidRunawayCount, double unpaidRunawayDebt,
-                         List<ZoneLine> zones, List<DayLine> days) {
+                         List<ZoneLine> zones, List<DayLine> days, List<TypeLine> byVehicleType) {
         public double total() { return cash + pos + subscriptionSales + other; }
         public double rent() { return rents.stream().mapToDouble(MonthRent::share).sum(); }
         public double net() { return total() - rent(); }
@@ -63,8 +71,13 @@ public class PeriodReportService {
         Map<LocalDate, double[]> days = new TreeMap<>();
         for (LocalDate d = range.from(); !d.isAfter(range.to()); d = d.plusDays(1)) days.put(d, new double[3]);
 
+        Map<String, double[]> typeAcc = new HashMap<>(); // code -> {transactions, income}
         for (RecordRow r : paid) {
             double f = r.feeOrZero();
+            double[] ta = typeAcc.computeIfAbsent(r.vehicleType() == null ? VehicleTypes.SMALL : r.vehicleType(),
+                    k -> new double[2]);
+            ta[0]++;
+            if (r.paymentMethod() != com.bilpark.backend.model.PaymentMethod.SUBSCRIPTION) ta[1] += f; // same as zone totals
             Acc z = zone(zoneAcc, zoneLabel, r, streetNames);
             double[] day = days.get(r.exitTime().toLocalDate());
             z.txn++;
@@ -111,8 +124,14 @@ public class PeriodReportService {
         }
         List<DayLine> dayLines = new ArrayList<>();
         days.forEach((d, v) -> dayLines.add(new DayLine(d, v[0], v[1], v[2])));
+        List<TypeLine> typeLines = new ArrayList<>();
+        for (VehicleType t : vehicleTypes.all()) {
+            double[] ta = typeAcc.get(t.getCode());
+            if (!t.isActive() && ta == null) continue;
+            typeLines.add(new TypeLine(t.getCode(), t.getDisplayName(), ta == null ? 0 : (int) ta[0], ta == null ? 0 : ta[1]));
+        }
         return new Report(range, cash, pos, subSales, other, subExits, rents, cancelled.size(), cancelledFees,
-                unpaidCount, unpaidDebt, zones, dayLines);
+                unpaidCount, unpaidDebt, zones, dayLines, typeLines);
     }
 
     private static Acc zone(Map<String, Acc> acc, Map<String, String[]> labels, RecordRow r, Map<String, String> names) {
@@ -155,6 +174,16 @@ public class PeriodReportService {
         m.put("cancelledFees", r2(r.cancelledFees()));
         m.put("unpaidRunawayCount", r.unpaidRunawayCount());
         m.put("unpaidRunawayDebt", r2(r.unpaidRunawayDebt()));
+        List<Map<String, Object>> types = new ArrayList<>();
+        for (TypeLine t : r.byVehicleType()) {
+            Map<String, Object> tm = new LinkedHashMap<>();
+            tm.put("code", t.code());
+            tm.put("displayName", t.displayName());
+            tm.put("transactions", t.transactions());
+            tm.put("income", r2(t.income()));
+            types.add(tm);
+        }
+        m.put("byVehicleType", types);
         return m;
     }
 
@@ -189,6 +218,10 @@ public class PeriodReportService {
         for (DayLine d : r.days()) {
             daily.add(d.day(), Money.of(r2(d.cash())), Money.of(r2(d.pos())), Money.of(r2(d.other())), Money.of(r2(d.total())));
         }
-        return List.of(summary, zones, daily);
+        ReportSheet types = new ReportSheet("vehicle-types", "Araç tipine göre", List.of("Tip", "İşlem", "Ciro"));
+        for (TypeLine t : r.byVehicleType()) {
+            types.add(t.displayName(), t.transactions(), Money.of(r2(t.income())));
+        }
+        return List.of(summary, zones, daily, types);
     }
 }

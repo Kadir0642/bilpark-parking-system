@@ -21,6 +21,7 @@ import com.bilpark.backend.model.Tariff;
 import com.bilpark.backend.model.SubscriptionStatus;
 import com.bilpark.backend.model.User;
 import com.bilpark.backend.model.VehicleType;
+import com.bilpark.backend.model.VehicleTypes;
 import com.bilpark.backend.model.Zone;
 import com.bilpark.backend.repository.ParkSpotRepository;
 import com.bilpark.backend.repository.ParkingRecordRepository;
@@ -62,6 +63,7 @@ public class ParkingService
     private final ChangePublisher changePublisher; // canlı olaylar
     private final AuditService auditService;
     private final Clock clock;
+    private final VehicleTypeService vehicleTypeService;
 
     public ParkingService(ParkSpotRepository parkSpotRepository,
                           ParkingRecordRepository parkingRecordRepository,
@@ -70,8 +72,10 @@ public class ParkingService
                           TariffService tariffService,
                           ChangePublisher changePublisher,
                           AuditService auditService,
-                          Clock clock)
+                          Clock clock,
+                          VehicleTypeService vehicleTypeService)
     {
+        this.vehicleTypeService = vehicleTypeService;
         this.parkSpotRepository=parkSpotRepository;
         this.parkingRecordRepository=parkingRecordRepository;
         this.zoneRepository = zoneRepository;
@@ -140,14 +144,11 @@ public class ParkingService
         }
 
         // B. Araç tipi
-        VehicleType type = VehicleType.SMALL; // Default
-        if (vehicleType != null && !vehicleType.isEmpty()) {
-            try {
-                type = VehicleType.valueOf(vehicleType.toUpperCase(Locale.ROOT));
-            } catch (IllegalArgumentException e) {
-                type = VehicleType.SMALL; // Hatalı gelirse küçük say
-            }
-        }
+        // Boş gelirse SMALL; bilinmeyen veya pasif tip 400
+        String type = (vehicleType == null || vehicleType.isBlank())
+                ? VehicleTypes.SMALL
+                : vehicleType.trim().toUpperCase(Locale.ROOT);
+        vehicleTypeService.requireActive(type);
 
         Zone zone = zoneId != null ? zoneRepository.findById(zoneId).orElse(null) : null;
 
@@ -179,7 +180,7 @@ public class ParkingService
         after.put("plate", plate);
         after.put("zoneId", zoneIdOf(result));
         after.put("street", street != null ? street.name() : null);
-        after.put("vehicleType", type.name());
+        after.put("vehicleType", type);
         auditService.log(AuditAction.VEHICLE_CHECK_IN, "ParkSpot", result.getId(),
                 plate + " giriş: " + (zone != null ? zone.getZoneName() : (street != null ? street.getDisplayName() : "-")),
                 null, after);
@@ -190,7 +191,7 @@ public class ParkingService
     private void publishEntered(ParkSpot spot) {
         Map<String, Object> p = new HashMap<>();
         p.put("plate", spot.getCurrentPlate());
-        p.put("vehicleType", spot.getCurrentType() != null ? spot.getCurrentType().name() : null);
+        p.put("vehicleType", spot.getCurrentType());
         p.put("zoneId", zoneIdOf(spot));
         p.put("street", spot.getStreet() != null ? spot.getStreet().name() : null);
         p.put("side", spot.getSide());
@@ -503,7 +504,7 @@ public class ParkingService
         m.put("entryTime", r.getEntryTime());
         m.put("exitTime", r.getExitTime());
         m.put("fee", r.getFee());
-        m.put("vehicleType", r.getVehicleType() != null ? r.getVehicleType().name() : null);
+        m.put("vehicleType", r.getVehicleType());
         m.put("paymentMethod", r.getPaymentMethod() != null ? r.getPaymentMethod().name() : null);
         m.put("previousStatus", r.getCancelledFromStatus() != null ? r.getCancelledFromStatus().name() : null);
         m.put("status", r.getStatus() != null ? r.getStatus().name() : null);
@@ -603,7 +604,7 @@ public class ParkingService
                 .orElseThrow(() -> notActive(p));
         checkSpotAccess(actor, spot);
         Map<String, Object> body = debtBody(spot);
-        body.put("vehicleType", spot.getCurrentType() != null ? spot.getCurrentType().name() : null);
+        body.put("vehicleType", spot.getCurrentType());
         body.put("zoneId", zoneIdOf(spot));
         return body;
     }
@@ -638,17 +639,39 @@ public class ParkingService
 
     // --- ADMIN PANELİ GRAFİKLERİ VE ANALİZ ---
 
-    // Ciro dağılımı (SQL toplama; tip null = eski kayıt = Otomobil)
+    // Ciro dağılımı: görünen ad -> ciro (etkin tipler + cirosu olan pasif tipler, sırayla)
     public Map<String, Double> calculateIncomeByVehicleType(){
-        double small = 0, large = 0;
-        for (Object[] row : parkingRecordRepository.sumPaidIncomeByVehicleType()) {
-            double v = row[1] == null ? 0.0 : ((Number) row[1]).doubleValue();
-            if (row[0] == VehicleType.LARGE) large += v; else small += v;
-        }
         Map<String, Double> result = new LinkedHashMap<>();
-        result.put("Otomobil", small);
-        result.put("Kamyonet", large);
+        for (Map<String, Object> d : incomeByVehicleTypeDetails()) {
+            result.put((String) d.get("displayName"), (Double) d.get("income"));
+        }
         return result;
+    }
+
+    // Aynı dağılımın ayrıntısı: [{code, displayName, iconKey, active, income, records}]
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> incomeByVehicleTypeDetails(){
+        Map<String, double[]> sums = new HashMap<>(); // code -> {income, records}
+        for (Object[] row : parkingRecordRepository.sumPaidIncomeByVehicleType()) {
+            String code = row[0] == null ? VehicleTypes.SMALL : (String) row[0]; // tip null = eski kayıt = SMALL
+            double[] acc = sums.computeIfAbsent(code, k -> new double[2]);
+            acc[0] += row[1] == null ? 0.0 : ((Number) row[1]).doubleValue();
+            acc[1] += row[2] == null ? 0.0 : ((Number) row[2]).doubleValue();
+        }
+        List<Map<String, Object>> out = new java.util.ArrayList<>();
+        for (VehicleType t : vehicleTypeService.all()) {
+            double[] acc = sums.get(t.getCode());
+            if (!t.isActive() && acc == null) continue;
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("code", t.getCode());
+            m.put("displayName", t.getDisplayName());
+            m.put("iconKey", t.getIconKey());
+            m.put("active", t.isActive());
+            m.put("income", acc != null ? acc[0] : 0.0);
+            m.put("records", acc != null ? (long) acc[1] : 0L);
+            out.add(m);
+        }
+        return out;
     }
 
     // Operasyonel başarı (Kaçan/Ödenen)

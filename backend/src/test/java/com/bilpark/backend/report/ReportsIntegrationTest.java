@@ -85,7 +85,7 @@ class ReportsIntegrationTest {
         ParkingRecord r = new ParkingRecord("34RW" + ThreadLocalRandom.current().nextInt(100000, 999999),
                 z.getStreet(), z, null, null, LocalDateTime.parse(exit).minusHours(1));
         r.setExitTime(LocalDateTime.parse(exit));
-        r.setVehicleType(VehicleType.SMALL);
+        r.setVehicleType("SMALL");
         r.setFee(fee);
         r.setStatus(st);
         r.setPaymentMethod(pm);
@@ -311,8 +311,10 @@ class ReportsIntegrationTest {
         record(z, u, "2091-05-07T10:00:00", ParkingStatus.PAID, 30, null);
         cancelled(z, u, "2091-05-07T12:00:00", ParkingStatus.PAID, 70, PaymentMethod.CASH, "2091-05-08T09:00:00");
         record(z, u, "2091-05-08T10:00:00", ParkingStatus.RUNAWAY, 25, null);
-        subscriptions.save(new Subscription("34SUB" + ThreadLocalRandom.current().nextInt(1000, 9999),
-                VehicleType.SMALL, LocalDate.parse("2091-05-10"), null, null));
+        Subscription sub = new Subscription("34SUB" + ThreadLocalRandom.current().nextInt(1000, 9999),
+                "SMALL", LocalDate.parse("2091-05-10"), null, null);
+        sub.setMonthlyFee(2500.0); // the fee comes from the tariff row; set it as SubscriptionService would
+        subscriptions.save(sub);
 
         mvc.perform(put("/api/admin/settings/rent").header("Authorization", admin())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"year\":2091,\"annualRent\":1200000}"))
@@ -334,7 +336,13 @@ class ReportsIntegrationTest {
                 .andExpect(jsonPath("$.cancelledCount").value(1))
                 .andExpect(jsonPath("$.cancelledFees").value(70.0))
                 .andExpect(jsonPath("$.unpaidRunawayDebt").value(25.0))
-                .andExpect(jsonPath("$.rentMissingYears").isEmpty());
+                .andExpect(jsonPath("$.rentMissingYears").isEmpty())
+                .andExpect(jsonPath("$.byVehicleType[0].code").value("SMALL"))
+                .andExpect(jsonPath("$.byVehicleType[0].displayName").value("Otomobil"))
+                .andExpect(jsonPath("$.byVehicleType[0].transactions").value(4))
+                .andExpect(jsonPath("$.byVehicleType[0].income").value(180.0))
+                .andExpect(jsonPath("$.byVehicleType[1].code").value("LARGE"))
+                .andExpect(jsonPath("$.byVehicleType[1].transactions").value(0));
 
         // half month pro-rated: 1,200,000 / 12 * 15 / 31
         mvc.perform(get("/api/admin/reports/period/summary?from=2091-05-01&to=2091-05-15").header("Authorization", admin()))
@@ -348,7 +356,10 @@ class ReportsIntegrationTest {
                 .andExpect(jsonPath("$.rentMissingYears[0]").value(2089));
 
         try (XSSFWorkbook wb = open(download("/api/admin/reports/period?from=2091-05-01&to=2091-05-31"))) {
-            assertEquals(List.of("Özet", "Saha bazında", "Günlük"), sheetNames(wb));
+            assertEquals(List.of("Özet", "Saha bazında", "Günlük", "Araç tipine göre"), sheetNames(wb));
+            XSSFSheet types = wb.getSheet("Araç tipine göre");
+            assertEquals("Otomobil", types.getRow(1).getCell(0).getStringCellValue());
+            assertEquals(180.0, types.getRow(1).getCell(2).getNumericCellValue(), 1e-9);
             XSSFSheet sum = wb.getSheet("Özet");
             assertEquals(100.0, rowStartingWith(sum, "Nakit ciro").getCell(1).getNumericCellValue(), 1e-9);
             assertEquals(50.0, rowStartingWith(sum, "POS ciro").getCell(1).getNumericCellValue(), 1e-9);
