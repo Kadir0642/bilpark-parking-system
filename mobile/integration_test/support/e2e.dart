@@ -12,6 +12,7 @@ import 'dart:math';
 
 import 'package:bilpark/core/api_client.dart';
 import 'package:bilpark/core/constants.dart';
+import 'package:bilpark/core/entry_queue.dart';
 import 'package:bilpark/main.dart' as app;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -103,10 +104,6 @@ Future<void> typeInto(WidgetTester t, Finder f, String text) async {
   await pause(t, 0.6);
 }
 
-/// Ekrandaki snackbar kapanana kadar bekler: alttaki "+" düğmesinin üstüne gelip dokunuşu yutuyor.
-Future<void> waitNoSnackBar(WidgetTester t) =>
-    waitGone(t, find.byType(SnackBar), timeout: const Duration(seconds: 12), reason: 'Bildirim kapanmadı');
-
 /// labelText'i [label] olan TextField.
 Finder fieldWithLabel(String label) =>
     find.byWidgetPredicate((w) => w is TextField && w.decoration?.labelText == label, description: 'TextField[$label]');
@@ -126,6 +123,7 @@ Future<void> startApp(WidgetTester t) async {
   await Future<void>.delayed(const Duration(seconds: 2));
   final prefs = await SharedPreferences.getInstance();
   await prefs.remove(ApiClient.tokenKey);
+  await prefs.remove(EntryQueue.prefsKey); // önceki koşudan kalan çevrimdışı girişler
   debugPrint('E2E-LOG|startApp: uygulama açılıyor');
   app.main();
   await Future<void>.delayed(const Duration(seconds: 2));

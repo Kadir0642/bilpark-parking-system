@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/api_client.dart';
 import 'core/constants.dart';
+import 'core/entry_queue.dart';
 import 'core/format.dart';
 import 'core/license.dart';
 import 'core/live_sync.dart';
@@ -118,6 +119,11 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
   StreamSubscription<void>? _reloadSub;
   Timer? _debounce;
 
+  // Bağlantı gelince çevrimdışı giriş kuyruğu boşaltılır
+  void _onLiveStatus() {
+    if (liveSync.status.value == LiveStatus.online) entryQueue.flush();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -134,6 +140,8 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
       _scheduleRefresh();
     });
     liveSync.onDeactivated = _onDeactivated;
+    entryQueue.load().then((_) => entryQueue.flush());
+    liveSync.status.addListener(_onLiveStatus);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) liveSync.start(zoneId: widget.zoneId);
     });
@@ -145,6 +153,7 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
     _debounce?.cancel();
     _eventSub?.cancel();
     _reloadSub?.cancel();
+    liveSync.status.removeListener(_onLiveStatus);
     liveSync.onDeactivated = null;
     ApiClient.onReadOnly = null;
     LicenseStore.reset();
@@ -154,7 +163,10 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) liveSync.reconnectNow();
+    if (state == AppLifecycleState.resumed) {
+      liveSync.reconnectNow();
+      entryQueue.flush();
+    }
   }
 
   bool _isMine(SyncEvent e) {

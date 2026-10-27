@@ -9,6 +9,22 @@ yığınına karşı çalışır. Kullanıcının demo yığınına (8081/5433/5
 | `m1_saha_akisi_test.dart` | Atanmış saha, sola/sağa giriş ve mükerrer uyarı, Ödeme Al + Geri al, Kaçtı, abone/borçlu, vardiyayı bitir |
 | `m2_canli_senkron_test.dart` | İkinci cihazdan giriş, ağ kesintisi, tarife zamanlama, motosiklet etkinleştirme |
 | `m3_hesap_test.dart` | Panelde açılan memurla giriş, yanlış giriş iptali, saha değişikliği ve pasife alma |
+| `m4_bulgular_test.dart` | 27 Ekim bulgularının düzeltmeleri: ana sayfa taşması, "Elle ekle" görünürlüğü, bildirim varken "+", borçlu araç uyarısı, çevrimdışı giriş kuyruğu |
+
+## Telefon bağlanınca tek komut
+
+Telefonu USB ile bağlayıp (USB hata ayıklama açık, `adb devices` cihazı gösteriyor) worktree kökünden Git Bash'te:
+
+```bash
+bash mobile/integration_test/tools/telefon_dogrula.sh
+```
+
+Betik aşağıdaki 1-3. adımları kendisi yapar: ayrı test yığınını (`bilpark-e2e`, 5434/8082/5501) kurar ve örnek veriyi
+yükler, `adb reverse` ve host yardımcısını açar, `m4_bulgular`, `m1_saha_akisi`, `m2_canli_senkron` dosyalarını sırayla
+koşar ve madde sonuçlarını yazar; sonunda test yığınını kaldırır ve telefona demo (8081) APK'sını geri kurar.
+Docker Desktop açık olmalıdır. `.env.demo` yoksa `demo/yeni-env.ps1` ile oluşturulur. Yalnızca bulgu testleri için
+sona `m4_bulgular` yazın. Kayıtlar `mobile/build/e2e-<zaman>/` altındadır. `m3_hesap` panelde elle açılan
+`panelmemur` hesabını gerektirdiği için ayrıca koşulur (aşağıda).
 
 ## 1. Test yığını
 

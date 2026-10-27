@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/entry_queue.dart';
 import '../core/format.dart';
 import '../core/live_sync.dart';
 import '../core/theme.dart';
@@ -75,7 +76,11 @@ class LiveConnectionBanner extends StatelessWidget {
       valueListenable: s.status,
       builder: (_, st, _) => ValueListenableBuilder<DateTime?>(
         valueListenable: s.lastSync,
-        builder: (_, ls, _) => ConnectionBanner(status: st, lastSync: ls, pending: pending),
+        // Çevrimdışı giriş kuyruğundaki kayıtlar bekleyen işleme otomatik eklenir
+        builder: (_, ls, _) => ValueListenableBuilder<List<PendingEntry>>(
+          valueListenable: entryQueue.items,
+          builder: (_, q, _) => ConnectionBanner(status: st, lastSync: ls, pending: pending + q.length),
+        ),
       ),
     );
   }

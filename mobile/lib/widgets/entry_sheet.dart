@@ -50,15 +50,18 @@ class _EntrySheetState extends State<_EntrySheet> {
   @override
   Widget build(BuildContext context) {
     final c = context.bp;
+    final kb = MediaQuery.of(context).viewInsets.bottom;
+    // Klavye açıkken boşluklar daralır: küçük ekranda "Sola/Sağa park" kaydırmadan görünür kalsın
+    final gap = kb > 0 ? 8.0 : 16.0;
     return SafeArea(
       child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+        padding: EdgeInsets.fromLTRB(20, 0, 20, kb + (kb > 0 ? 8 : 20)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text('Araç girişi', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 16),
+            SizedBox(height: gap),
             ValueListenableBuilder<TextEditingValue>(
               valueListenable: _plate,
               builder: (context, v, _) => TextField(
@@ -79,7 +82,7 @@ class _EntrySheetState extends State<_EntrySheet> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: gap),
             Text('Araç türü', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: c.text2)),
             const SizedBox(height: 8),
             // Seçenekler sunucudaki etkin tiplerden gelir; sayfa açıkken liste değişirse yeniden kurulur
@@ -105,7 +108,7 @@ class _EntrySheetState extends State<_EntrySheet> {
                 );
               },
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: gap + 4),
             ReadOnlyGate(
               builder: (_, ro) => Row(
                 children: [

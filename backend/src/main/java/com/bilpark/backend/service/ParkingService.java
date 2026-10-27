@@ -9,6 +9,7 @@ import com.bilpark.backend.fee.FeeBreakdown;
 import com.bilpark.backend.fee.FeeEngine;
 import com.bilpark.backend.fee.TariffRules;
 import com.bilpark.backend.model.AuditAction;
+import com.bilpark.backend.model.CheckInRequest;
 import com.bilpark.backend.model.ParkSpot;
 import com.bilpark.backend.model.ParkingRecord;
 import com.bilpark.backend.model.ParkingStatus;
@@ -23,6 +24,7 @@ import com.bilpark.backend.model.User;
 import com.bilpark.backend.model.VehicleType;
 import com.bilpark.backend.model.VehicleTypes;
 import com.bilpark.backend.model.Zone;
+import com.bilpark.backend.repository.CheckInRequestRepository;
 import com.bilpark.backend.repository.ParkSpotRepository;
 import com.bilpark.backend.repository.ParkingRecordRepository;
 import com.bilpark.backend.repository.SubscriptionRepository;
@@ -56,6 +58,7 @@ public class ParkingService
     private static final Logger log = LoggerFactory.getLogger(ParkingService.class);
 
     private final ParkSpotRepository parkSpotRepository; // Aktif araçlar
+    private final CheckInRequestRepository checkInRequestRepository;
     private final ParkingRecordRepository parkingRecordRepository; // Muhasebe fişleri
     private final ZoneRepository zoneRepository;
     private final SubscriptionRepository subscriptionRepository;
@@ -73,8 +76,10 @@ public class ParkingService
                           ChangePublisher changePublisher,
                           AuditService auditService,
                           Clock clock,
-                          VehicleTypeService vehicleTypeService)
+                          VehicleTypeService vehicleTypeService,
+                          CheckInRequestRepository checkInRequestRepository)
     {
+        this.checkInRequestRepository = checkInRequestRepository;
         this.vehicleTypeService = vehicleTypeService;
         this.parkSpotRepository=parkSpotRepository;
         this.parkingRecordRepository=parkingRecordRepository;
@@ -123,6 +128,20 @@ public class ParkingService
     @Transactional
     public ParkSpot checkInVehicle(String licensePlate,String vehicleType,StreetLocation street,String side, Long zoneId, User actor)
     {
+        return checkInVehicle(licensePlate, vehicleType, street, side, zoneId, actor, null);
+    }
+
+    private static final java.util.regex.Pattern REQUEST_ID = java.util.regex.Pattern.compile("[A-Za-z0-9-]{8,64}");
+
+    // checkInRequestId != null: idempotent giriş (çevrimdışı kuyruk tekrarı)
+    @Transactional
+    public ParkSpot checkInVehicle(String licensePlate,String vehicleType,StreetLocation street,String side, Long zoneId, User actor,
+                                   String checkInRequestId)
+    {
+        if (checkInRequestId != null && !REQUEST_ID.matcher(checkInRequestId).matches()) {
+            throw ApiException.badRequest(ErrorCodes.INVALID_REQUEST_ID,
+                    "Geçersiz istek kimliği (8-64 karakter, harf/rakam/tire).");
+        }
         String plate = PlateNormalizer.normalize(licensePlate);
 
         if (isOfficer(actor)) {
@@ -134,6 +153,19 @@ public class ParkingService
             }
             if (street != assigned.getStreet()) {
                 throw denied();
+            }
+        }
+
+        // Tekrar: aynı istek kimliği daha önce işlendiyse (bölge yetkisi yukarıda doğrulandı)
+        if (checkInRequestId != null) {
+            Optional<CheckInRequest> prior = checkInRequestRepository.findById(checkInRequestId);
+            if (prior.isPresent()) {
+                Long spotId = prior.get().getParkSpotId();
+                Optional<ParkSpot> live = spotId == null ? Optional.empty() : parkSpotRepository.findById(spotId);
+                if (live.isPresent() && live.get().getCurrentPlate().equals(prior.get().getPlate())) {
+                    return withSubscriptionAndDebt(List.of(live.get())).get(0);
+                }
+                throw ApiException.conflict(ErrorCodes.DUPLICATE_REQUEST, "Bu giriş daha önce işlendi.");
             }
         }
 
@@ -176,6 +208,17 @@ public class ParkingService
                     plate + " plakalı araç zaten sistemde aktif.");
         }
         ParkSpot result = saved != null ? saved : newSpot;
+        if (checkInRequestId != null) {
+            try {
+                checkInRequestRepository.saveAndFlush(new CheckInRequest(
+                        checkInRequestId, plate, result.getId(), LocalDateTime.now(clock)));
+            } catch (DataIntegrityViolationException e) {
+                // Aynı kimlikle eşzamanlı ikinci istek; bu işlem geri alınır
+                log.info("Concurrent duplicate check-in request id {}", checkInRequestId);
+                throw ApiException.conflict(ErrorCodes.ALREADY_PARKED,
+                        plate + " plakalı araç zaten sistemde aktif.");
+            }
+        }
         Map<String, Object> after = new LinkedHashMap<>();
         after.put("plate", plate);
         after.put("zoneId", zoneIdOf(result));

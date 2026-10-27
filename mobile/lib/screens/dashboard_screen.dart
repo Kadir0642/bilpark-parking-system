@@ -184,19 +184,29 @@ class DashboardScreenState extends State<DashboardScreen> {
                   _tariffCard(c),
                   const SizedBox(height: 16),
                   _summaryCard(c),
-                  const SizedBox(height: 16),
-                  ReadOnlyGate(
-                    builder: (_, ro) => Row(
-                      children: [
-                        Expanded(child: _actionButton(Icons.photo_camera_outlined, 'Plaka tara', ro ? null : widget.onScanPlate)),
-                        const SizedBox(width: 10),
-                        Expanded(child: _actionButton(Icons.add, 'Elle ekle', ro ? null : widget.onManualEntry)),
-                      ],
-                    ),
-                  ),
-                  const ReadOnlyNote(),
                 ],
               ),
+            ),
+          ),
+          // Eylem çubuğu listenin dışında sabit durur: küçük ekranda kaydırmadan "Elle ekle" erişilebilir
+          Container(
+            padding: const EdgeInsets.fromLTRB(BpSize.screenPad, 12, BpSize.screenPad, 12),
+            decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ReadOnlyGate(
+                  builder: (_, ro) => Row(
+                    children: [
+                      Expanded(child: _actionButton(Icons.photo_camera_outlined, 'Plaka tara', ro ? null : widget.onScanPlate)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _actionButton(Icons.add, 'Elle ekle', ro ? null : widget.onManualEntry)),
+                    ],
+                  ),
+                ),
+                const ReadOnlyNote(),
+              ],
             ),
           ),
         ],
@@ -310,7 +320,13 @@ class DashboardScreenState extends State<DashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: fg ?? c.text2)),
-            Text(value, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: valueColor ?? fg ?? c.text)),
+            // Uzun tutar tek satırda kalsın: sığmazsa küçülür
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(value,
+                  maxLines: 1, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: valueColor ?? fg ?? c.text)),
+            ),
           ],
         ),
       );
@@ -336,19 +352,27 @@ class DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 2.0,
-            children: [
-              tile('Tahsil edilen', money(s?.collected)),
-              tile('İşlem', count(s?.paidCount)),
-              tile('Kaçak', count(s?.runawayCount), valueColor: c.danger),
-              tile('Teslim edilecek nakit', money(s?.cash), bg: c.successSoft, fg: c.onSuccessSoft),
-            ],
+          // Sabit oranlı ızgara yerine doğal yükseklikli iki satır: yazı büyütülse de taşmaz
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: tile('Tahsil edilen', money(s?.collected))),
+                const SizedBox(width: 10),
+                Expanded(child: tile('İşlem', count(s?.paidCount))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: tile('Kaçak', count(s?.runawayCount), valueColor: c.danger)),
+                const SizedBox(width: 10),
+                Expanded(child: tile('Teslim edilecek nakit', money(s?.cash), bg: c.successSoft, fg: c.onSuccessSoft)),
+              ],
+            ),
           ),
           if (s != null) ...[
             const SizedBox(height: 12),

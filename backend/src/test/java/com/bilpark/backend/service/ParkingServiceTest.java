@@ -87,7 +87,8 @@ public class ParkingServiceTest {
         t.setPaidEnd(LocalTime.of(22, 0));
         when(tariffService.current()).thenReturn(t);
         parkingService = new ParkingService(parkSpotRepository, parkingRecordRepository, zoneRepository,
-                subscriptionRepository, tariffService, changePublisher, mock(AuditService.class), clock, TestVehicleTypes.service());
+                subscriptionRepository, tariffService, changePublisher, mock(AuditService.class), clock, TestVehicleTypes.service(),
+                mock(com.bilpark.backend.repository.CheckInRequestRepository.class));
     }
 
     private ParkSpot spot(String plate, String type, Zone zone, int minutesAgo) {
@@ -337,7 +338,8 @@ public class ParkingServiceTest {
     void testCheckOut_OvernightCarriesPaidMinutes() {
         // clock 09:00 next morning: yesterday 21:00-22:00 (60) + today 08:00-09:00 (60) = 120 paid minutes
         ParkingService svc = new ParkingService(parkSpotRepository, parkingRecordRepository, zoneRepository,
-                subscriptionRepository, tariffService, changePublisher, mock(AuditService.class), fixedClock(LocalDateTime.of(2026, 10, 21, 9, 0)), TestVehicleTypes.service());
+                subscriptionRepository, tariffService, changePublisher, mock(AuditService.class), fixedClock(LocalDateTime.of(2026, 10, 21, 9, 0)), TestVehicleTypes.service(),
+                mock(com.bilpark.backend.repository.CheckInRequestRepository.class));
         ParkSpot s = new ParkSpot("34NGT003", StreetLocation.CUMHURIYET, "SMALL", "Merkez", "Bilecik", "LEFT", null);
         s.setEntryTime(LocalDateTime.of(2026, 10, 20, 21, 0));
         when(parkSpotRepository.findByPlateForUpdate("34NGT003")).thenReturn(Optional.of(s));

@@ -95,8 +95,10 @@ public class ParkingController {
             @RequestParam(defaultValue = "SMALL") String type,
             @RequestParam(defaultValue = "LEFT") String side,
             @RequestParam(required = false) Long zoneId,
+            @RequestParam(required = false) String checkInRequestId,
             java.security.Principal principal) {
-        return ResponseEntity.ok(parkingService.checkInVehicle(plate, type, street, side, zoneId, currentUser(principal)));
+        return ResponseEntity.ok(parkingService.checkInVehicle(plate, type, street, side, zoneId,
+                currentUser(principal), checkInRequestId));
     }
 
     // paymentMethod: CASH (default) | POS | SUBSCRIPTION; ONLINE is reserved

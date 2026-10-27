@@ -62,10 +62,8 @@ void main() {
       await report.item(t, 'M12',
           'Mobilde yanlış girişi gerekçeyle iptal etme; kayıt cirodan düşüyor ve panelde iptal sekmesinde görünüyor', () async {
         const reason = 'E2E yanlış plaka';
-        // Ana sayfadaki "Elle ekle" küçük ekranda kaydırma alanının dışında kalıyor; Cadde'deki + düğmesi kullanılır.
-        await tapOn(t, find.descendant(of: find.byType(NavigationBar), matching: find.text('Cadde')));
-        await waitNoSnackBar(t);
-        await tapOn(t, find.byTooltip('Elle araç ekle'));
+        // Ana sayfadaki "Elle ekle" sabit eylem çubuğunda: kaydırmadan basılır, form Cadde ekranında açılır.
+        await tapOn(t, find.text('Elle ekle'));
         await waitFor(t, find.text('Araç girişi'));
         await typeInto(t, fieldWithLabel('Plaka'), plate);
         await pause(t);

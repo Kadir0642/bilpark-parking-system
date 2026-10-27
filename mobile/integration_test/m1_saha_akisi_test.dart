@@ -54,7 +54,6 @@ Future<void> refreshStreet(WidgetTester t) async {
 /// "Elle araç ekle" -> plaka -> "Sola park" / "Sağa park".
 Future<void> enterPlate(WidgetTester t, String plate, {required bool left}) async {
   await goTab(t, 'Cadde');
-  await waitNoSnackBar(t);
   await tapOn(t, find.byTooltip('Elle araç ekle'));
   await waitFor(t, find.text('Araç girişi'));
   await typeInto(t, fieldWithLabel('Plaka'), plate);
@@ -295,7 +294,11 @@ void main() {
       if (spotOf(spots, debtPlate) == null) {
         await enterPlate(t, debtPlate, left: true);
         await waitFor(t, find.text('$debtPlate sokağa eklendi.'));
+        // Girişte engellemeyen borç uyarısı
+        await waitFor(t, find.text('Borçlu araç'), reason: 'Borçlu araç girişinde uyarı çıkmalı');
+        expect(find.textContaining('kaçak geçmişi var'), findsOneWidget);
         await pause(t);
+        await tapOn(t, find.text('Tamam'));
       }
       spots = await activeSpots(admin);
       final debt = spotOf(spots, debtPlate)?['accumulatedDebt'];

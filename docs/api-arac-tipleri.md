@@ -104,6 +104,13 @@ Denetim kaydında yürürlük açıklamasına "etkinleşen: Motosiklet" / "pasif
 - Abonelik oluşturmada (`/api/subscription/create`) aynı kurallar; aylık ücret tipin tarife satırındaki
   `subscriptionMonthly`.
 
+### Giriş tekrarı (`checkInRequestId`)
+`POST /api/parking/check-in` isteğe bağlı `checkInRequestId` (8-64 karakter, `[A-Za-z0-9-]`) alır; çevrimdışı kuyruk
+tekrarını güvenli kılar. Biçim hatalıysa 400 `INVALID_REQUEST_ID`. Aynı kimlik, oluşturduğu kayıt hâlâ aktifken
+tekrar gelirse 200 ile aynı `ParkSpot` döner (yeni kayıt, denetim kaydı veya olay yok; `ALREADY_PARKED` kontrolünden
+önce çalışır). Kayıt artık aktif değilse (çıkış/kaçak/iptal) 409 `DUPLICATE_REQUEST` ("Bu giriş daha önce işlendi.").
+Parametresiz çağrı eskisi gibidir.
+
 ### Ücret
 `FeeEngine` tipin tarife satırındaki fiyatı kullanır. Park hâlindeyken tipi pasifleşen araç: satırda fiyat
 varsa o, yoksa SMALL fiyatı (çıkış engellenmez). Kodu `null` olan eski kayıt SMALL sayılır.

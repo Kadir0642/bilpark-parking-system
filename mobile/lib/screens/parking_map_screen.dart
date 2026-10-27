@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import '../core/api_client.dart';
+import '../core/constants.dart';
+import '../core/entry_queue.dart';
 import '../core/format.dart';
 import '../core/license.dart';
 import '../core/live_sync.dart';
@@ -13,6 +15,7 @@ import '../core/vehicle_types.dart';
 import '../widgets/bp_header.dart';
 import '../widgets/bp_snack.dart';
 import '../widgets/connection_banner.dart';
+import '../widgets/debt_alert.dart';
 import '../widgets/entry_sheet.dart';
 import '../widgets/license_banner.dart';
 import '../widgets/plate_badge.dart';
@@ -22,7 +25,8 @@ import 'vehicle_detail_screen.dart';
 
 enum _ActionKind {
   checkOut('Ödeme'),
-  runaway('Kaçak');
+  runaway('Kaçak'),
+  checkIn('Giriş'); // yalnızca kuyruktan düşen girişin hatası için; yeniden denenmez
 
   final String label;
   const _ActionKind(this.label);
@@ -54,7 +58,7 @@ class _FailedAction {
 
   // Ağ/sunucu hatası ve kilit çakışması tekrar denenebilir; "zaten işlendi", "abonelik yok" gibi iş kuralı hataları denenemez
   // 423 READ_ONLY dahil diğer 4xx hataları tekrar denenemez
-  bool get retryable => statusCode == null || statusCode! >= 500 || code == 'CONFLICT';
+  bool get retryable => kind != _ActionKind.checkIn && (statusCode == null || statusCode! >= 500 || code == 'CONFLICT');
 }
 
 class ParkingMapScreen extends StatefulWidget {
@@ -81,6 +85,8 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
   Timer? _debounce; // art arda gelen yenileme istekleri tek istek olur
   StreamSubscription<SyncEvent>? _evSub;
   StreamSubscription<void>? _reloadSub;
+  StreamSubscription<EntrySendResult>? _queueSub;
+  final GlobalKey _actionsKey = GlobalKey(); // alttaki düğme sütunu: bildirimler bunun üstünde kalır
   bool _failedExpanded = true;
   final Map<String, _PendingAction> _pending = {};
   final List<_FailedAction> _failed = [];
@@ -105,6 +111,12 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
     _evSub = liveSync.events.listen(_onEvent);
     _reloadSub = liveSync.reloads.listen((_) => scheduleRefresh());
     TariffStore.current.addListener(_onTariff);
+    _queueSub = entryQueue.results.listen(_onQueueResult);
+    entryQueue.items.addListener(_onQueueItems);
+  }
+
+  void _onQueueItems() {
+    if (mounted) setState(() {});
   }
 
   void _onTariff() {
@@ -131,6 +143,8 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
     _debounce?.cancel();
     _evSub?.cancel();
     _reloadSub?.cancel();
+    _queueSub?.cancel();
+    entryQueue.items.removeListener(_onQueueItems);
     TariffStore.current.removeListener(_onTariff);
     _clock?.cancel();
     _pendingTick?.cancel();
@@ -168,31 +182,90 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
     if (!mounted) return;
     final m = ScaffoldMessenger.of(context);
     m.hideCurrentSnackBar();
-    m.showSnackBar(bpSnackBar(context, msg, tone: tone, duration: duration, action: action));
+    // Floating + alt boşluk: bildirim "+" / "Plaka tara" düğmelerinin üstünde durur, dokunuşları yutmaz
+    final box = _actionsKey.currentContext?.findRenderObject();
+    final h = box is RenderBox && box.hasSize ? box.size.height : 60.0;
+    m.showSnackBar(bpSnackBar(context, msg,
+        tone: tone,
+        duration: duration,
+        action: action,
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.fromLTRB(12, 0, 12, h + 12 + 8)));
   }
 
   // CHECK-IN "SIDE" (YÖN) İSTER
   Future<void> checkInVehicle(String plate, String type, String side) async {
-    final Map<String, String> params = {
-      'plate': plate.toUpperCase().replaceAll(RegExp(r'[\s-]'), ''),
-      'street': _backendStreetEnum,
-      'type': type,
-      'side': side, // 'LEFT' veya 'RIGHT' olarak Backend'e gidiyor!
-    };
-    if (widget.zoneId != null) {
-      params['zoneId'] = widget.zoneId.toString();
+    // Her giriş istemci UUID'si taşır: istek sunucuya ulaşıp yanıt kaybolsa da tekrar gönderim çift kayıt açmaz
+    final entry = PendingEntry(
+      requestId: newRequestId(),
+      plate: plate,
+      street: _backendStreetEnum,
+      type: type,
+      side: side, // 'LEFT' veya 'RIGHT' olarak Backend'e gidiyor!
+      zoneId: widget.zoneId,
+      username: AppConstants.currentUser,
+    );
+    if (entryQueue.contains(entry.plate)) {
+      _showSnack('${entry.plate} zaten beklemede.', tone: BadgeTone.danger);
+      return;
+    }
+    // Çevrimdışıysa ya da önde bekleyen kayıt varsa sıra bozulmasın diye doğrudan kuyruğa
+    if (liveSync.status.value == LiveStatus.offline || entryQueue.items.value.isNotEmpty) {
+      await _queueEntry(entry);
+      return;
     }
     try {
-      await ApiClient.post('/parking/check-in', query: params);
-      _showSnack('${params['plate']} sokağa eklendi.', tone: BadgeTone.success);
+      final data = await ApiClient.post('/parking/check-in', query: entry.toQuery());
+      _showSnack('${entry.plate} sokağa eklendi.', tone: BadgeTone.success);
       scheduleRefresh();
+      _warnDebt(entry.plate, data);
     } on ApiException catch (e) {
-      // 409 ALREADY_PARKED / 400 INVALID_PLATE: sunucunun mesajı olduğu gibi gösterilir
       if (e.isUnauthorized) return;
+      // Ağ/zaman aşımı: AYNI requestId ile kuyruğa; istek ulaşmışsa sunucu tekrarı çift kayıt yapmaz
+      if (e.statusCode == null) {
+        await _queueEntry(entry);
+        return;
+      }
+      // 409 ALREADY_PARKED / 400 INVALID_PLATE: sunucunun mesajı olduğu gibi gösterilir
       _showSnack(e.message, tone: BadgeTone.danger, duration: const Duration(seconds: 6));
       if (e.code == 'ALREADY_PARKED') scheduleRefresh();
       // Tip tarifede pasifleşmiş/bilinmiyor: liste tazelenir, görevli güncel seçeneklerle tekrar dener
       if (e.code == 'VEHICLE_TYPE_INACTIVE' || e.code == 'UNKNOWN_VEHICLE_TYPE') VehicleTypeStore.load();
+    }
+  }
+
+  Future<void> _queueEntry(PendingEntry entry) async {
+    final ok = await entryQueue.enqueue(entry);
+    if (!ok) {
+      _showSnack('${entry.plate} zaten beklemede.', tone: BadgeTone.danger);
+      return;
+    }
+    _showSnack('${entry.plate} bağlantı gelince gönderilecek (beklemede).');
+    unawaited(entryQueue.flush());
+  }
+
+  /// Giriş yapıldıktan sonra: ödenmemiş kaçak borcu varsa engellemeyen uyarı.
+  void _warnDebt(String plate, dynamic body) {
+    final debt = body is Map ? body['accumulatedDebt'] : null;
+    if (debt is num && debt > 0 && mounted) showDebtAlert(context, plate, debt);
+  }
+
+  /// Kuyruktan giden kayıtların sonucu (bağlantı gelince arka planda gönderilenler).
+  void _onQueueResult(EntrySendResult r) {
+    if (!mounted || r.entry.street != _backendStreetEnum || r.entry.zoneId != widget.zoneId) return;
+    final plate = r.entry.plate;
+    switch (r.kind) {
+      case EntryResultKind.sent:
+        _showSnack('$plate sokağa eklendi.', tone: BadgeTone.success);
+        scheduleRefresh();
+        _warnDebt(plate, r.body);
+      case EntryResultKind.conflict || EntryResultKind.rejected:
+        final why = (r.message ?? 'Sunucu reddetti').replaceFirst(RegExp(r'[.\s]+$'), '');
+        final text = '$plate kaydedilemedi: $why. Kayıt kuyruktan çıkarıldı.';
+        setState(() => _failed.insert(
+            0, _FailedAction(plate, _ActionKind.checkIn, null, 0, DateTime.now(), text, null, r.kind == EntryResultKind.conflict ? 409 : 400)));
+        _showSnack(text, tone: BadgeTone.danger, duration: const Duration(seconds: 12));
+        scheduleRefresh();
     }
   }
 
@@ -288,8 +361,13 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
     } on ApiException catch (e) {
       if (!mounted) return;
       if (!e.isUnauthorized) {
-        setState(() => _failed.insert(0, _FailedAction(p.plate, p.kind, p.method, p.amount, DateTime.now(), e.message, e.code, e.statusCode)));
-        _showSnack('${formatPlate(p.plate)}: ${e.message}', tone: BadgeTone.danger, duration: const Duration(seconds: 7));
+        // Ödeme/kaçak asla kuyruğa alınmaz: bağlantı yoksa bunu açıkça söyle
+        final msg = e.statusCode == null
+            ? 'Bağlantı yok: ${p.kind == _ActionKind.checkOut ? 'ödeme' : 'kaçak kaydı'} kaydedilmedi. '
+                'Ödeme ve kaçak işlemleri bekletilmez; bağlantı gelince tekrar deneyin.'
+            : e.message;
+        setState(() => _failed.insert(0, _FailedAction(p.plate, p.kind, p.method, p.amount, DateTime.now(), msg, e.code, e.statusCode)));
+        _showSnack('${formatPlate(p.plate)}: $msg', tone: BadgeTone.danger, duration: const Duration(seconds: 7));
       }
       // Araç başka bir işlemle kapandıysa liste eskimiştir
       if (e.code == 'ALREADY_PROCESSED' || e.code == 'VEHICLE_NOT_FOUND') scheduleRefresh();
@@ -365,8 +443,54 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
   }
 
   // --- GÖRÜNÜM ---
+  // Çevrimdışı kuyrukta bekleyen giriş: sunucuya henüz gitmedi, ödeme alınamaz
+  Widget _buildQueuedCard(PendingEntry e) {
+    final c = context.bp;
+    final inside = DateTime.now().difference(e.createdAt);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 6),
+      child: Material(
+        color: c.warningSoft,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BpSize.rMd), side: BorderSide(color: c.warning, width: 2)),
+        child: InkWell(
+          customBorder: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BpSize.rMd)),
+          onTap: () => _showSnack('Bağlantı gelince gönderilecek'),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 104),
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: PlateBadge(e.plate))),
+                      const SizedBox(width: 4),
+                      Icon(iconForCode(e.type), size: 20, color: c.text2),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(formatDurationText(inside), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c.text2)),
+                  const SizedBox(height: 6),
+                  // Dar kartta taşmasın diye küçülür
+                  const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: StatusBadge('Beklemede', tone: BadgeTone.warning, icon: Icons.cloud_upload_outlined)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildCarCard(dynamic vehicle) {
     if (vehicle == null) return const SizedBox.shrink();
+    if (vehicle is PendingEntry) return _buildQueuedCard(vehicle);
     final c = context.bp;
     final String plate = vehicle['currentPlate'];
     final entry = DateTime.parse(vehicle['entryTime']).toLocal();
@@ -593,8 +717,19 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
 
     // Araçları "Yön"lerine göre iki farklı listeye ayırıyoruz
     final all = activeVehicles;
-    final leftVehicles = _applyFilters(all.where((v) => v['side'] == 'LEFT' || v['side'] == null).toList());
-    final rightVehicles = _applyFilters(all.where((v) => v['side'] == 'RIGHT').toList());
+    // Kuyrukta bekleyen girişler kendi kaldırımının başında görünür
+    final q = _search.text.toUpperCase().replaceAll(RegExp(r'[\s-]'), '');
+    final queued = entryQueue.items.value
+        .where((e) => e.street == _backendStreetEnum && e.zoneId == widget.zoneId && (q.isEmpty || e.plate.contains(q)))
+        .toList();
+    final leftVehicles = [
+      ...queued.where((e) => e.side != 'RIGHT'),
+      ..._applyFilters(all.where((v) => v['side'] == 'LEFT' || v['side'] == null).toList()),
+    ];
+    final rightVehicles = [
+      ...queued.where((e) => e.side == 'RIGHT'),
+      ..._applyFilters(all.where((v) => v['side'] == 'RIGHT').toList()),
+    ];
 
     // Hangi taraf daha uzunsa, otoparkın uzunluğu o kadar olacak! (Sınırsız Büyüme)
     final int rowCount = max(leftVehicles.length, rightVehicles.length);
@@ -699,6 +834,7 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
             right: 12,
             bottom: 12,
             child: Column(
+              key: _actionsKey,
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [

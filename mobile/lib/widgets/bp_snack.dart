@@ -3,12 +3,15 @@ import '../core/theme.dart';
 import 'status_badge.dart';
 
 /// Tema renklerinden SnackBar üretir. [tone] success/danger dışında verilmezse koyu nötr görünür.
+/// [behavior]/[margin]: varsayılan değişmez; cadde ekranı düğmelerin üstünde kalmak için floating + margin verir.
 SnackBar bpSnackBar(
   BuildContext context,
   String message, {
   BadgeTone? tone,
   Duration duration = const Duration(seconds: 4),
   SnackBarAction? action,
+  SnackBarBehavior? behavior,
+  EdgeInsetsGeometry? margin,
 }) {
   final c = context.bp;
   Color? bg;
@@ -25,5 +28,7 @@ SnackBar bpSnackBar(
     backgroundColor: bg,
     duration: duration,
     action: action,
+    behavior: behavior,
+    margin: margin,
   );
 }

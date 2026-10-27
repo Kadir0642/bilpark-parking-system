@@ -55,7 +55,6 @@ Future<void> _goTab(WidgetTester t, String label) async {
 
 /// Cadde ekranında + düğmesiyle formu açar; 'Araç girişi' başlığını bekler.
 Future<void> _openEntrySheet(WidgetTester t) async {
-  await waitNoSnackBar(t);
   await tapOn(t, find.byTooltip('Elle araç ekle'));
   await waitFor(t, find.text('Araç girişi'));
   await pause(t, 0.5);
@@ -163,13 +162,12 @@ void main() {
           timeout: const Duration(seconds: 30), reason: 'Backend durunca bant "Yeniden bağlanıyor…"/"Çevrimdışı" olmalı');
       await pause(t, 1.5);
 
-      // Giriş işlemleri çevrimdışı kuyruğa ALINMAZ (kuyruk yalnızca ödeme/kaçak geri alma penceresidir):
-      // hata snack'i çıkar, araç listeye eklenmez, "işlem bekliyor" görünmez.
+      // Çevrimdışı giriş telefonda bekletilir: "Beklemede" rozetli kart ve bantta bekleyen işlem sayısı.
       await _enterOnPhone(t, plateOffline);
-      await waitFor(t, find.textContaining('Sunucu'),
-          timeout: const Duration(seconds: 30), reason: 'Çevrimdışı girişte "Sunucuya ulaşılamadı…" (veya zaman aşımı) uyarısı');
-      expect(_plateCard(plateOffline), findsNothing, reason: 'Çevrimdışı girilen plaka listede olmamalı');
-      expect(find.textContaining('işlem bekliyor'), findsNothing, reason: 'Girişler kuyruğa alınmıyor');
+      await waitFor(t, find.textContaining('bağlantı gelince gönderilecek'),
+          timeout: const Duration(seconds: 30), reason: 'Çevrimdışı girişte kuyruk bildirimi');
+      await waitFor(t, find.text('Beklemede'), reason: 'Bekleyen giriş "Beklemede" rozetiyle görünmeli');
+      expect(find.textContaining('1 işlem bekliyor'), findsWidgets, reason: 'Bantta bekleyen işlem sayısı');
       await pause(t, 1.5);
 
       await Host.startBackend();
@@ -196,12 +194,13 @@ void main() {
       expect(_findVehicle(apiList, plateMissed), isNotNull, reason: 'API de $plateMissed kaydını göstermeli');
       await pause(t);
 
-      // Bağlantı döndü: telefondan giriş yeniden denenince çalışmalı.
-      await _enterOnPhone(t, plateOffline);
+      // Bağlantı döndü: bekleyen giriş kendiliğinden gönderilir, sunucuda tek kayıt olur.
       await _filter(t, plateOffline);
-      await waitFor(t, _plateCard(plateOffline), timeout: const Duration(seconds: 20), reason: 'Yeniden denenen giriş listede görünmeli');
+      await waitGone(t, find.text('Beklemede'), timeout: const Duration(seconds: 30), reason: 'Bekleyen giriş gönderilmedi');
+      await waitFor(t, _plateCard(plateOffline), timeout: const Duration(seconds: 20), reason: 'Gönderilen giriş listede görünmeli');
       final apiList2 = await _activeVehicles(await secondClient());
-      expect(_findVehicle(apiList2, plateOffline), isNotNull);
+      expect(apiList2.whereType<Map>().where((e) => e['currentPlate'] == plateOffline).length, 1,
+          reason: '$plateOffline sunucuda tam bir kez kayıtlı olmalı');
       await pause(t, 1.5);
     });
 

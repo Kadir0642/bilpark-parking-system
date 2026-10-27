@@ -35,4 +35,8 @@ public final class ErrorCodes {
     // Araç tipleri
     public static final String UNKNOWN_VEHICLE_TYPE = "UNKNOWN_VEHICLE_TYPE";
     public static final String VEHICLE_TYPE_INACTIVE = "VEHICLE_TYPE_INACTIVE"; // tip tarifede etkin değil
+
+    // Idempotent giriş
+    public static final String INVALID_REQUEST_ID = "INVALID_REQUEST_ID";   // checkInRequestId biçimi geçersiz
+    public static final String DUPLICATE_REQUEST = "DUPLICATE_REQUEST";     // aynı istek daha önce işlendi, kayıt artık aktif değil
 }
