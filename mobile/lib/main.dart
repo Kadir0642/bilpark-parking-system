@@ -8,6 +8,7 @@ import 'core/format.dart';
 import 'core/license.dart';
 import 'core/live_sync.dart';
 import 'core/tariff.dart';
+import 'core/user_update.dart';
 import 'core/theme.dart';
 import 'screens/auth_screen.dart';
 import 'screens/dashboard_screen.dart';
@@ -181,6 +182,9 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
           ..showSnackBar(bpSnackBar(context, msg));
       case 'LICENSE_UPDATED':
         LicenseStore.load();
+      case 'USER_UPDATED':
+        final who = e.payload['username'];
+        if (who == AppConstants.currentUser) _onUserUpdated(e.payload);
       case 'VEHICLE_ENTERED' || 'VEHICLE_EXITED' || 'VEHICLE_RUNAWAY' || 'VEHICLE_CANCELLED' || 'RECORD_CANCELLED':
         if (_isMine(e)) _scheduleRefresh();
     }
@@ -197,14 +201,82 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
     });
   }
 
-  /// Yönetici hesabı pasife aldı: oturum yerelde kapatılır (sunucuya /auth/logout gitmez).
-  Future<void> _onDeactivated() async {
+  /// Oturumu yerelde kapatıp giriş ekranına döner. [logoutFirst]: önce sunucuda vardiya kapatılmaya çalışılır, hata yutulur.
+  Future<void> _signOut(String? message, {bool logoutFirst = false}) async {
+    if (logoutFirst) {
+      try {
+        if (await ApiClient.getToken() != null) await ApiClient.post('/auth/logout');
+      } catch (_) {
+        // sunucuya ulaşılamasa da yerel çıkış yapılır
+      }
+    }
+    await liveSync.stop();
     await ApiClient.clearToken();
     AppConstants.clearAuth();
     final nav = navigatorKey.currentState;
     if (nav == null) return;
-    nav.pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const AuthScreen(message: ApiClient.deactivatedMessage)), (route) => false);
+    nav.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => AuthScreen(message: message)), (route) => false);
+  }
+
+  /// Yönetici hesabı pasife aldı: oturum yerelde kapatılır (sunucuya /auth/logout gitmez).
+  Future<void> _onDeactivated() => _signOut(ApiClient.deactivatedMessage);
+
+  bool _handlingUserUpdate = false;
+
+  /// Rol ya da saha değişti: güncel bilgi /me'den alınır. Saha değişince yeniden giriş en güvenli yoldur;
+  /// giriş akışı sahayı login yanıtından alır ve vardiyayı yeni sahada açar.
+  Future<void> _onUserUpdated(Map<String, dynamic> payload) async {
+    if (_handlingUserUpdate) return;
+    _handlingUserUpdate = true;
+    try {
+      var role = payload['role'] as String?;
+      var zoneId = (payload['zoneId'] as num?)?.toInt();
+      String? zoneName;
+      try {
+        final me = await ApiClient.get('/me');
+        if (me is Map) {
+          role = me['role'] as String?;
+          zoneId = (me['zoneId'] as num?)?.toInt();
+          zoneName = me['zoneName'] as String?;
+        }
+      } on ApiException catch (ex) {
+        if (ex.isUnauthorized) return;
+      } catch (_) {
+        // /me alınamazsa olay yükü kullanılır
+      }
+      if (!mounted) return;
+      switch (decideUserUpdate(role: role, zoneId: zoneId, currentZoneId: widget.zoneId)) {
+        case UserUpdateAction.none:
+          return;
+        case UserUpdateAction.roleChanged:
+          await _signOut('Hesabınızın rolü değiştirildi. Saha uygulaması yalnızca memurlar içindir.');
+        case UserUpdateAction.zoneChanged:
+          await _askRelogin('Sahanız değiştirildi: ${zoneName ?? 'yeni saha'}. '
+              'Açık vardiyanız eski sahada kalır; yeni sahada çalışmak için yeniden giriş yapın.');
+        case UserUpdateAction.zoneRemoved:
+          await _askRelogin('Size atanmış saha kalmadı. Yöneticinize başvurun.');
+      }
+    } finally {
+      _handlingUserUpdate = false;
+    }
+  }
+
+  Future<void> _askRelogin(String text) async {
+    final ctx = navigatorKey.currentContext;
+    if (ctx == null) return;
+    await showDialog<void>(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (d) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          title: const Text('Saha değişti'),
+          content: Text(text),
+          actions: [FilledButton(onPressed: () => Navigator.pop(d), child: const Text('Yeniden giriş yap'))],
+        ),
+      ),
+    );
+    await _signOut(null, logoutFirst: true);
   }
 
   void _select(int i) {

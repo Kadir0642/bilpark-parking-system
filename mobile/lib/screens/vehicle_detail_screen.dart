@@ -7,6 +7,7 @@ import '../core/tariff.dart';
 import '../core/theme.dart';
 import '../widgets/bp_header.dart';
 import '../widgets/bp_snack.dart';
+import '../widgets/cancel_entry_dialog.dart';
 import '../widgets/day_breakdown.dart';
 import '../widgets/license_banner.dart';
 import '../widgets/plate_badge.dart';
@@ -22,6 +23,12 @@ class VehicleDetailScreen extends StatefulWidget {
   final void Function(String method, double amount) onPay;
   final VoidCallback onRunaway;
 
+  /// Giriş iptal edilince (ya da araç zaten çıkmışsa) liste yenilemesi için çağrılır.
+  final VoidCallback? onCancelled;
+
+  /// Giriş iptali isteği (POST /parking/spots/cancel). Testte değiştirilebilir.
+  final Future<void> Function(String plate, String reason)? cancelEntry;
+
   /// Ücret önizlemesi (GET /parking/fee-preview). Testte değiştirilebilir.
   final Future<Map<String, dynamic>> Function(String plate)? loadPreview;
 
@@ -30,6 +37,8 @@ class VehicleDetailScreen extends StatefulWidget {
     required this.vehicle,
     required this.onPay,
     required this.onRunaway,
+    this.onCancelled,
+    this.cancelEntry,
     this.loadPreview,
   });
 
@@ -167,6 +176,29 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
   void _runaway() {
     Navigator.pop(context);
     widget.onRunaway();
+  }
+
+  Future<void> _cancelEntry() async {
+    final result = await showDialog<Object>(
+      context: context,
+      builder: (_) => CancelEntryDialog(
+        submit: (reason) async {
+          final send = widget.cancelEntry;
+          if (send != null) return send(_plate, reason);
+          await ApiClient.post('/parking/spots/cancel', query: {'plate': _plate}, body: {'reason': reason});
+        },
+      ),
+    );
+    if (!mounted || result == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    if (result == true) {
+      messenger.showSnackBar(bpSnackBar(context, '${formatPlate(_plate)} girişi iptal edildi.', tone: BadgeTone.success));
+    } else if (result is ApiException) {
+      // 404/409: araç zaten çıkmış olabilir; liste eskimiştir
+      messenger.showSnackBar(bpSnackBar(context, result.message, tone: BadgeTone.warning));
+    }
+    widget.onCancelled?.call();
+    Navigator.of(context).maybePop();
   }
 
   void _showQr() {
@@ -349,6 +381,11 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                           ),
                         ),
                       ],
+                    ),
+                    TextButton(
+                      style: TextButton.styleFrom(foregroundColor: c.danger),
+                      onPressed: readOnly ? null : _cancelEntry,
+                      child: const Text('Yanlış giriş, iptal et'),
                     ),
                     const ReadOnlyNote(),
                   ],

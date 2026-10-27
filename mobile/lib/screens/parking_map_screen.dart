@@ -321,6 +321,7 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
         vehicle: vehicle,
         onPay: (method, amount) => _payFromDetail(vehicle, method, amount),
         onRunaway: () => _requestRunaway(vehicle),
+        onCancelled: scheduleRefresh,
       ),
     ));
   }
