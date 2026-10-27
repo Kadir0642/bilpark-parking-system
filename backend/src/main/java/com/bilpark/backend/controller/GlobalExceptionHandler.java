@@ -4,6 +4,7 @@ import com.bilpark.backend.audit.ErrorLogService;
 import com.bilpark.backend.common.ApiException;
 import com.bilpark.backend.common.ErrorCodes;
 import jakarta.persistence.OptimisticLockException;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,10 +22,12 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -152,6 +155,30 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleRuntime(RuntimeException ex) {
         String m = ex.getMessage();
         return body(HttpStatus.BAD_REQUEST, ErrorCodes.BAD_REQUEST, m == null || m.isBlank() ? "Geçersiz istek." : m);
+    }
+
+    // The client went away (closed tab, dropped network) while we were writing, typically on the SSE stream.
+    // The response is already unusable, so nothing is logged as an error, stored, or written back.
+    // Other IOExceptions (e.g. file read failures) are still treated as unexpected errors.
+    @ExceptionHandler({AsyncRequestNotUsableException.class, IOException.class})
+    public ResponseEntity<Map<String, String>> handleIo(Exception ex, HttpServletResponse response) {
+        if (isClientDisconnect(ex)) {
+            log.debug("Client disconnected: {}", ex.getMessage());
+            return null; // no body; the response is not touched
+        }
+        return handleGeneric(ex);
+    }
+
+    static boolean isClientDisconnect(Throwable ex) {
+        for (Throwable t = ex; t != null; t = t.getCause() == t ? null : t.getCause()) {
+            if (t instanceof AsyncRequestNotUsableException) return true;
+            if ("org.apache.catalina.connector.ClientAbortException".equals(t.getClass().getName())) return true;
+            if (t instanceof IOException) {
+                String m = t.getMessage();
+                if (m != null && (m.contains("Broken pipe") || m.contains("Connection reset by peer"))) return true;
+            }
+        }
+        return false;
     }
 
     @ExceptionHandler(Exception.class)
