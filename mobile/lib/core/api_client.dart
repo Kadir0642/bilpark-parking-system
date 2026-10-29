@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/auth_screen.dart';
+import 'app_info.dart';
 import 'constants.dart';
 
 /// Tüm uygulamanın tek Navigator'ı (401'de ekrandan bağımsız yönlendirme için).
@@ -146,6 +147,7 @@ class ApiClient {
         .replace(queryParameters: (query == null || query.isEmpty) ? null : query);
     final headers = <String, String>{
       'X-Device-Id': await getDeviceId(),
+      ...await AppInfo.headers(),
       if (body != null) 'Content-Type': 'application/json',
     };
     if (auth) {
