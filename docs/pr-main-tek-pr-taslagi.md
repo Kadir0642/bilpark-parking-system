@@ -65,7 +65,7 @@ Doğrulama:
 
 ## Bilinen sınırlar
 
-- Mart'tan kalan aktif araçların bölgesi yok. Saha uygulaması yalnızca kendi bölgesini listelediği için memurlar bunları görmez. Kontrol listesinin 7.4 adımında bunlar admin olarak iptal edilir.
-- Mart kayıtlarında `payment_method`, `tariff_id` ve `collected_by` boştur. O dönemde bu bilgiler tutulmuyordu; tahmin edilmedi.
+- Canlıdaki Mart kayıtları deneme verisi. Kontrol listesinin 4.6 adımında deploy'dan önce siliniyor; kopyaları Neon yedek dalında kalıyor. Yükseltme yolu yine de dolu veriyle test edildi.
+- Silinmeden geçilirse: Mart'tan kalan aktif araçların bölgesi yoktur ve saha uygulaması bunları memura göstermez (7.4'te admin olarak iptal edilir). Mart kayıtlarında `payment_method`, `tariff_id` ve `collected_by` boş kalır; tahmin edilmez.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

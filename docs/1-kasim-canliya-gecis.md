@@ -98,9 +98,9 @@ Bu andan sonra eski canlı uygulama veritabanına bağlanamaz. Bu beklenen bir d
 
 ---
 
-## 4. Kontrol sorguları (salt okunur)
+## 4. Kontrol sorguları ve deneme kayıtlarının silinmesi
 
-Neon SQL Editor'da, **`main` dalında** çalıştır. Bu sorguların hiçbiri veriyi değiştirmez. Sonuçların ekran görüntüsünü al; içlerinde şifre yok.
+Neon SQL Editor'da, **`main` dalında** çalıştır. 4.1-4.5 salt okunurdur, veriyi değiştirmez. Sonuçların ekran görüntüsünü al; içlerinde şifre yok. Veriyi silen tek adım 4.6'dır.
 
 ### 4.1 Hangi tablolar var?
 
@@ -174,9 +174,24 @@ Bilgi amaçlı, satır sayısını not al. Mart'ta bölge kavramı yoktu, bu yü
 - Saha uygulaması yalnızca memurun kendi bölgesindeki araçları listeler. Bu yüzden memurlar bu araçları **göremez**.
 - Aynı plaka tekrar girilmek istenirse "zaten içeride" hatası alınır.
 
-Aylardır içeride görünen kayıtlar unutulmuş girişlerdir. Bunlar 7.4'te admin olarak iptal edilir; iptal edilen kayıt silinmez.
+4.6'da deneme kayıtları silineceği için bu araçlar da gider.
 
-**Kontrol:** 4.1 beklenen sonucu verdi, 4.2'de sayı yok, 4.3 boş döndü, 4.4'ün ekran görüntüsü alındı.
+### 4.6 Deneme kayıtlarını sil (karar: 29 Ekim)
+
+Canlıdaki kayıtların hepsi geliştirme sırasında yapılan denemeler. Gerçek müşteri kaydı yok. Bu yüzden yeni sürüme temiz başlanır. Denemelerin ücretleri ciro raporlarına karışmaz. Eski bölgesiz araç sorunu (7.4) da ortadan kalkar.
+
+Önce 4.4'teki ekran görüntüsüne bak. Tarihler ve plakalar denemelere benzemiyorsa, yani gerçek bir kayıt olabilecek bir şey görürsen, silme ve sor. Silinen her şey 1. adımdaki yedek dalda durur.
+
+```sql
+DELETE FROM active_park_spots;
+DELETE FROM parking_records;
+SELECT (SELECT count(*) FROM active_park_spots) AS aktif,
+       (SELECT count(*) FROM parking_records)   AS kayit;
+```
+
+Son sorgu `0 | 0` döndürmeli. Tablolar silinmez, yalnızca içleri boşalır. Migration'lar boş tablolarda da aynı şekilde çalışır.
+
+**Kontrol:** 4.1 beklenen sonucu verdi, 4.2'de sayı yok, 4.3 boş döndü, 4.4'ün ekran görüntüsü alındı, 4.6 sonrası iki tablo da boş.
 
 ---
 
@@ -227,7 +242,7 @@ SELECT installed_rank, version, type, success FROM flyway_schema_history ORDER B
 
 Sonuç 8 satır olmalı: `0 BASELINE`, sonra `1`-`7 SQL`; hepsinde `success = true`.
 
-4.4'teki anlık görüntü sorgusunu tekrar çalıştır. **Bütün sayılar aynı olmalı.** Plakalar artık boşluksuz görünür, bu beklenen bir değişiklik.
+4.4'teki anlık görüntü sorgusunu tekrar çalıştır. 4.6'yı yaptıysan **bütün sayılar 0** olmalı. Yapmadıysan sayılar 4.4'tekiyle aynı olmalı; plakalar boşluksuz görünür, bu beklenen bir değişiklik.
 
 ```sql
 SELECT count(*) AS hatali FROM parking_records WHERE status = 'RUNAWAY' AND debt_paid;  -- 0 olmalı
@@ -284,7 +299,7 @@ Alternatif: `API/swagger-ui.html`. Önce `/api/auth/login` ile token al, **Autho
 
 ### 7.4 Mart'tan kalan aktif araçları kapat
 
-4.5'te satır çıktıysa yap; çıkmadıysa atla. Komutlar araçları önce listeler, ardından **bugünden önce** girmiş olanları "hatalı giriş" olarak iptal eder. İptal edilen kayıt `CANCELLED` olarak kalır, ciroya ve borca girmez, denetim kaydına düşer. Bugün girmiş bölgesiz bir araç varsa dokunulmaz; onu sahaya sor.
+**4.6'yı yaptıysan bu adımı atla.** Yalnızca deneme kayıtları silinmeden geçildiyse ve 4.5'te satır çıktıysa gerekir. Komutlar araçları önce listeler, ardından **bugünden önce** girmiş olanları "hatalı giriş" olarak iptal eder. İptal edilen kayıt `CANCELLED` olarak kalır, ciroya ve borca girmez, denetim kaydına düşer. Bugün girmiş bölgesiz bir araç varsa dokunulmaz; onu sahaya sor.
 
 Komutları PowerShell penceresine yapıştır. `.ps1` dosyası olarak kaydedeceksen UTF-8 **BOM'lu** kaydet; yoksa Türkçe gerekçe bozuk görünür.
 
@@ -346,7 +361,7 @@ Eski monitör `/api/parking/spots` adresine gidiyordu. O adres kimlik doğrulama
    - Sayfa "bağlanamadı" diyorsa Render uykudan uyanıyor olabilir. 30-60 saniye bekle ve yenile.
    - Sayfa eski görünüyorsa GitHub Pages henüz güncellenmemiştir (5. adım, 4. madde).
 5. Saha uygulamasında araç kartından test girişini **iptal et** (hatalı giriş). Gerekçe: `Canlı geçiş QR testi`. İptal edilen kayıt ciroya ve borca girmez, denetim kaydında kalır.
-6. Panelde ciro ve son kayıtlar görünüyor. Eski Mart kayıtları da listede.
+6. Panelde ciro ve son kayıtlar görünüyor. 4.6'yı yaptıysan yalnızca bu geceki test kaydı var.
 
 **Kontrol:** QR sayfası doğru plakayı ve tutarı gösterdi. Test girişi iptal edildi.
 
