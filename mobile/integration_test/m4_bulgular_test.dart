@@ -8,6 +8,8 @@
 //   B4  Borçlu araç girişinde "Borçlu araç" uyarısı (tutar + "kaçak geçmişi var"); giriş yine yapılıyor.
 //   B5  Bağlantı yokken giriş kuyruğa alınıyor ("Beklemede" + "1 işlem bekliyor"), bağlantı gelince
 //       kendiliğinden gönderiliyor ve sunucuda tek kayıt oluşuyor.
+//   B6  Ekranlar arasında sağa-sola kaydırarak geçiliyor.
+//   B7  Giriş formunda plaka yazılırken anında kontrol; geçersiz plakada park düğmeleri kapalı.
 
 import 'package:bilpark/core/format.dart';
 import 'package:flutter/material.dart';
@@ -60,7 +62,7 @@ Future<void> _checkOutQuietly(Api api, String plate) async {
 void main() {
   ensureE2eBinding();
 
-  testWidgets('Bulgu düzeltmeleri (B1-B5)', (t) async {
+  testWidgets('Bulgu düzeltmeleri ve saha kolaylıkları (B1-B7)', (t) async {
     final report = E2eReport('m4_bulgular');
     // Taşma hataları FlutterError olarak gelir; B1 için toplanır, test bağlamasına yine iletilir.
     final overflows = <String>[];
@@ -161,6 +163,36 @@ void main() {
       await pause(t, 2);
       await _filter(t, '');
       await _checkOutQuietly(api, p);
+    });
+
+    await report.item(t, 'B6', 'Ekranlar arasında sağa-sola kaydırarak geçiliyor', () async {
+      await _goTab(t, 'Ana sayfa');
+      await waitFor(t, find.text('Sahadaki araç'));
+      final w = t.view.physicalSize.width / t.view.devicePixelRatio;
+      await t.flingFrom(Offset(w * 0.85, 420), Offset(-w * 0.7, 0), 1500);
+      await waitFor(t, find.textContaining('SOL KALDIRIM'), reason: 'Sola kaydırınca Cadde açılmalı');
+      await pause(t);
+      await t.flingFrom(Offset(w * 0.15, 420), Offset(w * 0.7, 0), 1500);
+      await waitFor(t, find.text('Sahadaki araç'), reason: 'Sağa kaydırınca Ana sayfa açılmalı');
+      await pause(t);
+    });
+
+    await report.item(t, 'B7', 'Geçersiz plakada park düğmeleri kapalı, geçerli plakada açık', () async {
+      await _goTab(t, 'Cadde');
+      await tapOn(t, find.byTooltip('Elle araç ekle'));
+      await waitFor(t, find.text('Araç girişi'));
+      FilledButton parkBtn() => t.widget<FilledButton>(
+          find.ancestor(of: find.text('Sola park'), matching: find.byWidgetPredicate((w) => w is FilledButton)).first);
+      await typeInto(t, fieldWithLabel('Plaka'), '99AB123');
+      await waitFor(t, find.text('İl kodu 01-81 olmalı'), reason: 'Geçersiz il kodunda uyarı');
+      expect(parkBtn().onPressed, isNull, reason: 'Geçersiz plakada "Sola park" kapalı olmalı');
+      await pause(t);
+      await typeInto(t, fieldWithLabel('Plaka'), '34AB123');
+      await waitFor(t, find.text('Geçerli plaka'));
+      expect(parkBtn().onPressed, isNotNull, reason: 'Geçerli plakada "Sola park" açık olmalı');
+      await pause(t);
+      await t.tapAt(const Offset(10, 60));
+      await waitGone(t, find.text('Araç girişi'));
     });
 
     report.finish();

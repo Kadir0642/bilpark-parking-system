@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/haptics.dart';
 import '../core/theme.dart';
 import 'status_badge.dart';
 
@@ -22,6 +23,7 @@ SnackBar bpSnackBar(
   } else if (tone == BadgeTone.danger) {
     bg = c.danger;
     fg = c.onDanger;
+    errorHaptic(); // tüm hata bildirimleri buradan geçer; başarıda titreşim yok
   }
   return SnackBar(
     content: Text(message, style: fg != null ? TextStyle(color: fg, fontSize: 15) : null),

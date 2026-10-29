@@ -150,6 +150,7 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _pages.dispose();
     _debounce?.cancel();
     _eventSub?.cancel();
     _reloadSub?.cancel();
@@ -299,9 +300,19 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
     await _signOut(null, logoutFirst: true);
   }
 
+  final _pages = PageController();
+  int? _target; // dokunmayla başlatılan kaydırma sürerken ara sayfalar seçim sayılmaz
+
   void _select(int i) {
     final firstVisit = _visited.add(i);
     setState(() => _index = i);
+    final cur = _pages.hasClients ? _pages.page?.round() : null;
+    if (cur != null && cur != i) {
+      _target = i;
+      _pages.animateToPage(i, duration: const Duration(milliseconds: 250), curve: Curves.easeOut).whenComplete(() {
+        if (_target == i) _target = null;
+      });
+    }
     if (firstVisit) return; // ilk kurulumda ekran kendi verisini çeker
     switch (i) {
       case _home:
@@ -322,10 +333,15 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
       },
       child: Scaffold(
         body: LicenseBannerHost(
-          child: IndexedStack(
-            index: _index,
+          // Kaydırarak sekme değişir; tüm sayfalar canlı tutulur (Cadde ekranı hiç atılmaz).
+          child: PageView(
+            controller: _pages,
+            allowImplicitScrolling: true, // komşu sayfa (Cadde) baştan kurulur
+            onPageChanged: (i) {
+              if (_target == null && i != _index) _select(i);
+            },
             children: [
-              DashboardScreen(
+              _KeepAlive(child: DashboardScreen(
                 key: _dashKey,
                 streetCode: widget.streetCode,
                 streetName: widget.streetName,
@@ -340,28 +356,31 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
                   _select(_street);
                   _mapKey.currentState?.showEntryForm('');
                 },
-              ),
-              ParkingMapScreen(
+              )),
+              _KeepAlive(
+                  child: ParkingMapScreen(
                 key: _mapKey,
                 streetCode: widget.streetCode,
                 streetName: widget.streetName,
                 zoneId: widget.zoneId,
                 zoneName: widget.zoneName,
-              ),
-              _visited.contains(_history)
-                  ? HistoryScreen(
-                      key: _historyKey,
-                      streetCode: widget.streetCode,
-                      streetName: widget.streetName,
-                      showOnlyRunaways: false)
-                  : const SizedBox.shrink(),
-              _visited.contains(_runaways)
-                  ? HistoryScreen(
-                      key: _runawayKey,
-                      streetCode: widget.streetCode,
-                      streetName: widget.streetName,
-                      showOnlyRunaways: true)
-                  : const SizedBox.shrink(),
+              )),
+              _KeepAlive(
+                  child: _visited.contains(_history)
+                      ? HistoryScreen(
+                          key: _historyKey,
+                          streetCode: widget.streetCode,
+                          streetName: widget.streetName,
+                          showOnlyRunaways: false)
+                      : const SizedBox.shrink()),
+              _KeepAlive(
+                  child: _visited.contains(_runaways)
+                      ? HistoryScreen(
+                          key: _runawayKey,
+                          streetCode: widget.streetCode,
+                          streetName: widget.streetName,
+                          showOnlyRunaways: true)
+                      : const SizedBox.shrink()),
             ],
           ),
         ),
@@ -378,5 +397,25 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
         ),
       ),
     );
+  }
+}
+
+/// PageView sayfasını ekran dışına çıkınca da canlı tutar (durum, zamanlayıcı ve kuyruk korunur).
+class _KeepAlive extends StatefulWidget {
+  final Widget child;
+  const _KeepAlive({required this.child});
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }

@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
 import '../core/entry_queue.dart';
@@ -21,6 +19,7 @@ import '../widgets/license_banner.dart';
 import '../widgets/plate_badge.dart';
 import '../widgets/search_field.dart';
 import '../widgets/status_badge.dart';
+import 'plate_scanner_screen.dart';
 import 'vehicle_detail_screen.dart';
 
 enum _ActionKind {
@@ -412,34 +411,10 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
       _showSnack(readOnlyReason, tone: BadgeTone.danger);
       return;
     }
-    final ImagePicker picker = ImagePicker();
-    final XFile? photo = await picker.pickImage(source: ImageSource.camera);
-    if (photo != null) {
-      final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
-      try {
-        final RecognizedText recognizedText = await textRecognizer.processImage(InputImage.fromFilePath(photo.path));
-
-        // 1. Gelen metni büyüt, yeni satırları (\n) ve gereksiz işaretleri boşluğa çevir
-        // Böylece "34\nABC\n123" (Kare Plaka) -> "34 ABC 123" (Standart) haline gelir.
-        String cleanText = recognizedText.text.toUpperCase().replaceAll(RegExp(r'[\n\r\-\.\,]'), ' ');
-
-        // 2. Güçlü Regex: (2 Rakam) + (1-3 Harf) + (2-4 Rakam)
-        RegExp platePattern = RegExp(r'\b(\d{2})\s*([A-Z]{1,3})\s*(\d{2,4})\b');
-        RegExpMatch? match = platePattern.firstMatch(cleanText);
-
-        String foundPlate = '';
-        if (match != null) {
-          // Eşleşen grupları boşluksuz birleştir (Örn: "34", "ABC", "123" -> "34ABC123")
-          foundPlate = '${match.group(1)}${match.group(2)}${match.group(3)}';
-        }
-
-        await showEntryForm(foundPlate);
-      } catch (e) {
-        debugPrint(e.toString());
-      } finally {
-        textRecognizer.close();
-      }
-    }
+    // Canlı kamera: aynı plaka 2 karede okununca kendiliğinden döner ('' = elle yaz, null = vazgeç)
+    final plate = await Navigator.push<String>(context, MaterialPageRoute(builder: (_) => const PlateScannerScreen()));
+    if (plate == null || !mounted) return;
+    await showEntryForm(plate);
   }
 
   // --- GÖRÜNÜM ---

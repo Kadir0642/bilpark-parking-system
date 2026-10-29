@@ -2,7 +2,15 @@ import 'package:flutter/material.dart';
 import '../core/api_client.dart';
 import '../core/theme.dart';
 
-const List<String> cancelReasonChips = ['Plaka yanlış okundu', 'Yanlış sahaya girildi', 'Mükerrer giriş'];
+const List<String> cancelReasonChips = [
+  'Plaka yanlış okundu',
+  'Yanlış sahaya girildi',
+  'Mükerrer giriş',
+  'Araç park etmeden ayrıldı',
+  'Yanlış kaldırım seçildi',
+  'Yanlış araç türü seçildi',
+  'Deneme / yanlışlıkla eklendi',
+];
 
 /// Gerekçe 5-500 karakter olmalı; geçerliyse null, değilse hata metni döner.
 String? validateCancelReason(String? text) {
@@ -85,11 +93,12 @@ class _CancelEntryDialogState extends State<CancelEntryDialog> {
               runSpacing: 4,
               children: [
                 for (final r in cancelReasonChips)
-                  ActionChip(
+                  ChoiceChip(
                     label: Text(r),
-                    onPressed: _busy
+                    selected: _controller.text.trim() == r,
+                    onSelected: _busy
                         ? null
-                        : () => setState(() {
+                        : (_) => setState(() {
                               _controller.text = r;
                               _error = null;
                             }),
@@ -100,6 +109,7 @@ class _CancelEntryDialogState extends State<CancelEntryDialog> {
             TextField(
               controller: _controller,
               enabled: !_busy,
+              onChanged: (_) => setState(() => _error = null), // yazınca seçili çip güncellenir
               maxLength: 500,
               minLines: 2,
               maxLines: 4,

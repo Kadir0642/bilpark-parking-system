@@ -90,16 +90,32 @@ Future<void> waitGone(WidgetTester t, Finder f, {Duration timeout = const Durati
 Future<void> tapOn(WidgetTester t, Finder f, {Duration timeout = const Duration(seconds: 15), double pauseFactor = 1}) async {
   await waitFor(t, f, timeout: timeout);
   final target = f.first;
-  await t.ensureVisible(target);
+  await reveal(t, target);
   await t.pump();
   await t.tap(target, warnIfMissed: false);
   await pause(t, pauseFactor);
 }
 
+/// Öğeyi yalnızca DİKEY kaydırma alanlarında görünür kılar. tester.ensureVisible yatay sekme sayfalarını (PageView)
+/// da öğenin sol kenarına hizalayıp başka sekmeye kaydırıyordu; gerçek dokunuşta böyle bir kayma olmaz.
+Future<void> reveal(WidgetTester t, Finder f) async {
+  final el = t.element(f);
+  final ro = el.renderObject;
+  if (ro == null) return;
+  final vertical = <ScrollPosition>[];
+  for (var s = Scrollable.maybeOf(el); s != null; s = Scrollable.maybeOf(s.context)) {
+    if (axisDirectionToAxis(s.axisDirection) == Axis.vertical) vertical.add(s.position);
+  }
+  for (final p in vertical) {
+    await p.ensureVisible(ro);
+  }
+  await t.pump();
+}
+
 /// TextField'a metin yazar (önceki metin silinir).
 Future<void> typeInto(WidgetTester t, Finder f, String text) async {
   await waitFor(t, f);
-  await t.ensureVisible(f.first);
+  await reveal(t, f.first);
   await t.enterText(f.first, text);
   await pause(t, 0.6);
 }
