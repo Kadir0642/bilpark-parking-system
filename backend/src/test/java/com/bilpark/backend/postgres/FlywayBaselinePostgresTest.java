@@ -19,8 +19,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Simulates the LIVE database (created by Hibernate ddl-auto=update before Flyway existed)
- * and runs the migrations with baseline-on-migrate, then checks an empty database too.
+ * Simulates a database created by Hibernate ddl-auto=update at stage 1 (commit 964ce7e, V1 shape, no Flyway)
+ * and runs the migrations with the application's baseline settings, then checks an empty database too.
+ * The March 2026 live schema (two tables only) is covered by MarchLiveSchemaUpgradePostgresTest.
  */
 @Testcontainers(disabledWithoutDocker = true)
 class FlywayBaselinePostgresTest {
@@ -29,12 +30,7 @@ class FlywayBaselinePostgresTest {
     static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16-alpine");
 
     private static Flyway flyway(String url) {
-        return Flyway.configure()
-                .dataSource(url, postgres.getUsername(), postgres.getPassword())
-                .locations("classpath:db/migration")
-                .baselineOnMigrate(true)
-                .baselineVersion("1")
-                .load();
+        return AppFlyway.forUrl(url, postgres.getUsername(), postgres.getPassword());
     }
 
     private static Connection conn(String url) throws SQLException {
@@ -90,12 +86,12 @@ class FlywayBaselinePostgresTest {
 
         MigrateResult result = flyway(url).migrate();
         assertTrue(result.success);
-        assertEquals(5, result.migrationsExecuted, "V2, V3, V4, V5 and V6 should run");
+        assertEquals(7, result.migrationsExecuted, "V1 (no-op: every table exists) and V2-V7 should run");
 
         try (Connection c = conn(url); Statement st = c.createStatement()) {
             List<String> hist = strings(c,
                     "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank");
-            assertEquals(List.of("BASELINE:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6"), hist);
+            assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7"), hist);
 
             assertEquals(0, count(c, "SELECT count(*) FROM pg_constraint WHERE conname = 'ukabc123xyz'"));
             assertEquals(1, count(c, "SELECT count(*) FROM pg_indexes WHERE indexname = 'ux_subscriptions_active_plate'"));
@@ -245,10 +241,10 @@ class FlywayBaselinePostgresTest {
         String url = urlFor("fresh_db");
         MigrateResult result = flyway(url).migrate();
         assertTrue(result.success);
-        assertEquals(6, result.migrationsExecuted);
+        assertEquals(7, result.migrationsExecuted);
 
         try (Connection c = conn(url); Statement st = c.createStatement()) {
-            assertEquals(List.of("SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6"),
+            assertEquals(List.of("SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7"),
                     strings(c, "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank"));
             // V6: istemci giriş kimliği birincil anahtar (aynı kimlikle ikinci satır reddedilir)
             assertEquals(1, count(c, "SELECT count(*) FROM pg_constraint c JOIN pg_class t ON t.oid=c.conrelid "
