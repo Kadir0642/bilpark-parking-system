@@ -111,6 +111,22 @@ tekrar gelirse 200 ile aynı `ParkSpot` döner (yeni kayıt, denetim kaydı veya
 önce çalışır). Kayıt artık aktif değilse (çıkış/kaçak/iptal) 409 `DUPLICATE_REQUEST` ("Bu giriş daha önce işlendi.").
 Parametresiz çağrı eskisi gibidir.
 
+### Çevrimdışı giriş saati (`clientEntryTime`)
+`POST /api/parking/check-in` isteğe bağlı `clientEntryTime` alır: memurun girişi cihazda yaptığı an, ofsetli
+ISO-8601 (ör. `2026-10-29T08:15:30.000Z`; `+03:00` gibi ofset de olur, sorgu dizesinde `+` kodlanmalı). Mobil
+uygulama bunu yalnızca çevrimdışı kuyruktan gönderirken ekler; doğrudan çevrimiçi girişte göndermez.
+- Sunucu değeri `Europe/Istanbul` yerel saatine çevirip **giriş saati** (`entryTime`) olarak yazar; ücret çıkışta bu
+  saatten itibaren hesaplanır (ücret motoru değişmedi).
+- Kabul aralığı: `[şimdi − 24 saat, şimdi + 5 dakika]`. 5 dakikaya kadar ileri saat kayması kabul edilir ama giriş
+  saati sunucu saatine kırpılır (giriş gelecekte olamaz).
+- Aralık dışı ya da okunamayan değer girişi **reddetmez**: sunucu saati (isteğin ulaştığı an) kullanılır ve uyarı
+  log'lanır. Böylece kuyruktaki giriş, saat yüzünden kaybolmaz.
+- Alan yoksa davranış eskisi gibidir (sunucu saati). Eski istemciler etkilenmez.
+- `checkInRequestId` tekrarında ilk kayıt döner; ikinci istekteki `clientEntryTime` giriş saatini değiştirmez.
+- Denetim kaydının (`VEHICLE_CHECK_IN`) `after` verisine `entryTime`, `entryTimeSource` (`CLIENT` | `SERVER`) ve
+  gönderildiyse ham `clientEntryTime` eklenir; geriye dönük saatli girişler bu alanla izlenebilir.
+- Yeni migration yok; mevcut `park_spots.entry_time` sütunu kullanılır.
+
 ### Ücret
 `FeeEngine` tipin tarife satırındaki fiyatı kullanır. Park hâlindeyken tipi pasifleşen araç: satırda fiyat
 varsa o, yoksa SMALL fiyatı (çıkış engellenmez). Kodu `null` olan eski kayıt SMALL sayılır.

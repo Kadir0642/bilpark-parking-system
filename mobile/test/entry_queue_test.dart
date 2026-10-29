@@ -38,6 +38,36 @@ void main() {
     expect(back.username, 'u');
   });
 
+  test('giriş saati: memurun dokunduğu an UTC saklanır, yeniden başlatmadan sonra kuyruk gönderiminde clientEntryTime olarak gider', () async {
+    final tapped = DateTime.utc(2026, 10, 29, 8, 15, 30);
+    final e = PendingEntry(requestId: 'rt1', plate: '34TIM001', street: 'S', type: 'SMALL', side: 'LEFT', createdAt: tapped.toLocal());
+    expect(e.createdAt.isUtc, isTrue);
+    expect(e.toJson()['createdAt'], '2026-10-29T08:15:30.000Z');
+    // Doğrudan (çevrimiçi) gönderimde saat gitmez: sunucu saati geçerli
+    expect(e.toQuery().containsKey('clientEntryTime'), isFalse);
+
+    await EntryQueue(send: (_) async => null).enqueue(e);
+    // Uygulama kapanıp saatler sonra açıldı; kayıt diskteki saatle geri gelir
+    final sent = <Map<String, String>>[];
+    final q2 = EntryQueue(send: (query) async => sent.add(query));
+    await q2.load();
+    expect(q2.items.value.single.createdAt, tapped);
+    await q2.flush();
+    expect(sent.single['clientEntryTime'], '2026-10-29T08:15:30.000Z');
+    expect(sent.single['checkInRequestId'], 'rt1');
+  });
+
+  test('eski sürümün yerel (ofsetsiz) createdAt kaydı aynı an olarak UTC değerine çevrilir', () {
+    final local = DateTime(2026, 10, 29, 11, 15, 30);
+    final old = PendingEntry.fromJson({
+      'requestId': 'rt2', 'plate': '34TIM002', 'street': 'S', 'type': 'SMALL', 'side': 'LEFT',
+      'createdAt': local.toIso8601String(), // 'Z' yok
+    });
+    expect(old.createdAt.isUtc, isTrue);
+    expect(old.createdAt, local.toUtc());
+    expect(old.toQuery(withEntryTime: true)['clientEntryTime'], local.toUtc().toIso8601String());
+  });
+
   test('enqueue kalıcıdır; yeni örnek load() ile geri yükler (yeniden başlatma)', () async {
     final q1 = EntryQueue(send: (_) async => null);
     expect(await q1.enqueue(_e('34ABC123', id: 'r1')), isTrue);

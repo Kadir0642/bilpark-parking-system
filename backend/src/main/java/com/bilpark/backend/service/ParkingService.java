@@ -40,9 +40,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -138,6 +141,46 @@ public class ParkingService
     public ParkSpot checkInVehicle(String licensePlate,String vehicleType,StreetLocation street,String side, Long zoneId, User actor,
                                    String checkInRequestId)
     {
+        return checkInVehicle(licensePlate, vehicleType, street, side, zoneId, actor, checkInRequestId, null);
+    }
+
+    // İstemci saatine en fazla bu kadar ileri kayma tanınır (sunucu saatine kırpılır)
+    static final Duration CLIENT_TIME_FUTURE_TOLERANCE = Duration.ofMinutes(5);
+    // Bundan eski istemci saati kabul edilmez (sunucu saati kullanılır)
+    static final Duration CLIENT_TIME_MAX_AGE = Duration.ofHours(24);
+
+    /** Kayda yazılan giriş saati ve kaynağı (CLIENT: memurun cihazı, SERVER: isteğin ulaştığı an). */
+    record EntryTime(LocalDateTime time, String source) {}
+
+    // clientEntryTime: ISO-8601, ofsetli (ör. 2026-10-29T08:15:00Z). Yalnız [şimdi-24s, şimdi+5dk] aralığında kabul edilir;
+    // aralık dışı ya da okunamayan değer girişi reddetmez, sunucu saati kullanılır (veri kaybı yerine bugünkü davranış).
+    EntryTime resolveEntryTime(String clientEntryTime, LocalDateTime now) {
+        if (clientEntryTime == null || clientEntryTime.isBlank()) return new EntryTime(now, "SERVER");
+        LocalDateTime client;
+        try {
+            client = OffsetDateTime.parse(clientEntryTime.trim())
+                    .atZoneSameInstant(clock.getZone()).toLocalDateTime();
+        } catch (DateTimeParseException e) {
+            log.warn("Unparseable clientEntryTime '{}', using server time", clientEntryTime);
+            return new EntryTime(now, "SERVER");
+        }
+        if (client.isAfter(now.plus(CLIENT_TIME_FUTURE_TOLERANCE))) {
+            log.warn("clientEntryTime {} is in the future (server {}), using server time", client, now);
+            return new EntryTime(now, "SERVER");
+        }
+        if (client.isBefore(now.minus(CLIENT_TIME_MAX_AGE))) {
+            log.warn("clientEntryTime {} is older than {} (server {}), using server time", client, CLIENT_TIME_MAX_AGE, now);
+            return new EntryTime(now, "SERVER");
+        }
+        // Tolerans içindeki küçük ileri kayma: giriş gelecekte olamaz
+        return new EntryTime(client.isAfter(now) ? now : client, "CLIENT");
+    }
+
+    // clientEntryTime != null: çevrimdışı kuyruktan gelen girişin memur cihazındaki saati
+    @Transactional
+    public ParkSpot checkInVehicle(String licensePlate,String vehicleType,StreetLocation street,String side, Long zoneId, User actor,
+                                   String checkInRequestId, String clientEntryTime)
+    {
         if (checkInRequestId != null && !REQUEST_ID.matcher(checkInRequestId).matches()) {
             throw ApiException.badRequest(ErrorCodes.INVALID_REQUEST_ID,
                     "Geçersiz istek kimliği (8-64 karakter, harf/rakam/tire).");
@@ -185,7 +228,8 @@ public class ParkingService
         Zone zone = zoneId != null ? zoneRepository.findById(zoneId).orElse(null) : null;
 
         ParkSpot newSpot = new ParkSpot(plate, street, type, "Merkez", "Bilecik", side, zone);
-        newSpot.setEntryTime(LocalDateTime.now(clock));
+        EntryTime entry = resolveEntryTime(clientEntryTime, LocalDateTime.now(clock));
+        newSpot.setEntryTime(entry.time());
 
         // Kaçak borcu
         List<ParkingRecord> unpaidRecords = parkingRecordRepository.findByLicensePlateAndStatus(plate, ParkingStatus.RUNAWAY);
@@ -224,6 +268,9 @@ public class ParkingService
         after.put("zoneId", zoneIdOf(result));
         after.put("street", street != null ? street.name() : null);
         after.put("vehicleType", type);
+        after.put("entryTime", entry.time().toString());
+        after.put("entryTimeSource", entry.source());
+        if (clientEntryTime != null) after.put("clientEntryTime", clientEntryTime);
         auditService.log(AuditAction.VEHICLE_CHECK_IN, "ParkSpot", result.getId(),
                 plate + " giriş: " + (zone != null ? zone.getZoneName() : (street != null ? street.getDisplayName() : "-")),
                 null, after);
