@@ -20,11 +20,13 @@ bash mobile/integration_test/tools/telefon_dogrula.sh
 ```
 
 Betik aşağıdaki 1-3. adımları kendisi yapar: ayrı test yığınını (`bilpark-e2e`, 5434/8082/5501) kurar ve örnek veriyi
-yükler, `adb reverse` ve host yardımcısını açar, `m4_bulgular`, `m1_saha_akisi`, `m2_canli_senkron` dosyalarını sırayla
-koşar ve madde sonuçlarını yazar; sonunda test yığınını kaldırır ve telefona demo (8081) APK'sını geri kurar.
-Docker Desktop açık olmalıdır. `.env.demo` yoksa `demo/yeni-env.ps1` ile oluşturulur. Yalnızca bulgu testleri için
-sona `m4_bulgular` yazın. Kayıtlar `mobile/build/e2e-<zaman>/` altındadır. `m3_hesap` panelde elle açılan
-`panelmemur` hesabını gerektirdiği için ayrıca koşulur (aşağıda).
+yükler, m3 için `panelmemur` (Bölüm 2) hesabını API ile açar, `adb reverse` ve host yardımcısını açar, `m0_baglanti`,
+`m4_bulgular`, `m1_saha_akisi`, `m2_canli_senkron`, `m3_hesap` dosyalarını sırayla koşar ve madde sonuçlarını yazar;
+sonunda test yığınını kaldırır ve telefona demo (8081) APK'sını geri kurar. Docker Desktop açık olmalıdır. `.env.demo`
+yoksa `demo/yeni-env.ps1` ile oluşturulur. Yalnızca bulgu testleri için sona `m4_bulgular` yazın. Kayıtlar
+`mobile/build/e2e-<zaman>/` altındadır. Süre yaklaşık 30 dakikadır.
+
+Son koşu (29 Ekim 2026, Galaxy M12): 18/18 madde geçti (B1-B5, M1-M8, M10-M14).
 
 ## 1. Test yığını
 

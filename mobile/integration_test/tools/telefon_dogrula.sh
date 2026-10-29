@@ -2,14 +2,13 @@
 # Telefon bağlanınca tek komutla uçtan uca doğrulama:
 #   1) ayrı test yığınını kurar (compose projesi bilpark-e2e, portlar 5434/8082/5501; demo yığınına dokunmaz),
 #   2) örnek veriyi ve test hazırlığını yükler, telefonu adb reverse ile bağlar, host yardımcısını açar,
-#   3) testleri sırayla telefonda koşar (varsayılan: m4_bulgular m1_saha_akisi m2_canli_senkron),
+#   3) testleri sırayla telefonda koşar (varsayılan: m0, m4, m1, m2, m3; m3 için panelmemur API ile açılır),
 #   4) test yığınını kaldırır ve telefona demo (8081) APK'sını geri kurar.
 #
 # Kullanım (worktree kökünden, Git Bash):
 #   bash mobile/integration_test/tools/telefon_dogrula.sh                 # varsayılan dosyalar
 #   bash mobile/integration_test/tools/telefon_dogrula.sh m4_bulgular     # yalnızca bulgu testleri
 # İsteğe bağlı: DEVICE (yoksa ilk bağlı cihaz), KEEP_STACK=1 (yığını kaldırma), NO_DEMO_APK=1.
-# m3_hesap panelde elle açılan 'panelmemur' hesabını istediği için varsayılana dahil değildir (docs/e2e-testler.md).
 
 set -u
 root=$(git rev-parse --show-toplevel) || exit 1
@@ -17,7 +16,7 @@ cd "$root" || exit 1
 adb="${LOCALAPPDATA:-}/Android/Sdk/platform-tools/adb.exe"
 [ -x "$adb" ] || adb=adb
 files=("$@")
-[ ${#files[@]} -eq 0 ] && files=(m4_bulgular m1_saha_akisi m2_canli_senkron)
+[ ${#files[@]} -eq 0 ] && files=(m0_baglanti m4_bulgular m1_saha_akisi m2_canli_senkron m3_hesap)
 logdir="$root/mobile/build/e2e-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$logdir"
 
@@ -59,6 +58,26 @@ MSYS_NO_PATHCONV=1 docker exec bilpark-e2e-db-1 sh -c 'psql -U "$DB_USERNAME" -d
 MSYS_NO_PATHCONV=1 docker exec -i bilpark-e2e-db-1 sh -c 'psql -U "$DB_USERNAME" -d bilpark_demo -v ON_ERROR_STOP=1 -q' \
   < mobile/integration_test/tools/e2e-hazirlik.sql || exit 1
 
+# m3'ün ön koşulu: panelde açılmış gibi 'panelmemur' (Tevfik Bey - Bölüm 2), rastgele şifreyle API üzerinden
+export E2E_NEW_OFFICER_PASSWORD=${E2E_NEW_OFFICER_PASSWORD:-$(python -c "import secrets,string;a=string.ascii_letters+string.digits;print('Pm7'+''.join(secrets.choice(a) for _ in range(11)))")}
+python - <<'EOF' || exit 1
+import json, os, urllib.request, urllib.error
+base = 'http://127.0.0.1:8082/api'
+def call(path, body, token=None):
+    h = {'Content-Type': 'application/json', 'X-Device-Id': 'e2e-hazirlik'}
+    if token: h['Authorization'] = 'Bearer ' + token
+    req = urllib.request.Request(base + path, json.dumps(body).encode(), h, method='POST')
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r: return json.loads(r.read() or b'null')
+    except urllib.error.HTTPError as e:
+        if e.code == 409: return None  # zaten var
+        raise SystemExit(f'{path}: HTTP {e.code} {e.read().decode()}')
+tok = call('/auth/login', {'username': 'admin', 'password': os.environ['E2E_ADMIN_PASSWORD']})['token']
+call('/admin/users', {'username': 'panelmemur', 'fullName': 'Panel Memur', 'password': os.environ['E2E_NEW_OFFICER_PASSWORD'],
+                      'role': 'OFFICER', 'zoneId': 2}, tok)
+print('panelmemur hazır')
+EOF
+
 # --- 2) Telefon ve host yardımcısı ---
 "$adb" -s "$device" reverse tcp:8082 tcp:8082 >/dev/null
 "$adb" -s "$device" reverse tcp:8099 tcp:8099 >/dev/null
@@ -72,7 +91,7 @@ sleep 2
 echo
 echo "=== Sonuçlar ($logdir/results.jsonl)"
 if [ -f "$logdir/results.jsonl" ]; then
-  python -c "import json,sys
+  PYTHONIOENCODING=utf-8 python -c "import json,sys
 rows=[json.loads(l) for l in open(sys.argv[1],encoding='utf-8') if l.strip()]
 for r in rows: print(('GEÇTİ ' if r.get('status')=='PASS' else 'KALDI ')+r.get('id','?')+' '+r.get('title',''))
 print(f\"{sum(r.get('status')=='PASS' for r in rows)}/{len(rows)} madde geçti\")" "$logdir/results.jsonl"
