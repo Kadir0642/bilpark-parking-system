@@ -88,6 +88,7 @@ public class ParkingController {
     }
 
     // POST /api/parking/check-in?plate=34ABC123&street=TEVFIK_BEY&type=SMALL&side=LEFT&zoneId=1
+    //   [&checkInRequestId=<uuid>&clientEntryTime=2026-10-29T08:15:00Z]  (çevrimdışı kuyruk)
     @PostMapping("/check-in")
     public ResponseEntity<ParkSpot> checkIn(
             @RequestParam @jakarta.validation.constraints.NotBlank(message = "Plaka boş olamaz.") String plate,
@@ -96,9 +97,10 @@ public class ParkingController {
             @RequestParam(defaultValue = "LEFT") String side,
             @RequestParam(required = false) Long zoneId,
             @RequestParam(required = false) String checkInRequestId,
+            @RequestParam(required = false) String clientEntryTime,
             java.security.Principal principal) {
         return ResponseEntity.ok(parkingService.checkInVehicle(plate, type, street, side, zoneId,
-                currentUser(principal), checkInRequestId));
+                currentUser(principal), checkInRequestId, clientEntryTime));
     }
 
     // paymentMethod: CASH (default) | POS | SUBSCRIPTION; ONLINE is reserved

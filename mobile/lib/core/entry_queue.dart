@@ -1,6 +1,8 @@
 // Çevrimdışı giriş kuyruğu. Yalnızca ARAÇ GİRİŞİ bekletilir (ödeme/kaçak/iptal asla).
 // Her giriş istemci tarafında bir UUID taşır (checkInRequestId): istek sunucuya ulaşıp yanıt kaybolsa bile
 // aynı kayıt tekrar gönderildiğinde sunucu çift kayıt açmaz. Kuyruk SharedPreferences'ta kalıcıdır.
+// Giriş saati, memurun girişi yaptığı an (createdAt, UTC) olarak saklanır ve kuyruk gönderiminde
+// clientEntryTime ile iletilir; böylece bağlantı kesintisi süresi ücretten düşmez.
 
 import 'dart:async';
 import 'dart:convert';
@@ -31,6 +33,8 @@ class PendingEntry {
   final String side;
   final int? zoneId;
   final String? username;
+
+  /// Memurun girişi yaptığı an (UTC).
   final DateTime createdAt;
 
   PendingEntry({
@@ -43,7 +47,7 @@ class PendingEntry {
     this.username,
     DateTime? createdAt,
   })  : plate = normalizePlate(plate),
-        createdAt = createdAt ?? DateTime.now();
+        createdAt = (createdAt ?? DateTime.now()).toUtc();
 
   Map<String, dynamic> toJson() => {
         'requestId': requestId,
@@ -53,7 +57,7 @@ class PendingEntry {
         'side': side,
         if (zoneId != null) 'zoneId': zoneId,
         if (username != null) 'username': username,
-        'createdAt': createdAt.toIso8601String(),
+        'createdAt': createdAt.toIso8601String(), // UTC, 'Z' ekli
       };
 
   factory PendingEntry.fromJson(Map<String, dynamic> j) => PendingEntry(
@@ -68,13 +72,15 @@ class PendingEntry {
       );
 
   /// POST /parking/check-in sorgu parametreleri.
-  Map<String, String> toQuery() => {
+  /// withEntryTime: kuyruktan gönderimde memurun giriş saati eklenir (sunucu ±aralık dışını yok sayar).
+  Map<String, String> toQuery({bool withEntryTime = false}) => {
         'plate': plate,
         'street': street,
         'type': type,
         'side': side,
         if (zoneId != null) 'zoneId': zoneId.toString(),
         'checkInRequestId': requestId,
+        if (withEntryTime) 'clientEntryTime': createdAt.toIso8601String(),
       };
 }
 
@@ -154,7 +160,7 @@ class EntryQueue {
       final user = AppConstants.currentUser;
       if (user != null && e.username != null && e.username != user) continue; // başka kullanıcının kaydı bekler
       try {
-        final body = await _send(e.toQuery());
+        final body = await _send(e.toQuery(withEntryTime: true));
         await remove(e.requestId);
         _emit(EntrySendResult(EntryResultKind.sent, e, body: body));
       } on ApiException catch (ex) {
