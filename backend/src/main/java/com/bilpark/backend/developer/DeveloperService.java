@@ -99,6 +99,8 @@ public class DeveloperService {
         db.put("latencyMs", (System.nanoTime() - t0) / 1_000_000);
 
         h.put("status", dbOk ? "UP" : "DEGRADED");
+        h.put("appVersion", appVersion());
+        h.put("startedAt", startedAt());
         h.put("time", LocalDateTime.now(clock));
         h.put("uptimeSeconds", uptimeSeconds());
         h.put("javaVersion", System.getProperty("java.version"));
@@ -169,6 +171,21 @@ public class DeveloperService {
     private long uptimeSeconds() {
         long startMs = ManagementFactory.getRuntimeMXBean().getStartTime();
         return Math.max(0, Duration.between(Instant.ofEpochMilli(startMs), Instant.now()).toSeconds());
+    }
+
+    /** Deploy commit (Render sets RENDER_GIT_COMMIT, others GIT_COMMIT) or the jar build version; null when unknown. */
+    private static String appVersion() {
+        for (String key : new String[]{"RENDER_GIT_COMMIT", "GIT_COMMIT", "SOURCE_VERSION"}) {
+            String v = System.getenv(key);
+            if (v != null && !v.isBlank()) return v.trim().length() > 12 ? v.trim().substring(0, 12) : v.trim();
+        }
+        String impl = DeveloperService.class.getPackage().getImplementationVersion();
+        return impl == null || impl.isBlank() ? null : impl;
+    }
+
+    private LocalDateTime startedAt() {
+        long startMs = ManagementFactory.getRuntimeMXBean().getStartTime();
+        return LocalDateTime.ofInstant(Instant.ofEpochMilli(startMs), clock.getZone());
     }
 
     private String flywayVersion() {

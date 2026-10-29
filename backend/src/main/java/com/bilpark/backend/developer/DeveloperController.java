@@ -20,8 +20,13 @@ public class DeveloperController {
     public record AdminPasswordResetRequest(String username, String newPassword) {}
 
     private final DeveloperService developerService;
+    private final DeveloperAuditService auditService;
+    private final DeveloperActivityService activityService;
 
-    public DeveloperController(DeveloperService developerService) {
+    public DeveloperController(DeveloperService developerService, DeveloperAuditService auditService,
+                               DeveloperActivityService activityService) {
+        this.auditService = auditService;
+        this.activityService = activityService;
         this.developerService = developerService;
     }
 
@@ -47,6 +52,35 @@ public class DeveloperController {
     @GetMapping("/errors")
     public List<Map<String, Object>> errors(@RequestParam(defaultValue = "50") int limit) {
         return developerService.errors(limit);
+    }
+
+
+    @GetMapping("/audit")
+    public Map<String, Object> audit(@RequestParam(required = false) String from,
+                                     @RequestParam(required = false) String to,
+                                     @RequestParam(required = false) String action,
+                                     @RequestParam(required = false) String actor,
+                                     @RequestParam(required = false) String actorRole,
+                                     @RequestParam(required = false) String entityType,
+                                     @RequestParam(required = false) String q,
+                                     @RequestParam(defaultValue = "0") int page,
+                                     @RequestParam(defaultValue = "50") int size) {
+        return auditService.list(new DeveloperAuditService.Query(from, to, action, actor, actorRole, entityType, q),
+                page, size);
+    }
+
+    @GetMapping("/audit/actions")
+    public List<Map<String, String>> auditActions() {
+        return auditService.actions();
+    }
+
+    @GetMapping("/activity")
+    public Map<String, Object> activity(@RequestParam(defaultValue = "24") int hours) {
+        if (hours < 1 || hours > DeveloperActivityService.MAX_HOURS) {
+            throw ApiException.badRequest(ErrorCodes.VALIDATION_ERROR,
+                    "hours 1 ile " + DeveloperActivityService.MAX_HOURS + " arasında olmalı.");
+        }
+        return activityService.activity(hours);
     }
 
     @PostMapping("/admin-password-reset")

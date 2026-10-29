@@ -307,6 +307,15 @@ public class SyncService implements ChangePublisher {
         return clients.size();
     }
 
+    /** Ids of the users that currently hold an open stream (developer monitoring). */
+    public java.util.Set<Long> connectedUserIds() {
+        java.util.Set<Long> ids = new java.util.HashSet<>();
+        for (Client c : clients) {
+            if (!c.closed && c.viewer.userId() != null) ids.add(c.viewer.userId());
+        }
+        return ids;
+    }
+
     // ---- scheduled jobs ---------------------------------------------------------------------
 
     /** Keeps proxies/mobile connections alive and tells clients the latest version. No database access. */

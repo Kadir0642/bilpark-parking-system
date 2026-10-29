@@ -81,7 +81,7 @@ class MarchLiveSchemaUpgradePostgresTest {
 
         try (Connection c = conn(url); Statement st = c.createStatement()) {
             // baselined below V1, so the idempotent V1 creates users, zones, subscriptions and fiscal_years
-            assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7"),
+            assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8"),
                     strings(c, "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank"));
             assertEquals(0, count(c, "SELECT count(*) FROM flyway_schema_history WHERE NOT success"));
 

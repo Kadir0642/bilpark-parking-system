@@ -86,12 +86,12 @@ class FlywayBaselinePostgresTest {
 
         MigrateResult result = flyway(url).migrate();
         assertTrue(result.success);
-        assertEquals(7, result.migrationsExecuted, "V1 (no-op: every table exists) and V2-V7 should run");
+        assertEquals(8, result.migrationsExecuted, "V1 (no-op: every table exists) and V2-V8 should run");
 
         try (Connection c = conn(url); Statement st = c.createStatement()) {
             List<String> hist = strings(c,
                     "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank");
-            assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7"), hist);
+            assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8"), hist);
 
             assertEquals(0, count(c, "SELECT count(*) FROM pg_constraint WHERE conname = 'ukabc123xyz'"));
             assertEquals(1, count(c, "SELECT count(*) FROM pg_indexes WHERE indexname = 'ux_subscriptions_active_plate'"));
@@ -241,10 +241,10 @@ class FlywayBaselinePostgresTest {
         String url = urlFor("fresh_db");
         MigrateResult result = flyway(url).migrate();
         assertTrue(result.success);
-        assertEquals(7, result.migrationsExecuted);
+        assertEquals(8, result.migrationsExecuted);
 
         try (Connection c = conn(url); Statement st = c.createStatement()) {
-            assertEquals(List.of("SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7"),
+            assertEquals(List.of("SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8"),
                     strings(c, "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank"));
             // V6: istemci giriş kimliği birincil anahtar (aynı kimlikle ikinci satır reddedilir)
             assertEquals(1, count(c, "SELECT count(*) FROM pg_constraint c JOIN pg_class t ON t.oid=c.conrelid "
@@ -254,6 +254,9 @@ class FlywayBaselinePostgresTest {
             assertEquals(1, count(c, "SELECT count(*) FROM pg_indexes WHERE indexname = 'ux_subscriptions_active_plate'"));
             assertEquals(1, count(c, "SELECT count(*) FROM information_schema.tables WHERE table_name='shifts'"));
             assertEquals(1, count(c, "SELECT count(*) FROM license_info WHERE grace_days = 15"));
+            // V8: cihaz izi kolonları
+            assertEquals(3, count(c, "SELECT count(*) FROM information_schema.columns WHERE table_name = 'users' "
+                    + "AND column_name IN ('last_seen_at', 'last_app_version', 'last_device')"));
             assertEquals(1, count(c, "SELECT count(*) FROM information_schema.tables WHERE table_name='audit_logs'"));
         }
     }

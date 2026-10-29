@@ -335,6 +335,8 @@ Panel için JSON: `GET /api/admin/reports/period/summary?from&to`
 | `GET /api/developer/errors?limit=50` | `[{id, createdAt, method, path, errorCode, exceptionClass, message, stackExcerpt, username}]`. Denetim kaydı: `DEV_ERRORS_VIEWED`. |
 | `POST /api/developer/admin-password-reset` | `{"username":"admin","newPassword":"..."}` → `{message, username}`. Yalnızca ADMIN hesapları (`400 PROTECTED_ACCOUNT`; bilinmeyen kullanıcıda `404`). Denetim kaydı: `DEV_ADMIN_PASSWORD_RESET`. |
 
+Bakım dönemi için eklenen salt okunur izleme uç noktaları (`/api/developer/audit`, `/api/developer/audit/actions`, `/api/developer/activity`, `health` eki `appVersion`/`startedAt`, plaka maskeleme, cihaz izi): bkz. `docs/api-gelistirici-izleme.md`.
+
 Geliştiricinin başka yetkisi yoktur. Gizli bir kapatma, kilitleme veya silme uç noktası bulunmaz.
 
 ---

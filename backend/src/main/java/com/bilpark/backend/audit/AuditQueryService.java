@@ -69,6 +69,7 @@ public class AuditQueryService {
         LABELS.put(AuditAction.DEVELOPER_ACCOUNT_CREATED, "Geliştirici hesabı oluşturuldu");
         LABELS.put(AuditAction.DEV_HEALTH_VIEWED, "Geliştirici: sağlık görüntülendi");
         LABELS.put(AuditAction.DEV_ERRORS_VIEWED, "Geliştirici: hatalar görüntülendi");
+        LABELS.put(AuditAction.DEV_AUDIT_VIEWED, "Geliştirici: denetim kaydı görüntülendi");
         LABELS.put(AuditAction.DEV_ADMIN_PASSWORD_RESET, "Geliştirici: yönetici şifresi sıfırlandı");
     }
 

@@ -108,7 +108,7 @@ public class SecurityConfig {
         // In a real production app, restrict these to actual frontend domains
         configuration.setAllowedOrigins(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Device-Id", "Last-Event-ID", "Cache-Control"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Device-Id", "X-App-Version", "X-Device", "Last-Event-ID", "Cache-Control"));
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
