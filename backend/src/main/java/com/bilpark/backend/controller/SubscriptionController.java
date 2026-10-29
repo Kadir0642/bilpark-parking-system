@@ -26,17 +26,13 @@ public class SubscriptionController {
     @PostMapping("/create")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> createSubscription(@RequestBody @jakarta.validation.Valid com.bilpark.backend.dto.SubscriptionRequest request) {
-        try {
-            Subscription sub = subscriptionService.createSubscription(
-                request.getLicensePlate(), 
-                request.getVehicleType(), 
-                request.getOwnerName(), 
-                request.getOwnerPhone()
-            );
-            return ResponseEntity.ok(sub);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
+        Subscription sub = subscriptionService.createSubscription(
+            request.getLicensePlate(), 
+            request.getVehicleType(), 
+            request.getOwnerName(), 
+            request.getOwnerPhone()
+        );
+        return ResponseEntity.ok(sub);
     }
 
     /**
@@ -66,11 +62,7 @@ public class SubscriptionController {
     @PostMapping("/cancel")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> cancelSubscription(@RequestParam String plate) {
-        try {
-            Subscription cancelled = subscriptionService.cancelSubscription(plate);
-            return ResponseEntity.ok(cancelled);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
+        Subscription cancelled = subscriptionService.cancelSubscription(plate);
+        return ResponseEntity.ok(cancelled);
     }
 }

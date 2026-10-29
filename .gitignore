@@ -22,3 +22,5 @@
 
 # Logs
 *.log
+# Local demo secrets (docker-compose.yml)
+.env.demo

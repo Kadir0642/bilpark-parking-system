@@ -1,0 +1,207 @@
+/* BilPark tasarım sistemi: renk tokenları ve ortak bileşenler.
+   admin-panel.html ve customer-payment.html bu dosyayı paylaşır.
+   Tema: <html data-theme="light|dark">; özellik yoksa sistem tercihi kullanılır.
+   Sayfalarda sabit renk yazılmaz, her renk buradaki değişkenlerden gelir. */
+
+:root {
+    color-scheme: light;
+    --bg: #F3F5F8;
+    --surface: #FFFFFF;
+    --surface-2: #EDF0F4;
+    --border: #CDD5DF;
+    --border-strong: #94A3B8;
+    --text: #0E1726;
+    --text-2: #4A5668;
+    --primary: #1747C6;
+    --on-primary: #FFFFFF;
+    --primary-soft: #E3EBFF;
+    --on-primary-soft: #12379A;
+    --success: #06734F;
+    --on-success: #FFFFFF;
+    --success-soft: #DDF5EA;
+    --on-success-soft: #05553B;
+    --danger: #B42318;
+    --on-danger: #FFFFFF;
+    --danger-soft: #FDE7E5;
+    --on-danger-soft: #8A1A12;
+    --warning: #9A4A00;
+    --on-warning: #FFFFFF;
+    --warning-soft: #FFF1D6;
+    --on-warning-soft: #7A3A00;
+    --sub: #0B6B66;
+    --sub-soft: #D7F3F0;
+    --on-sub-soft: #0A5450;
+    --plate-bg: #FFFFFF;
+    --plate-text: #0E1726;
+    --plate-strip: #1747C6;
+    --plate-strip-text: #FFFFFF;
+    --shadow: 0 8px 24px rgba(14, 23, 38, 0.18);
+
+    --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-lg: 16px;
+    --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-12: 48px;
+    --tap: 44px;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --bg: #0A0F1A;
+        --surface: #121A29;
+        --surface-2: #1A2436;
+        --border: #2A374D;
+        --border-strong: #4A5A73;
+        --text: #F2F5F9;
+        --text-2: #B3BFCF;
+        --primary: #7FA6FF;
+        --on-primary: #08122B;
+        --primary-soft: #1B2B52;
+        --on-primary-soft: #C9D8FF;
+        --success: #4ADE9B;
+        --on-success: #062A1B;
+        --success-soft: #0F3326;
+        --on-success-soft: #A7F3CE;
+        --danger: #FF8A80;
+        --on-danger: #2A0503;
+        --danger-soft: #3D1716;
+        --on-danger-soft: #FFC9C3;
+        --warning: #FFB547;
+        --on-warning: #2A1A00;
+        --warning-soft: #3A2A0D;
+        --on-warning-soft: #FFDDA3;
+        --sub: #4FD1C5;
+        --sub-soft: #0E3330;
+        --on-sub-soft: #A6F0E8;
+        --plate-bg: #F2F5F9;
+        --plate-text: #0E1726;
+        --plate-strip: #3A66E0;
+        --plate-strip-text: #FFFFFF;
+        --shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0A0F1A;
+    --surface: #121A29;
+    --surface-2: #1A2436;
+    --border: #2A374D;
+    --border-strong: #4A5A73;
+    --text: #F2F5F9;
+    --text-2: #B3BFCF;
+    --primary: #7FA6FF;
+    --on-primary: #08122B;
+    --primary-soft: #1B2B52;
+    --on-primary-soft: #C9D8FF;
+    --success: #4ADE9B;
+    --on-success: #062A1B;
+    --success-soft: #0F3326;
+    --on-success-soft: #A7F3CE;
+    --danger: #FF8A80;
+    --on-danger: #2A0503;
+    --danger-soft: #3D1716;
+    --on-danger-soft: #FFC9C3;
+    --warning: #FFB547;
+    --on-warning: #2A1A00;
+    --warning-soft: #3A2A0D;
+    --on-warning-soft: #FFDDA3;
+    --sub: #4FD1C5;
+    --sub-soft: #0E3330;
+    --on-sub-soft: #A6F0E8;
+    --plate-bg: #F2F5F9;
+    --plate-text: #0E1726;
+    --plate-strip: #3A66E0;
+    --plate-strip-text: #FFFFFF;
+    --shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* --- Temel --- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; line-height: 1.45; }
+a { color: var(--primary); }
+a:hover { color: var(--on-primary-soft); }
+:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--text-2); }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+[hidden] { display: none !important; }
+
+/* --- Kart --- */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); }
+.card-pad { padding: var(--s-4); }
+
+/* --- Düğmeler --- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2); min-height: var(--tap); padding: 0 var(--s-4); border-radius: var(--r-md); border: 1px solid transparent; font: 600 15px var(--font); cursor: pointer; text-decoration: none; white-space: nowrap; }
+.btn:disabled, .btn[aria-disabled="true"] { cursor: not-allowed; background: var(--surface-2); color: var(--text-2); border-color: var(--border); }
+.btn-lg { min-height: 56px; font-size: 17px; font-weight: 700; }
+.btn-block { width: 100%; }
+.btn-primary { background: var(--primary); color: var(--on-primary); }
+.btn-success { background: var(--success); color: var(--on-success); }
+.btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
+.btn-danger-outline { background: transparent; color: var(--danger); border: 2px solid var(--danger); }
+.btn-warning-outline { background: transparent; color: var(--warning); border: 2px solid var(--warning); }
+.btn-icon { width: var(--tap); padding: 0; }
+.btn-ghost { background: transparent; color: var(--text); }
+
+/* --- Rozetler --- */
+.badge { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 var(--s-2); border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.badge-success { background: var(--success-soft); color: var(--on-success-soft); }
+.badge-danger { background: var(--danger-soft); color: var(--on-danger-soft); }
+.badge-warning { background: var(--warning-soft); color: var(--on-warning-soft); }
+.badge-primary { background: var(--primary-soft); color: var(--on-primary-soft); }
+.badge-sub { background: var(--sub-soft); color: var(--on-sub-soft); }
+.badge-neutral { background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; display: inline-block; }
+
+/* --- Plaka --- */
+.plate { display: inline-flex; align-items: stretch; height: 36px; border: 2px solid var(--plate-text); border-radius: 6px; background: var(--plate-bg); overflow: hidden; }
+.plate::before { content: "TR"; width: 16px; background: var(--plate-strip); color: var(--plate-strip-text); font-size: 8px; font-weight: 800; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 3px; }
+.plate > span { padding: 0 var(--s-2); display: flex; align-items: center; color: var(--plate-text); font-size: 18px; font-weight: 800; letter-spacing: 1px; white-space: nowrap; }
+
+/* --- Form --- */
+.field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; color: var(--text-2); }
+.input, .select { min-height: var(--tap); padding: 0 var(--s-3); border-radius: var(--r-sm); border: 2px solid var(--border-strong); background: var(--surface); color: var(--text); font: 500 16px var(--font); width: 100%; }
+.input:focus, .select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); }
+.input[aria-invalid="true"] { border-color: var(--danger); }
+.field-error { font-size: 13px; color: var(--danger); font-weight: 500; }
+
+/* --- Bildirimler --- */
+.alert { padding: var(--s-3) 14px; border-radius: var(--r-sm); font-size: 14px; border: 1px solid; }
+.alert-danger { background: var(--danger-soft); color: var(--on-danger-soft); border-color: var(--danger); }
+.alert-warning { background: var(--warning-soft); color: var(--on-warning-soft); border-color: var(--warning); }
+.alert-success { background: var(--success-soft); color: var(--on-success-soft); border-color: var(--success); }
+.alert-info { background: var(--primary-soft); color: var(--on-primary-soft); border-color: var(--primary); }
+.status-pill { display: inline-flex; align-items: center; gap: var(--s-2); height: 36px; padding: 0 var(--s-3); border-radius: 999px; font-size: 14px; font-weight: 700; }
+.status-online { background: var(--success-soft); color: var(--on-success-soft); }
+.status-offline { background: var(--warning-soft); color: var(--on-warning-soft); }
+.status-danger { background: var(--danger-soft); color: var(--on-danger-soft); }
+
+.toast-stack { position: fixed; right: var(--s-6); bottom: var(--s-6); left: auto; z-index: 1000; display: flex; flex-direction: column; gap: var(--s-2); max-width: min(420px, calc(100vw - 32px)); }
+.toast { display: flex; align-items: center; gap: 10px; padding: var(--s-3) var(--s-4); border-radius: var(--r-md); background: var(--text); color: var(--bg); font-size: 15px; box-shadow: var(--shadow); }
+.toast-error { background: var(--danger); color: var(--on-danger); }
+@media (max-width: 600px) { .toast-stack { right: 16px; left: 16px; bottom: 16px; max-width: none; } }
+
+/* --- Tablo --- */
+.table-wrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.table th { background: var(--surface-2); color: var(--text-2); font-size: 13px; font-weight: 700; text-align: left; padding: var(--s-3); white-space: nowrap; }
+.table td { padding: var(--s-3); border-top: 1px solid var(--border); vertical-align: middle; }
+.table th:first-child, .table td:first-child { padding-left: var(--s-4); }
+.table th:last-child, .table td:last-child { padding-right: var(--s-4); }
+.table .right { text-align: right; }
+.table tbody tr.clickable { cursor: pointer; }
+.table tbody tr.clickable:hover { background: var(--surface-2); }
+.table tbody tr.selected { background: var(--primary-soft); }
+.table-empty { text-align: center; color: var(--text-2); padding: var(--s-8) var(--s-4) !important; }
+
+/* --- Gün gün süre dökümü --- */
+.breakdown { border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+.breakdown-row { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: var(--s-2); padding: var(--s-2) var(--s-3); border-top: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+.breakdown-row:first-child { border-top: 0; }
+.breakdown-head { font-size: 13px; font-weight: 600; color: var(--text-2); }
+.breakdown-total { font-weight: 800; background: var(--surface-2); border-top: 2px solid var(--border-strong); }
+
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

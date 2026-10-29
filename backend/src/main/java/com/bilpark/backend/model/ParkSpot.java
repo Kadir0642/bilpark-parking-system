@@ -35,8 +35,8 @@ public class ParkSpot {
 
     private LocalDateTime entryTime;
 
-    @Enumerated(EnumType.STRING)
-    private VehicleType currentType;
+    @Column(length = 30)
+    private String currentType; // vehicle_types.code
 
     @Enumerated(EnumType.STRING)
     private ParkingStatus status = ParkingStatus.ACTIVE;
@@ -47,7 +47,7 @@ public class ParkSpot {
     @Transient
     private Boolean hasSubscription; // Used to show if vehicle has active subscription on check-in
 
-    public ParkSpot(String currentPlate, StreetLocation street, VehicleType currentType,
+    public ParkSpot(String currentPlate, StreetLocation street, String currentType,
                     String region, String neighborhood, String side, Zone zone) {
         this.currentPlate = currentPlate;
         this.street = street;

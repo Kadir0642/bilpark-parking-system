@@ -32,6 +32,12 @@ public class FiscalYear {
     @Column(nullable = false)
     private boolean isActive = false;
 
+    // Archiving only marks the period; parking records are never deleted (VUK md. 253)
+    @Column(nullable = false)
+    private boolean archived = false;
+
+    private java.time.LocalDateTime archivedAt;
+
     public FiscalYear(LocalDate startDate, LocalDate endDate, String label) {
         this.startDate = startDate;
         this.endDate = endDate;

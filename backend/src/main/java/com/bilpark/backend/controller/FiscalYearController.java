@@ -28,31 +28,19 @@ public class FiscalYearController {
 
     @PostMapping("/create")
     public ResponseEntity<?> createFiscalYear(@RequestBody @jakarta.validation.Valid com.bilpark.backend.dto.FiscalYearRequest request) {
-        try {
-            FiscalYear fy = fiscalYearService.createFiscalYear(request.getStartDate(), request.getEndDate(), request.getLabel());
-            return ResponseEntity.ok(fy);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
+        FiscalYear fy = fiscalYearService.createFiscalYear(request.getStartDate(), request.getEndDate(), request.getLabel());
+        return ResponseEntity.ok(fy);
     }
 
     @PostMapping("/{id}/archive")
     public ResponseEntity<?> archiveFiscalYear(@PathVariable Long id) {
-        try {
-            FiscalYear archived = fiscalYearService.archiveFiscalYear(id);
-            return ResponseEntity.ok(archived);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
+        FiscalYear archived = fiscalYearService.archiveFiscalYear(id);
+        return ResponseEntity.ok(archived);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteFiscalYear(@PathVariable Long id) {
-        try {
-            fiscalYearService.deleteFiscalYear(id);
-            return ResponseEntity.ok(Map.of("message", "Dönem başarıyla silindi."));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
+        fiscalYearService.deleteFiscalYear(id);
+        return ResponseEntity.ok(Map.of("message", "Dönem başarıyla silindi."));
     }
 }

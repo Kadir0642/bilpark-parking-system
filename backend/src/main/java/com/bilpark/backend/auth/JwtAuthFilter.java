@@ -1,5 +1,6 @@
 package com.bilpark.backend.auth;
 
+import com.bilpark.backend.sync.TicketService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,9 +21,37 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
 
-    public JwtAuthFilter(JwtUtil jwtUtil, CustomUserDetailsService userDetailsService) {
+    private final TicketService ticketService;
+
+    public JwtAuthFilter(JwtUtil jwtUtil, CustomUserDetailsService userDetailsService, TicketService ticketService) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
+        this.ticketService = ticketService;
+    }
+
+    /** Browser EventSource cannot send headers: /api/events accepts a one-time ?ticket= instead. */
+    private void authenticateByTicket(HttpServletRequest request) {
+        String username = ticketService.consume(request.getParameter("ticket"));
+        if (username == null) return;
+        try {
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            if (userDetails.isEnabled()) {
+                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.getAuthorities());
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+            }
+        } catch (Exception e) {
+            // unknown user: stay anonymous
+        }
+    }
+
+    /** A password change or reset invalidates older tokens (JWT iat has second precision). */
+    private boolean issuedBeforePasswordChange(String jwt, UserDetails userDetails) {
+        if (!(userDetails instanceof BilparkUserDetails b) || b.getPasswordChangedAt() == null) return false;
+        java.util.Date iat = jwtUtil.extractIssuedAt(jwt);
+        return iat == null
+                || iat.toInstant().isBefore(b.getPasswordChangedAt().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
     }
 
     @Override
@@ -37,6 +66,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         final String username;
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            if ("/api/events".equals(request.getRequestURI()) && request.getParameter("ticket") != null
+                    && SecurityContextHolder.getContext().getAuthentication() == null) {
+                authenticateByTicket(request);
+            }
             filterChain.doFilter(request, response);
             return;
         }
@@ -48,7 +81,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
                 
-                if (jwtUtil.validateToken(jwt, userDetails)) {
+                if (userDetails.isEnabled() && jwtUtil.validateToken(jwt, userDetails)
+                        && !issuedBeforePasswordChange(jwt, userDetails)) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,

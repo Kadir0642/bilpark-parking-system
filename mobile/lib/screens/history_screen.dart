@@ -1,33 +1,39 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../core/constants.dart';
+import '../core/api_client.dart';
+import '../core/format.dart';
+import '../core/theme.dart';
+import '../widgets/bp_header.dart';
+import '../widgets/bp_snack.dart';
+import '../widgets/search_field.dart';
+import '../widgets/status_badge.dart';
 
 class HistoryScreen extends StatefulWidget {
-  final String region;
-  final String neighborhood;
-  final String street;
+  final String streetCode; // sunucudaki cadde kodu
+  final String streetName; // görünen cadde adı
   final bool showOnlyRunaways; // DRY PRENSİBİ: Bu sayfa Kaçaklar için mi açıldı?
 
   const HistoryScreen({
     super.key,
-    required this.region,
-    required this.neighborhood,
-    required this.street,
-    required this.showOnlyRunaways // Yeni eklenen zorunlu parametre
+    required this.streetCode,
+    required this.streetName,
+    required this.showOnlyRunaways,
   });
 
   @override
-  State<HistoryScreen> createState() => _HistoryScreenState();
+  State<HistoryScreen> createState() => HistoryScreenState();
 }
 
-class _HistoryScreenState extends State<HistoryScreen> {
+class _Day {
+  final DateTime day;
+  final List<Map<dynamic, dynamic>> records = [];
+  double total = 0;
+  _Day(this.day);
+}
+
+class HistoryScreenState extends State<HistoryScreen> {
   List<dynamic> historyRecords = [];
   bool isLoading = true;
-  TextEditingController searchController = TextEditingController();
-
-  // Türkçe caddeleri Backend Enum'una çeviren akıllı köprü
-  String get _backendStreetEnum => AppConstants.toBackendEnum(widget.street);
+  final TextEditingController searchController = TextEditingController();
 
   @override
   void initState() {
@@ -35,45 +41,52 @@ class _HistoryScreenState extends State<HistoryScreen> {
     fetchHistory();
   }
 
-// --- 1. SADELEŞTİRİLMİŞ GEÇMİŞİ GETİR ---
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  /// Sekmeye dönüldüğünde listeyi (aramayı koruyarak) tazeler.
+  Future<void> refresh() {
+    final q = searchController.text.trim();
+    return q.isEmpty ? fetchHistory() : searchPlate(q);
+  }
+
+  // --- 1. GEÇMİŞİ GETİR ---
   Future<void> fetchHistory() async {
     setState(() => isLoading = true);
 
-    final uri = Uri.parse('${AppConstants.baseUrl}/history').replace(queryParameters: {
-      'street': _backendStreetEnum,
-    });
-
     try {
-      final response = await http.get(
-        uri,
-        headers: AppConstants.authHeaders()
-      );
-
-      if (response.statusCode == 200 && mounted) {
-        List<dynamic> allRecords = json.decode(response.body);
-
-        if (widget.showOnlyRunaways) {
-          // Eğer Kaçaklar sayfasındaysak, SADECE KAÇANLARI al
-          allRecords = allRecords.where((r) => r['status'] == 'RUNAWAY').toList();
-        } else {
-          // Eğer Normal Geçmiş sayfasındaysak, SADECE ÖDEYENLERİ (PAID) al
-          allRecords = allRecords.where((r) => r['status'] == 'PAID').toList();
-        }
-
+      final data = await ApiClient.get('/parking/history', query: {'street': widget.streetCode});
+      if (!mounted) return;
+      setState(() {
+        historyRecords = _filterByMode(data is List ? data : []);
+        isLoading = false;
+      });
+    } on ApiException catch (e) {
+      _showError(e.message);
+      if (mounted) {
         setState(() {
-          historyRecords = allRecords;
+          historyRecords = [];
           isLoading = false;
         });
-      } else {
-        setState(() => isLoading = false);
       }
-    } catch (e) {
-      debugPrint("Geçmiş Çekme Hatası: $e");
-      if (mounted) setState(() => isLoading = false);
     }
   }
 
-// --- 2. GÜNCELLENMİŞ ARAMA MOTORU ---
+  // Kaçaklar sayfasında yalnızca RUNAWAY, normal geçmişte yalnızca PAID kayıtlar
+  List<dynamic> _filterByMode(List<dynamic> records) {
+    final wanted = widget.showOnlyRunaways ? 'RUNAWAY' : 'PAID';
+    return records.where((r) => r['status'] == wanted).toList();
+  }
+
+  void _showError(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(bpSnackBar(context, msg, tone: BadgeTone.danger));
+  }
+
+  // --- 2. ARAMA ---
   Future<void> searchPlate(String plate) async {
     if (plate.isEmpty) {
       fetchHistory();
@@ -81,183 +94,290 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
 
     setState(() => isLoading = true);
-    final uri = Uri.parse('${AppConstants.baseUrl}/history/search').replace(queryParameters: {
-      'plate': plate.toUpperCase().replaceAll(' ', ''),
-    });
-
     try {
-      final response = await http.get(
-        uri,
-        headers: AppConstants.authHeaders()
-      );
-
-      if (response.statusCode == 200 && mounted) {
-        List<dynamic> results = json.decode(response.body);
-
-        // ARAMADA DA AYNI KESİN AYRIMI YAPIYORUZ
-        if (widget.showOnlyRunaways) {
-          results = results.where((r) => r['status'] == 'RUNAWAY').toList();
-        } else {
-          results = results.where((r) => r['status'] == 'PAID').toList();
-        }
-
+      // Sunucu parça arama yapar; kayıt yoksa 404 NOT_FOUND döner (boş liste gibi ele alınır)
+      final data = await ApiClient.get('/parking/history/search',
+          query: {'plate': plate.toUpperCase().replaceAll(RegExp(r'[\s-]'), '')});
+      if (!mounted) return;
+      setState(() {
+        historyRecords = _filterByMode(data is List ? data : []);
+        isLoading = false;
+      });
+    } on ApiException catch (e) {
+      if (e.statusCode != 404) _showError(e.message);
+      if (mounted) {
         setState(() {
-          historyRecords = results;
+          historyRecords = [];
           isLoading = false;
         });
-      } else {
-        setState(() { historyRecords = []; isLoading = false; });
       }
-    } catch (e) {
-      debugPrint("Arama Hatası: $e");
-      if (mounted) setState(() => isLoading = false);
     }
   }
 
-  String formatTime(String? timeStr) {
-    if (timeStr == null) return "-";
-    DateTime dt = DateTime.parse(timeStr).toLocal();
-    return "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+  DateTime? _parse(dynamic s) => s == null ? null : DateTime.tryParse(s.toString())?.toLocal();
+
+  double _fee(Map r) => r['fee'] is num ? (r['fee'] as num).toDouble() : 0.0;
+
+  /// Kayıtları gün bazında gruplar (kapanış zamanına, yoksa girişe göre; en yeni gün üstte).
+  List<_Day> _group() {
+    final days = <String, _Day>{};
+    for (final r in historyRecords) {
+      if (r is! Map) continue;
+      final t = _parse(r['exitTime']) ?? _parse(r['entryTime']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final key = '${t.year}-${t.month}-${t.day}';
+      final d = days.putIfAbsent(key, () => _Day(DateTime(t.year, t.month, t.day)));
+      d.records.add(r);
+      d.total += _fee(r);
+    }
+    final list = days.values.toList()..sort((a, b) => b.day.compareTo(a.day));
+    for (final d in list) {
+      d.records.sort((a, b) {
+        final ta = _parse(a['exitTime']) ?? _parse(a['entryTime']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final tb = _parse(b['exitTime']) ?? _parse(b['entryTime']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return tb.compareTo(ta);
+      });
+    }
+    return list;
   }
 
-  String formatDate(String? timeStr) {
-    if (timeStr == null) return "";
-    DateTime dt = DateTime.parse(timeStr).toLocal();
-    return "${dt.day}/${dt.month}/${dt.year}";
+  String _dayTitle(DateTime d) {
+    final now = DateTime.now();
+    if (d.year == now.year && d.month == now.month && d.day == now.day) return 'Bugün · ${formatDayLabel(d)}';
+    return formatDayLabel(d);
   }
 
   @override
   Widget build(BuildContext context) {
-    // Sayfanın teması nereden geldiğimize göre tamamen değişir!
-    Color themeColor = widget.showOnlyRunaways ? Colors.red[700]! : const Color(0xFF3F51B5);
-    String pageTitle = widget.showOnlyRunaways ? "Kara Liste (Kaçaklar) 🚨" : "Tüm Geçmiş Kayıtlar";
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        title: Text(pageTitle, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-        backgroundColor: themeColor,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: Column(
+    final c = context.bp;
+    final runaways = widget.showOnlyRunaways;
+    return ColoredBox(
+      color: c.bg,
+      child: Column(
         children: [
-          // YENİ: ARAMA ÇUBUĞU (Senin Fikrin 💡)
-          Container(
-            padding: const EdgeInsets.all(15),
-            decoration: const BoxDecoration(
-                color: Colors.white,
-                boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))]
-            ),
-            child: TextField(
-              controller: searchController,
-              onSubmitted: (value) => searchPlate(value), // Klavyede 'Ara'ya basınca çalışır
-              decoration: InputDecoration(
-                hintText: "Plaka Ara (Örn: 34ABC123)",
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    searchController.clear();
-                    fetchHistory(); // Temizleyince eski listeyi getir
-                  },
+          BpHeader(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(runaways ? 'Kaçaklar' : 'Geçmiş', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+                    Flexible(
+                      child: Text(widget.streetName, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, color: c.text2)),
+                    ),
+                  ],
                 ),
-                filled: true,
-                fillColor: Colors.grey[100],
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
-              ),
+                const SizedBox(height: 10),
+                BpSearchField(
+                  controller: searchController,
+                  hint: runaways ? 'Plaka ara' : 'Plaka ara (örn. 11ABC123)',
+                  onSubmitted: searchPlate,
+                  onCleared: fetchHistory,
+                ),
+              ],
             ),
           ),
-
-          // LİSTE KISMI
           Expanded(
             child: isLoading
-                ? Center(child: CircularProgressIndicator(color: themeColor))
-                : historyRecords.isEmpty
-                ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(widget.showOnlyRunaways ? Icons.shield : Icons.history, size: 80, color: Colors.grey[400]),
-                    const SizedBox(height: 15),
-                    Text(widget.showOnlyRunaways ? "Bu caddede kaçak araç kaydı yok. Harika!" : "Kayıt bulunamadı.", style: const TextStyle(color: Colors.grey, fontSize: 16)),
-                  ],
-                )
-            )
-                : ListView.builder(
-              padding: const EdgeInsets.all(15),
-              itemCount: historyRecords.length,
-              itemBuilder: (context, index) {
-                final record = historyRecords[index];
+                ? const Center(child: CircularProgressIndicator())
+                : RefreshIndicator(onRefresh: refresh, child: _body(c, runaways)),
+          ),
+        ],
+      ),
+    );
+  }
 
-                // YENİ BİLPARK 2.0 STATUS MANTIĞI
-                bool isRunaway = record['status'] == 'RUNAWAY';
-                double fee = record["fee"] != null ? (record["fee"] as num).toDouble() : 0.0;
-
-                return Card(
-                  elevation: 2,
-                  margin: const EdgeInsets.only(bottom: 15),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                      side: BorderSide(color: isRunaway ? Colors.redAccent : Colors.transparent, width: 1)
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(15),
-                    leading: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                          color: isRunaway ? Colors.red.withValues(alpha: 0.1) : Colors.green.withValues(alpha: 0.1),
-                          shape: BoxShape.circle
-                      ),
-                      child: Icon(
-                          isRunaway ? Icons.warning_rounded : Icons.check_circle,
-                          color: isRunaway ? Colors.red : Colors.green,
-                          size: 30
-                      ),
-                    ),
-                    title: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(record["licensePlate"] ?? "Bilinmiyor", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: 1)),
-                        Text(formatDate(record["entryTime"]), style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                      ],
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 8),
-                        Text("Giriş: ${formatTime(record["entryTime"])}  -  Çıkış: ${formatTime(record["exitTime"])}", style: TextStyle(color: Colors.grey[800])),
-                        const SizedBox(height: 5),
-                        Text(
-                            isRunaway ? "DURUM: ÖDEMEDEN KAÇTI" : "DURUM: ÖDEME ALINDI",
-                            style: TextStyle(
-                                color: isRunaway ? Colors.red : Colors.green,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12
-                            )
-                        ),
-                      ],
-                    ),
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(isRunaway ? "Kalan Borç" : "Tahsilat", style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                        Text(
-                            "$fee TL",
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                color: isRunaway ? Colors.red : Colors.green
-                            )
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+  Widget _body(BilParkColors c, bool runaways) {
+    if (historyRecords.isEmpty) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(32),
+        children: [
+          const SizedBox(height: 48),
+          Icon(runaways ? Icons.verified_user_outlined : Icons.history, size: 56, color: c.borderStrong),
+          const SizedBox(height: 12),
+          Text(
+            runaways ? 'Bu caddede kaçak araç kaydı yok.' : 'Kayıt bulunamadı.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, color: c.text2),
+          ),
+        ],
+      );
+    }
+    final days = _group();
+    final totalDebt = historyRecords.whereType<Map>().fold<double>(0, (a, r) => a + _fee(r));
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      children: [
+        if (runaways) ...[
+          _debtSummary(c, totalDebt, historyRecords.length),
+          const SizedBox(height: 4),
+        ],
+        for (final d in days) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(2, 14, 2, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(_dayTitle(d.day), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: c.text2)),
+                Text(formatMoney(d.total),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: runaways ? c.danger : c.text)),
+              ],
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: c.surface,
+              border: Border.all(color: c.border),
+              borderRadius: BorderRadius.circular(BpSize.rMd),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                for (var i = 0; i < d.records.length; i++) ...[
+                  if (i > 0) Divider(color: c.border),
+                  runaways ? _runawayRow(c, d.records[i]) : _paidRow(c, d.records[i]),
+                ],
+              ],
             ),
           ),
         ],
+        if (runaways) ...[
+          const SizedBox(height: 16),
+          Text('Borç tahsilatı yönetim panelinden yapılır. Saha personeli kaydı yalnızca görür.',
+              style: TextStyle(fontSize: 14, color: c.text2)),
+        ],
+      ],
+    );
+  }
+
+  Widget _debtSummary(BilParkColors c, double total, int count) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: c.dangerSoft,
+        border: Border.all(color: c.danger),
+        borderRadius: BorderRadius.circular(BpSize.rLg),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, size: 36, color: c.onDangerSoft),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Açık borç toplamı', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c.onDangerSoft)),
+                Text(formatMoney(total), style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: c.onDangerSoft)),
+                Text('$count araç · bu araçlar tekrar girişte uyarı verir',
+                    style: TextStyle(fontSize: 14, color: c.onDangerSoft)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _paidRow(BilParkColors c, Map r) {
+    final entry = _parse(r['entryTime']);
+    final exit = _parse(r['exitTime']);
+    final range = '${entry != null ? formatHm(entry) : '-'} – ${exit != null ? formatHm(exit) : '-'}';
+    final dur = (entry != null && exit != null) ? ' · ${formatDurationText(exit.difference(entry))}' : '';
+    final method = r['paymentMethod'] as String?;
+    final paidMin = r['paidMinutes'] is num ? (r['paidMinutes'] as num).toInt() : null;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 68),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(formatPlate((r['licensePlate'] ?? 'Bilinmiyor').toString()),
+                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+                  const SizedBox(height: 4),
+                  Text('$range$dur', style: TextStyle(fontSize: 14, color: c.text2)),
+                  if (paidMin != null)
+                    Text('Ücretli süre: ${formatDurationText(Duration(minutes: paidMin))}',
+                        style: TextStyle(fontSize: 14, color: c.text2)),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(formatMoney(_fee(r)), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                if (method != null) ...[
+                  const SizedBox(height: 4),
+                  StatusBadge(methodLabel(method), tone: _methodTone(method)),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  BadgeTone _methodTone(String m) {
+    switch (m) {
+      case 'CASH':
+        return BadgeTone.success;
+      case 'POS':
+        return BadgeTone.primary;
+      case 'SUBSCRIPTION':
+        return BadgeTone.sub;
+      default:
+        return BadgeTone.neutral;
+    }
+  }
+
+  Widget _runawayRow(BilParkColors c, Map r) {
+    final entry = _parse(r['entryTime']);
+    final exit = _parse(r['exitTime']);
+    final when = entry == null
+        ? '-'
+        : '${formatDayMonth(entry)} ${formatHm(entry)}${exit != null ? ' – ${formatHm(exit)}' : ''}';
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 72),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      Text(formatPlate((r['licensePlate'] ?? 'Bilinmiyor').toString()),
+                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+                      const StatusBadge('Kaçak', tone: BadgeTone.danger),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(when, style: TextStyle(fontSize: 14, color: c.text2)),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text('Borç', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.text2)),
+                Text(formatMoney(_fee(r)), style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: c.danger)),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

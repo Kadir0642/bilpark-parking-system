@@ -2,234 +2,423 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BilPark - Hızlı Ödeme</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BilPark - Park Ücreti Sorgulama</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="theme.css">
     <style>
-        :root { --primary: #3F51B5; --bg: #f4f6f9; --text: #333; --card: #fff; --success: #10b981; --error: #ef4444;}
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        body { background-color: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; color: var(--text); }
+        body { min-height: 100vh; overflow-x: hidden; }
+        .app { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+        .app-header { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-5) var(--s-4); background: var(--surface); border-bottom: 1px solid var(--border); }
+        .brand-mark { width: 40px; height: 40px; flex: none; border-radius: 10px; background: var(--primary); color: var(--on-primary); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; }
+        .brand-name { font-size: 17px; font-weight: 800; }
+        .brand-zone { font-size: 14px; color: var(--text-2); overflow-wrap: anywhere; }
+        main { flex: 1; padding: var(--s-5) var(--s-4); display: flex; flex-direction: column; gap: var(--s-4); }
+        .view { display: none; flex-direction: column; gap: var(--s-4); animation: fadeIn .25s ease; }
+        .view.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+        .card-body { padding: var(--s-5); display: flex; flex-direction: column; gap: var(--s-4); }
+        h1, h2 { margin: 0; }
+        h1 { font-size: 22px; font-weight: 800; }
+        h2 { font-size: 17px; font-weight: 700; }
+        label.field-label { font-size: 14px; font-weight: 600; color: var(--text-2); }
 
-        /* Mobil Uygulama Kutusu */
-        .app-container { width: 100%; max-width: 420px; background: var(--card); min-height: 100vh; padding: 30px 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); position: relative;}
-        @media(min-width: 421px) { .app-container { min-height: auto; border-radius: 24px; margin: 20px; } }
+        .plate-field { display: flex; align-items: stretch; height: 64px; border: 3px solid var(--plate-text); border-radius: 10px; background: var(--plate-bg); overflow: hidden; }
+        .plate-field:focus-within { box-shadow: 0 0 0 4px var(--primary-soft); outline: 3px solid var(--primary); outline-offset: 2px; }
+        .plate-field.invalid { border-color: var(--danger); }
+        .plate-strip { width: 34px; flex: none; background: var(--plate-strip); color: var(--plate-strip-text); font-size: 13px; font-weight: 800; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; }
+        .plate-input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--plate-text); font: 800 28px var(--font); text-align: center; text-transform: uppercase; letter-spacing: 2px; padding: 0 var(--s-2); }
+        .plate-input::placeholder { color: var(--border-strong); }
 
-        /* Header */
-        .header { text-align: center; margin-bottom: 40px; }
-        .header-logo { width: 60px; height: 60px; background: var(--primary); color: white; border-radius: 18px; display: inline-flex; justify-content: center; align-items: center; font-size: 32px; font-weight: 800; margin-bottom: 15px; box-shadow: 0 8px 15px rgba(63, 81, 181, 0.3); }
-        .header h1 { font-size: 22px; font-weight: 800; color: #111; letter-spacing: -0.5px;}
-        .header p { color: #6b7280; font-size: 14px; margin-top: 5px;}
+        .tariff { display: grid; grid-template-columns: 1fr auto auto; gap: var(--s-2) var(--s-4); font-size: 15px; align-items: baseline; }
+        .tariff .th { font-size: 13px; font-weight: 600; color: var(--text-2); }
+        .tariff .num { text-align: right; font-weight: 700; }
+        .tariff-note { font-size: 14px; color: var(--text-2); margin: 0; }
+        #tariffBody { display: flex; flex-direction: column; gap: var(--s-3); }
+        .breakdown-ranges { padding: 0 var(--s-3) var(--s-2); display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-3); font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+        .breakdown-ranges b { color: var(--text); font-weight: 600; }
 
-        /* Görünümler (Sayfalar arası geçiş için) */
-        .view { display: none; animation: fadeIn 0.4s ease; }
-        .view.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* Form Elemanları */
-        .input-group { margin-bottom: 20px; }
-        .input-group label { display: block; font-size: 13px; font-weight: 600; color: #4b5563; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;}
-        .plate-input { width: 100%; font-size: 28px; font-weight: 800; text-align: center; padding: 15px; border: 2px solid #e5e7eb; border-radius: 16px; outline: none; transition: 0.3s; text-transform: uppercase; letter-spacing: 3px; color: #111;}
-        .plate-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(63, 81, 181, 0.1); }
-
-        .btn { width: 100%; padding: 16px; border: none; border-radius: 16px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 10px;}
-        .btn-primary { background: var(--primary); color: white; box-shadow: 0 8px 15px rgba(63, 81, 181, 0.25); }
-        .btn-primary:active { transform: scale(0.98); }
-        .btn-secondary { background: #f3f4f6; color: #4b5563; margin-top: 10px; }
-        .btn:disabled { opacity: 0.7; cursor: not-allowed; }
-
-        /* Fiş/Borç Detay Kartı */
-        .receipt-card { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 16px; padding: 25px; margin-bottom: 30px; }
-        .receipt-row { display: flex; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;}
-        .receipt-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0;}
-        .receipt-label { color: #64748b; font-size: 14px; }
-        .receipt-value { font-weight: 600; color: #0f172a; text-align: right; }
-        .total-price { font-size: 32px; font-weight: 800; color: var(--success); text-align: center; margin: 20px 0;}
-
-        .pay-notice { background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; border-radius: 16px; padding: 16px; margin-bottom: 20px; text-align: center; font-size: 15px; line-height: 1.5; }
-
-        .loader { display: none; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; }
+        .spinner { display: none; width: 20px; height: 20px; border: 3px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+        [aria-busy="true"] .spinner { display: inline-block; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        #errorMsg { color: var(--error); text-align: center; font-size: 14px; font-weight: 600; margin-top: 15px; display: none; background: #fee2e2; padding: 10px; border-radius: 8px;}
+        .summary-top { display: flex; justify-content: space-between; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
+        .amount-label { font-size: 15px; font-weight: 600; color: var(--text-2); }
+        .amount { font-size: 48px; font-weight: 800; line-height: 1.1; color: var(--success); }
+        .amount-sub { font-size: 20px; font-weight: 700; color: var(--sub); display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; padding: var(--s-1) 0; }
+        .summary-meta { font-size: 14px; color: var(--text-2); }
+        .refresh-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); padding-top: var(--s-3); border-top: 1px solid var(--border); font-size: 14px; color: var(--text-2); }
+        .breakdown-row > span:not(:first-child) { text-align: right; }
+        .btn-dashed { border: 2px dashed var(--border-strong); background: var(--surface-2); color: var(--text-2); }
 
-        /* TABS */
-        .tabs { display: flex; background: #e2e8f0; border-radius: 12px; padding: 5px; margin-bottom: 25px; }
-        .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 8px; font-weight: 600; font-size: 14px; color: #64748b; cursor: pointer; transition: 0.3s; }
-        .tab-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-
-        select.plate-input { appearance: none; background: #fff url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%233F51B5%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E") no-repeat right 15px top 50%; background-size: 12px auto;}
-
+        .app-footer { padding: var(--s-4) var(--s-4) var(--s-8); font-size: 14px; color: var(--text-2); display: flex; flex-direction: column; gap: var(--s-3); }
+        .footer-toggle { background: none; border: 0; padding: 0 var(--s-2); margin-left: calc(-1 * var(--s-2)); min-height: var(--tap); color: var(--primary); font: 600 15px var(--font); text-decoration: underline; cursor: pointer; text-align: left; }
+        .footer-text { margin: 0; }
     </style>
 </head>
 <body>
 
-<div class="app-container">
-
-    <div class="header">
-        <div class="header-logo">P</div>
-        <h1>BilPark Müşteri Portalı</h1>
-        <p>Sıra beklemeden, güvenle işlem yapın.</p>
-    </div>
-
-    <!-- TABS -->
-    <div class="tabs">
-        <button class="tab-btn active" onclick="switchMainTab('payment')">Borç Sorgulama</button>
-        <button class="tab-btn" onclick="switchMainTab('subscription')">Aylık Abonelik</button>
-    </div>
-
-    <div id="view-search" class="view active">
-        <div class="input-group">
-            <label>Araç Plakası</label>
-            <!-- GÜVENLİK GÜNCELLEMESİ: maxlength="11" ve Regex ile sadece Harf, Rakam ve Boşluk -->
-            <input type="text" id="plateInput" class="plate-input" placeholder="34 ABC 123" autocomplete="off" maxlength="11" oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9\s]/g, '')">
+<div class="app">
+    <header class="app-header">
+        <div class="brand-mark" aria-hidden="true">P</div>
+        <div>
+            <div class="brand-name">BilPark otopark</div>
+            <div class="brand-zone" id="zoneLine">Bilecik Merkez</div>
         </div>
-        <button class="btn btn-primary" onclick="queryDebt()" id="btnQuery">
-            <span id="txtQuery">Borcumu Sorgula</span>
-            <div class="loader" id="ldrQuery"></div>
-        </button>
-        <div id="errorMsg"></div>
-    </div>
+    </header>
 
-    <div id="view-payment" class="view">
-        <div class="receipt-card">
-            <div class="receipt-row">
-                <span class="receipt-label">Plaka</span>
-                <span class="receipt-value" id="resPlate">34ABC123</span>
+    <main>
+        <!-- Görünüm 1: plaka girişi -->
+        <section id="view-search" class="view active">
+            <div class="card">
+                <form class="card-body" id="searchForm" novalidate>
+                    <h1>Park ücretinizi öğrenin</h1>
+                    <div class="field">
+                        <label class="field-label" for="plateInput">Araç plakası</label>
+                        <div class="plate-field" id="plateField">
+                            <span class="plate-strip" aria-hidden="true">TR</span>
+                            <input type="text" id="plateInput" class="plate-input" placeholder="34 ABC 123"
+                                   inputmode="text" autocapitalize="characters" autocomplete="off" autocorrect="off"
+                                   spellcheck="false" maxlength="11" aria-describedby="plateError">
+                        </div>
+                        <div id="plateError" class="field-error" role="alert" aria-live="polite" hidden></div>
+                    </div>
+                    <div id="errorMsg" class="alert alert-danger" role="alert" aria-live="polite" hidden></div>
+                    <button type="submit" class="btn btn-primary btn-lg btn-block" id="btnQuery">
+                        <span class="spinner" aria-hidden="true"></span>
+                        <span id="txtQuery">Ücreti göster</span>
+                    </button>
+                </form>
             </div>
-            <div class="receipt-row">
-                <span class="receipt-label">Park Yeri</span>
-                <span class="receipt-value" id="resStreet">Tevfik Bey Caddesi</span>
-            </div>
-            <div class="receipt-row">
-                <span class="receipt-label">İçerideki Süre</span>
-                <span class="receipt-value" id="resDuration">45 Dakika</span>
-            </div>
-            <div class="receipt-row" id="subRow" style="display: none;">
-                <span class="receipt-label">Abonelik Durumu</span>
-                <span class="receipt-value" style="color: var(--primary); font-weight: 800;">Aktif</span>
-            </div>
-            <div class="total-price" id="resFee">25.0 TL</div>
+        </section>
+
+        <!-- Görünüm 2: sonuç -->
+        <section id="view-result" class="view" aria-live="polite">
+            <section class="card" aria-labelledby="amountLabel">
+                <div class="card-body">
+                    <div class="summary-top">
+                        <span class="plate"><span id="resPlate"></span></span>
+                        <span class="summary-meta" id="resStreet"></span>
+                    </div>
+                    <div>
+                        <div class="amount-label" id="amountLabel">Şu anki tutar</div>
+                        <div class="amount num" id="resFee"></div>
+                        <div class="amount-sub" id="resSub" hidden><span>Ücretsiz</span><span class="badge badge-sub">Abone</span></div>
+                        <div class="summary-meta" id="resEntry"></div>
+                    </div>
+                    <div class="refresh-row">
+                        <span id="resAsOf"></span>
+                        <button type="button" class="btn btn-secondary" id="btnRefresh">
+                            <span class="spinner" aria-hidden="true"></span>
+                            <span id="txtRefresh">Yenile</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card" aria-labelledby="breakdownTitle">
+                <div class="card-body">
+                    <h2 id="breakdownTitle">Süre dökümü</h2>
+                    <div class="breakdown" id="breakdown"></div>
+                    <p class="tariff-note" id="tariffNote" hidden>Tutar önceki tarifeyle hesaplandı.</p>
+                </div>
+            </section>
+
+            <section class="card" id="tariffCard" aria-labelledby="tariffTitle" hidden>
+                <div class="card-body">
+                    <h2 id="tariffTitle">Tarife</h2>
+                    <div id="tariffBody"></div>
+                </div>
+            </section>
+
+            <div class="alert alert-warning"><strong>Ödemeyi sahadaki görevliye yapın.</strong> Nakit veya kartla ödeyebilirsiniz.</div>
+            <button type="button" class="btn btn-lg btn-block btn-dashed" disabled>Online ödeme · yakında</button>
+            <button type="button" class="btn btn-secondary btn-lg btn-block" id="btnBack">Başka plaka sorgula</button>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <div>
+            <button type="button" class="footer-toggle" id="subToggle" aria-expanded="false" aria-controls="subText">Aylık abonelik</button>
+            <p class="footer-text" id="subText" hidden>Aylık abonelik için saha görevlisine veya işletmeye başvurun.</p>
         </div>
-
-        <div class="pay-notice">
-            <strong>Ödemenizi saha personeline yapınız.</strong><br>
-            Nakit veya POS ile ödeme sahadaki görevliye yapılır.
-        </div>
-
-        <button class="btn btn-secondary" onclick="switchView('view-search')">Geri Dön</button>
-    </div>
-
-    <!-- ABONELİK GÖRÜNÜMÜ -->
-    <div id="view-subscription" class="view">
-        <div class="pay-notice">
-            <strong>Aylık abonelik</strong><br>
-            Aylık abonelik başvurusu için saha personeline veya yönetime başvurunuz.
-        </div>
-    </div>
-
+        <div>[FİRMA ADI] · [TELEFON]</div>
+    </footer>
 </div>
 
 <script src="config.js"></script>
 <script>
-    const BASE_URL = CONFIG.BASE_URL + "/api/parking";
-
+    const API = CONFIG.BASE_URL + "/api/parking";
+    const $ = (id) => document.getElementById(id);
     let isProcessing = false;
+    let lastPlate = "";
 
-    function switchView(viewId) {
+    function showView(id) {
         document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-        document.getElementById(viewId).classList.add('active');
+        $(id).classList.add('active');
+        window.scrollTo(0, 0);
     }
 
-    async function queryDebt() {
-        if (isProcessing) return;
+    function setBusy(busy) {
+        isProcessing = busy;
+        [['btnQuery', 'txtQuery'], ['btnRefresh', 'txtRefresh']].forEach(([b]) => {
+            $(b).disabled = busy;
+            $(b).setAttribute('aria-busy', busy ? 'true' : 'false');
+        });
+    }
 
-        // Boşlukları silip asıl plaka uzunluğunu buluyoruz
-        const plate = document.getElementById('plateInput').value.replace(/\s+/g, '').toUpperCase();
-        const errorMsg = document.getElementById('errorMsg');
-        const btnQuery = document.getElementById('btnQuery');
+    function showFieldError(msg) {
+        const el = $('plateError');
+        el.textContent = msg || '';
+        el.hidden = !msg;
+        $('plateField').classList.toggle('invalid', !!msg);
+        $('plateInput').setAttribute('aria-invalid', msg ? 'true' : 'false');
+    }
+    function showError(msg) {
+        const el = $('errorMsg');
+        el.textContent = msg || '';
+        el.hidden = !msg;
+    }
 
-        // GÜVENLİK GÜNCELLEMESİ: Uzunluk 5'ten küçük veya 9'dan büyükse sunucuya ASLA gitme!
-        if(plate.length < 5 || plate.length > 9) {
-            errorMsg.innerText = "Lütfen 5 ile 9 karakter arası geçerli bir plaka giriniz.";
-            errorMsg.style.display = 'block';
+    function fmtDuration(mins) {
+        mins = Math.max(0, Math.round(Number(mins) || 0));
+        const h = Math.floor(mins / 60), m = mins % 60;
+        if (h === 0) return m + ' dk';
+        return m === 0 ? h + ' sa' : h + ' sa ' + m + ' dk';
+    }
+    function fmtMoney(v) {
+        const n = Number(v) || 0;
+        return '₺' + n.toLocaleString('tr-TR', { maximumFractionDigits: 2 });
+    }
+    function fmtEntry(iso) {
+        const d = new Date(iso);
+        if (isNaN(d)) return '';
+        const day = d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+        const time = d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', hour12: false });
+        return day + ' ' + time;
+    }
+    // 11KM4471 -> 11 KM 4471 (tabeladaki gibi okunur)
+    function fmtPlate(p) {
+        const s = String(p || '').replace(/\s+/g, '').toUpperCase();
+        const m = s.match(/^(\d{2})([A-Z]{1,3})(\d{2,4})$/);
+        return m ? m[1] + ' ' + m[2] + ' ' + m[3] : s;
+    }
+
+    function row(cls, cells) {
+        const r = document.createElement('div');
+        r.className = 'breakdown-row ' + cls;
+        cells.forEach(c => { const s = document.createElement('span'); s.textContent = c; r.appendChild(s); });
+        return r;
+    }
+
+    // Sunucu saatleri Europe/Istanbul yerel saatidir (saat dilimi eki yok); dönüşüm yapılmaz, metinden okunur.
+    function hhmm(iso) { return String(iso).slice(11, 16); }
+    function dayOf(iso) { return String(iso).slice(0, 10); }
+    // Ertesi günün 00:00'ı aralık sonunda 24:00 yazılır
+    function endLabel(seg) {
+        const t = hhmm(seg.end);
+        return (t === '00:00' && dayOf(seg.end) > String(seg.date)) ? '24:00' : t;
+    }
+    function fmtDate(iso) {
+        const p = String(iso).split(/[-T:]/).map(Number);
+        const MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+        return p.length >= 3 && p[1] ? p[2] + ' ' + MONTHS[p[1] - 1] : '';
+    }
+
+    // Gün gün döküm: segments gün (date) bazında gruplanır
+    function renderBreakdown(data) {
+        const box = $('breakdown');
+        box.textContent = '';
+        const segs = Array.isArray(data.segments) ? data.segments : [];
+        if (!segs.length) {
+            const total = row('breakdown-total', ['Toplam süre', fmtDuration(data.durationMinutes)]);
+            total.style.gridTemplateColumns = '1fr auto';
+            box.appendChild(total);
             return;
         }
+        const days = [];
+        const byDate = {};
+        segs.forEach(sg => {
+            let d = byDate[sg.date];
+            if (!d) { d = byDate[sg.date] = { date: sg.date, paid: 0, free: 0, list: [] }; days.push(d); }
+            if (sg.paid) d.paid += Number(sg.minutes) || 0; else d.free += Number(sg.minutes) || 0;
+            d.list.push(sg);
+        });
+        box.appendChild(row('breakdown-head', ['Gün', 'Ücretli', 'Ücretsiz']));
+        let paid = 0, free = 0;
+        days.forEach(d => {
+            paid += d.paid; free += d.free;
+            box.appendChild(row('', [fmtDate(d.date), fmtDuration(d.paid), fmtDuration(d.free)]));
+            const rg = document.createElement('div');
+            rg.className = 'breakdown-ranges';
+            d.list.forEach(sg => {
+                const it = document.createElement('span');
+                const b = document.createElement('b');
+                b.textContent = hhmm(sg.start) + '–' + endLabel(sg);
+                it.appendChild(b);
+                it.appendChild(document.createTextNode(sg.paid ? ' ücretli' : ' ücretsiz'));
+                rg.appendChild(it);
+            });
+            box.appendChild(rg);
+        });
+        // Sunucunun toplamları varsa onlar kullanılır
+        if (data.paidMinutes != null) paid = Number(data.paidMinutes);
+        if (data.freeMinutes != null) free = Number(data.freeMinutes);
+        box.appendChild(row('breakdown-total', ['Toplam', fmtDuration(paid), fmtDuration(free)]));
+    }
 
-        isProcessing = true;
-        btnQuery.disabled = true;
-        document.getElementById('txtQuery').style.display = 'none';
-        document.getElementById('ldrQuery').style.display = 'block';
-        errorMsg.style.display = 'none';
+    // Tarife özeti; hata/eksik veri durumunda kart sessizce gizlenir
+    // Etkin araç tiplerinin ücret satırları; vehicleTypes yoksa (eski sunucu) small/large'a düşülür
+    function tariffRows(t) {
+        if (!t) return [];
+        if (Array.isArray(t.vehicleTypes) && t.vehicleTypes.length) {
+            return t.vehicleTypes.filter(v => v && v.enabled && v.firstHour != null)
+                .slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+                .map(v => ({ name: v.displayName || v.code, firstHour: v.firstHour, extraHour: v.extraHour }));
+        }
+        const rows = [];
+        if (t.small) rows.push({ name: 'Otomobil', firstHour: t.small.firstHour, extraHour: t.small.extraHour });
+        if (t.large) rows.push({ name: 'Kamyonet', firstHour: t.large.firstHour, extraHour: t.large.extraHour });
+        return rows;
+    }
+    function tariffText(t) {
+        return tariffRows(t).map(r => r.name + ': ilk saat ' + fmtMoney(r.firstHour) + ', sonraki her saat ' + fmtMoney(r.extraHour)).join(' · ');
+    }
+    function renderTariff(t, tariffId) {
+        const card = $('tariffCard'), body = $('tariffBody');
+        body.textContent = '';
+        $('tariffNote').hidden = true;
+        try {
+            if (!t || !tariffRows(t).length) throw new Error('tarife yok');
+            // Tutar farklı bir tarife sürümüyle hesaplandıysa özet gösterilmez
+            if (tariffId != null && t.id != null && tariffId !== t.id) {
+                $('tariffNote').hidden = false;
+                throw new Error('tarife sürümü farklı');
+            }
+            const p1 = document.createElement('p');
+            p1.className = 'tariff-note';
+            p1.textContent = tariffText(t);
+            const p2 = document.createElement('p');
+            p2.className = 'tariff-note';
+            const ps = t.paidStart || '08:00', pe = t.paidEnd || '22:00';
+            p2.textContent = 'İlk ' + (t.freeMinutes != null ? t.freeMinutes : 5) + ' dakika ücretsiz · Ücretli saatler ' + ps + '–' + (pe === '00:00' ? '24:00' : pe) + ', dışında ücretsiz. Aboneler ücret ödemez.';
+            body.appendChild(p1);
+            body.appendChild(p2);
+            const u = t.upcoming;
+            if (u && tariffRows(u).length && u.effectiveFrom) {
+                const p3 = document.createElement('p');
+                p3.className = 'alert alert-info';
+                p3.textContent = fmtDate(u.effectiveFrom) + ' ' + hhmm(u.effectiveFrom) + ' itibarıyla yeni tarife: ' + tariffText(u);
+                body.appendChild(p3);
+            }
+            card.hidden = false;
+        } catch (e) {
+            card.hidden = true;
+        }
+    }
+
+    function renderResult(data, tariff) {
+        $('resPlate').textContent = fmtPlate(data.plate || lastPlate);
+        $('resStreet').textContent = data.streetName || '';
+        const sub = !!data.hasSubscription;
+        $('resFee').hidden = sub;
+        $('resSub').hidden = !sub;
+        if (!sub) $('resFee').textContent = fmtMoney(data.fee);
+        const entry = fmtEntry(data.entryTime);
+        $('resEntry').textContent = (entry ? 'Giriş ' + entry + ' · ' : '') + 'toplam ' + fmtDuration(data.durationMinutes);
+        $('resAsOf').textContent = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' itibarıyla';
+        renderBreakdown(data);
+        renderTariff(tariff, data.tariffId);
+        showView('view-result');
+    }
+
+    // Tarife sayfa ömrü boyunca bir kez başarıyla alınırsa önbellekte tutulur
+    let tariffCache = null;
+    async function fetchTariff() {
+        if (tariffCache) return tariffCache;
+        try {
+            const r = await fetch(CONFIG.BASE_URL + '/api/tariff/current');
+            if (!r.ok) return null;
+            tariffCache = await r.json();
+            return tariffCache;
+        } catch (e) { return null; }
+    }
+    async function fetchDebt(plate) {
+        const response = await fetch(API + '/debt?plate=' + encodeURIComponent(plate));
+        let data = {};
+        const ct = response.headers.get('content-type');
+        if (ct && ct.includes('application/json')) {
+            data = await response.json();
+        } else if (response.ok) {
+            data = { error: 'Beklenmeyen bir sunucu yanıtı alındı.' };
+        }
+        return { ok: response.ok, data };
+    }
+
+    async function queryDebt(fromRefresh) {
+        if (isProcessing) return;
+        const plate = fromRefresh ? lastPlate : $('plateInput').value.replace(/\s+/g, '').toUpperCase();
+
+        showError('');
+        if (plate.length < 5 || plate.length > 9) {
+            showFieldError('Plaka 5 ile 9 karakter arasında olmalıdır.');
+            $('plateInput').focus();
+            return;
+        }
+        showFieldError('');
+        lastPlate = plate;
+        setBusy(true);
 
         try {
-            const response = await fetch(`${BASE_URL}/debt?plate=${plate}`);
-
-            let data = {};
-            const contentType = response.headers.get("content-type");
-            if (contentType && contentType.includes("application/json")) {
-                data = await response.json();
+            // Borç ve tarife paralel istenir; tarife hatası tutarı etkilemez
+            const [debt, tariff] = await Promise.all([fetchDebt(plate), fetchTariff()]);
+            const data = debt.data;
+            if (debt.ok && !data.error) {
+                // Borç yanıtı kendi tarifesini taşıyorsa o kullanılır
+                renderResult(data, (data.tariff && tariffRows(data.tariff).length) ? data.tariff : tariff);
             } else {
-                data = { error: "Beklenmeyen bir sunucu yanıtı alındı." };
+                showView('view-search');
+                showError(data.error || 'Bu plakaya ait aktif park kaydı bulunamadı.');
             }
-
-            if(response.ok) {
-                document.getElementById('resPlate').innerText = data.plate;
-                document.getElementById('resStreet').innerText = data.streetName || "Bilecik Merkez";
-
-                let mins = data.durationMinutes;
-                let durationText = mins < 60 ? `${mins} Dakika` : `${Math.floor(mins/60)} Saat ${mins%60} Dk`;
-                document.getElementById('resDuration').innerText = durationText;
-
-                if (data.hasSubscription) {
-                    document.getElementById('subRow').style.display = 'flex';
-                    document.getElementById('resFee').innerText = 'Ücretsiz (Abonelik)';
-                    document.getElementById('resFee').style.color = 'var(--primary)';
-                } else {
-                    document.getElementById('subRow').style.display = 'none';
-                    document.getElementById('resFee').innerText = `${data.fee} TL`;
-                    document.getElementById('resFee').style.color = 'var(--success)';
-                }
-
-                switchView('view-payment');
-            } else {
-                errorMsg.innerText = data.error || "Otoparkta bu plakaya ait aktif araç bulunamadı.";
-                errorMsg.style.display = 'block';
-            }
-        } catch (error) {
-            errorMsg.innerText = "Bağlantı koptu. Lütfen internetinizi kontrol edin.";
-            errorMsg.style.display = 'block';
+        } catch (e) {
+            showView('view-search');
+            showError('Bağlantı kurulamadı. İnternetinizi kontrol edip tekrar deneyin.');
         } finally {
-            isProcessing = false;
-            btnQuery.disabled = false;
-            document.getElementById('txtQuery').style.display = 'block';
-            document.getElementById('ldrQuery').style.display = 'none';
+            setBusy(false);
         }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const plateFromUrl = urlParams.get('plate');
+        const params = new URLSearchParams(window.location.search);
+        const zone = params.get('zone') || params.get('street');
+        if (zone) $('zoneLine').textContent = zone.slice(0, 80);
 
-        if(plateFromUrl) {
-            document.getElementById('plateInput').value = plateFromUrl.toUpperCase();
-            setTimeout(() => {
-                queryDebt();
-            }, 300);
+        const input = $('plateInput');
+        input.addEventListener('input', () => {
+            input.value = input.value.toUpperCase().replace(/[^A-Z0-9\s]/g, '');
+            if (!$('plateError').hidden) showFieldError('');
+        });
+        $('searchForm').addEventListener('submit', (e) => { e.preventDefault(); queryDebt(false); });
+        $('btnRefresh').addEventListener('click', () => queryDebt(true));
+        $('btnBack').addEventListener('click', () => {
+            showError(''); showFieldError('');
+            showView('view-search');
+            input.focus();
+        });
+        $('subToggle').addEventListener('click', () => {
+            const t = $('subText');
+            t.hidden = !t.hidden;
+            $('subToggle').setAttribute('aria-expanded', t.hidden ? 'false' : 'true');
+        });
+
+        const plateFromUrl = params.get('plate');
+        if (plateFromUrl) {
+            input.value = plateFromUrl.toUpperCase().replace(/[^A-Z0-9\s]/g, '').slice(0, 11);
+            setTimeout(() => queryDebt(false), 300);
         }
     });
-
-    function switchMainTab(tab) {
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        
-        if (tab === 'payment') {
-            document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
-            switchView('view-search');
-        } else {
-            document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
-            document.getElementById('view-subscription').classList.add('active');
-        }
-    }
 </script>
 
 </body>

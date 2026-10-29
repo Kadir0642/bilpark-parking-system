@@ -8,8 +8,7 @@ import java.time.LocalDate;
 
 /**
  * Monthly parking subscription.
- * Small vehicles: 2,500 TL/month
- * Large vehicles: 3,000 TL/month
+ * The monthly fee comes from the vehicle type's row in the current tariff.
  *
  * When a subscribed vehicle is scanned at check-in, the officer
  * receives a notification and the vehicle is NOT recorded as a
@@ -25,12 +24,14 @@ public class Subscription {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
-    private String licensePlate; // Normalized to uppercase
-
-    @Enumerated(EnumType.STRING)
+    // Not unique: a plate keeps its old (EXPIRED/CANCELLED) rows when it renews.
+    // "One ACTIVE subscription per plate" is enforced in SubscriptionService
+    // and by the partial unique index ux_subscriptions_active_plate (Flyway V2).
     @Column(nullable = false)
-    private VehicleType vehicleType; // SMALL = 2500 TL, LARGE = 3000 TL
+    private String licensePlate; // Normalized by PlateNormalizer
+
+    @Column(nullable = false, length = 30)
+    private String vehicleType; // vehicle_types.code
 
     @Column(nullable = false)
     private LocalDate startDate;
@@ -38,7 +39,7 @@ public class Subscription {
     @Column(nullable = false)
     private LocalDate endDate; // Typically startDate + 1 month
 
-    private Double monthlyFee; // 2500.0 or 3000.0
+    private Double monthlyFee; // from the tariff row of the vehicle type
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -47,13 +48,12 @@ public class Subscription {
     private String ownerName;  // Optional: vehicle owner name
     private String ownerPhone; // Optional: contact number
 
-    public Subscription(String licensePlate, VehicleType vehicleType,
+    public Subscription(String licensePlate, String vehicleType,
                         LocalDate startDate, String ownerName, String ownerPhone) {
-        this.licensePlate = licensePlate.toUpperCase();
+        this.licensePlate = licensePlate;
         this.vehicleType  = vehicleType;
         this.startDate    = startDate;
         this.endDate      = startDate.plusMonths(1);
-        this.monthlyFee   = (vehicleType == VehicleType.LARGE) ? 3000.0 : 2500.0;
         this.status       = SubscriptionStatus.ACTIVE;
         this.ownerName    = ownerName;
         this.ownerPhone   = ownerPhone;

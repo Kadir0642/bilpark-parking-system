@@ -1,55 +1,102 @@
 package com.bilpark.backend.service;
 
+import com.bilpark.backend.audit.AuditService;
+import com.bilpark.backend.common.ApiException;
+import com.bilpark.backend.common.ErrorCodes;
+import com.bilpark.backend.common.PlateNormalizer;
+import com.bilpark.backend.model.AuditAction;
 import com.bilpark.backend.model.Subscription;
 import com.bilpark.backend.model.SubscriptionStatus;
-import com.bilpark.backend.model.VehicleType;
+import com.bilpark.backend.model.Tariff;
+import com.bilpark.backend.model.TariffVehiclePrice;
+import com.bilpark.backend.model.VehicleTypes;
 import com.bilpark.backend.repository.SubscriptionRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
 @Service
 public class SubscriptionService {
 
+    private static final Logger log = LoggerFactory.getLogger(SubscriptionService.class);
+
     private final SubscriptionRepository subscriptionRepository;
 
-    public SubscriptionService(SubscriptionRepository subscriptionRepository) {
+    private final TariffService tariffService;
+
+    private final AuditService auditService;
+
+    private final VehicleTypeService vehicleTypeService;
+
+    public SubscriptionService(SubscriptionRepository subscriptionRepository, TariffService tariffService,
+                               AuditService auditService, VehicleTypeService vehicleTypeService) {
+        this.vehicleTypeService = vehicleTypeService;
+        this.auditService = auditService;
         this.subscriptionRepository = subscriptionRepository;
+        this.tariffService = tariffService;
     }
 
     /**
-     * Creates a new monthly subscription.
-     * Fee is calculated automatically based on vehicle type.
+     * Creates a new monthly subscription (a renewal after EXPIRED/CANCELLED is a new row).
+     * At most one ACTIVE subscription per plate.
      */
     @Transactional
     public Subscription createSubscription(String licensePlate, String vehicleTypeStr,
                                            String ownerName, String ownerPhone) {
-        String plate = licensePlate.toUpperCase().trim();
+        String plate = PlateNormalizer.normalize(licensePlate);
 
-        // Check if an active subscription already exists for this plate
-        Optional<Subscription> existing = subscriptionRepository
-                .findByLicensePlateIgnoreCaseAndStatus(plate, SubscriptionStatus.ACTIVE);
-
-        if (existing.isPresent() && existing.get().isCurrentlyActive()) {
-            throw new RuntimeException(
-                    "Bu plakaya ait aktif bir abonelik zaten mevcut. Bitiş: "
-                    + existing.get().getEndDate());
+        List<Subscription> actives = subscriptionRepository
+                .findByPlateAndStatusForUpdate(plate, SubscriptionStatus.ACTIVE);
+        for (Subscription s : actives) {
+            if (s.isCurrentlyActive()) {
+                throw ApiException.conflict(ErrorCodes.SUBSCRIPTION_EXISTS,
+                        "Bu plakaya ait aktif bir abonelik zaten mevcut. Bitiş: " + s.getEndDate());
+            }
+        }
+        // ACTIVE ama tarihi geçmiş satırlar önce EXPIRED yapılır
+        if (!actives.isEmpty()) {
+            actives.forEach(s -> s.setStatus(SubscriptionStatus.EXPIRED));
+            subscriptionRepository.saveAllAndFlush(actives);
         }
 
-        VehicleType type;
-        try {
-            type = VehicleType.valueOf(vehicleTypeStr.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            type = VehicleType.SMALL;
-        }
+        String type = (vehicleTypeStr == null || vehicleTypeStr.isBlank())
+                ? VehicleTypes.SMALL : vehicleTypeStr.trim().toUpperCase(Locale.ROOT);
+        vehicleTypeService.requireActive(type);
 
+        // Aylık ücret geçerli tarifedeki tip satırından gelir
+        Tariff tariff = tariffService.current();
+        TariffVehiclePrice price = tariff.priceOf(type);
+        if (price == null || !price.isEnabled() || price.getSubscriptionMonthly() == null) {
+            throw ApiException.badRequest(ErrorCodes.INVALID_TARIFF,
+                    vehicleTypeService.displayName(type) + " için tarifede abonelik ücreti tanımlı değil.");
+        }
         Subscription sub = new Subscription(plate, type, LocalDate.now(), ownerName, ownerPhone);
-        return subscriptionRepository.save(sub);
+        sub.setMonthlyFee(price.getSubscriptionMonthly());
+        try {
+            Subscription saved = subscriptionRepository.saveAndFlush(sub);
+            Map<String, Object> after = new LinkedHashMap<>(); // no owner name / phone
+            after.put("plate", saved.getLicensePlate());
+            after.put("vehicleType", saved.getVehicleType());
+            after.put("startDate", String.valueOf(saved.getStartDate()));
+            after.put("endDate", String.valueOf(saved.getEndDate()));
+            after.put("monthlyFee", saved.getMonthlyFee());
+            auditService.log(AuditAction.SUBSCRIPTION_CREATED, "Subscription", saved.getId(),
+                    saved.getLicensePlate() + " için abonelik oluşturuldu", null, after);
+            return saved;
+        } catch (DataIntegrityViolationException e) {
+            throw ApiException.conflict(ErrorCodes.SUBSCRIPTION_EXISTS,
+                    "Bu plakaya ait aktif bir abonelik zaten mevcut.");
+        }
     }
 
     /**
@@ -57,9 +104,9 @@ public class SubscriptionService {
      * Returns a rich response map used by mobile check-in popup.
      */
     public Map<String, Object> checkSubscription(String licensePlate) {
+        String plate = PlateNormalizer.clean(licensePlate);
         Optional<Subscription> opt = subscriptionRepository
-                .findByLicensePlateIgnoreCaseAndStatus(
-                        licensePlate.toUpperCase(), SubscriptionStatus.ACTIVE);
+                .findFirstByLicensePlateAndStatusOrderByEndDateDesc(plate, SubscriptionStatus.ACTIVE);
 
         if (opt.isEmpty() || !opt.get().isCurrentlyActive()) {
             return Map.of("hasSubscription", false);
@@ -69,7 +116,7 @@ public class SubscriptionService {
         return Map.of(
                 "hasSubscription", true,
                 "licensePlate",    sub.getLicensePlate(),
-                "vehicleType",     sub.getVehicleType().name(),
+                "vehicleType",     sub.getVehicleType(),
                 "startDate",       sub.getStartDate().toString(),
                 "endDate",         sub.getEndDate().toString(),
                 "ownerName",       sub.getOwnerName() != null ? sub.getOwnerName() : "",
@@ -90,18 +137,29 @@ public class SubscriptionService {
     /** Cancels a subscription by plate (admin action). */
     @Transactional
     public Subscription cancelSubscription(String licensePlate) {
-        Subscription sub = subscriptionRepository
-                .findByLicensePlateIgnoreCaseAndStatus(
-                        licensePlate.toUpperCase(), SubscriptionStatus.ACTIVE)
-                .orElseThrow(() -> new RuntimeException(
-                        "Bu plakaya ait aktif abonelik bulunamadı: " + licensePlate));
-        sub.setStatus(SubscriptionStatus.CANCELLED);
-        return subscriptionRepository.save(sub);
+        String plate = PlateNormalizer.clean(licensePlate);
+        List<Subscription> actives = subscriptionRepository
+                .findByPlateAndStatusForUpdate(plate, SubscriptionStatus.ACTIVE);
+        if (actives.isEmpty()) {
+            throw ApiException.notFound(ErrorCodes.NOT_FOUND,
+                    "Bu plakaya ait aktif abonelik bulunamadı: " + plate);
+        }
+        actives.forEach(s -> s.setStatus(SubscriptionStatus.CANCELLED));
+        subscriptionRepository.saveAll(actives);
+        Subscription first = actives.get(0);
+        Map<String, Object> before = new LinkedHashMap<>();
+        before.put("plate", first.getLicensePlate());
+        before.put("status", "ACTIVE");
+        Map<String, Object> after = new LinkedHashMap<>();
+        after.put("plate", first.getLicensePlate());
+        after.put("status", "CANCELLED");
+        auditService.log(AuditAction.SUBSCRIPTION_CANCELLED, "Subscription", first.getId(),
+                first.getLicensePlate() + " aboneliği iptal edildi", before, after);
+        return first;
     }
 
     /**
      * Scheduled task: runs every day at 01:00 AM to mark expired subscriptions.
-     * This keeps the status column accurate without manual intervention.
      */
     @Scheduled(cron = "0 0 1 * * *")
     @Transactional
@@ -111,7 +169,7 @@ public class SubscriptionService {
         expired.forEach(s -> s.setStatus(SubscriptionStatus.EXPIRED));
         subscriptionRepository.saveAll(expired);
         if (!expired.isEmpty()) {
-            System.out.println("[SubscriptionService] Expired " + expired.size() + " subscriptions.");
+            log.info("Expired {} subscriptions.", expired.size());
         }
     }
 }

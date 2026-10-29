@@ -79,7 +79,17 @@ To modify the core backend business logic:
 2. Right-click `pom.xml` -> "Add as Maven Project".
 3. Set the environment variables listed in `backend/.env.example` (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `ADMIN_PASSWORD`, `OFFICER_PASSWORD`). The backend refuses to start without `JWT_SECRET`.
 4. Run `BackendApplication.java`. Tests run without a database: `./mvnw test` (H2 `test` profile).
-5. Point the clients at your local server: `flutter run --dart-define=API_BASE=http://10.0.2.2:8080/api` for mobile; the web pages pick `http://localhost:8080` automatically when opened from localhost (see `web/config.js`).
+5. Point the clients at your local server: `flutter run --dart-define=API_BASE=http://10.0.2.2:8080/api` for mobile; for the web pages add `?api=http://localhost:8080` to the URL (opened from localhost they default to the Docker demo on `http://localhost:8081`, see `web/config.js`).
+
+### Yerel demo (Docker + Android telefon)
+PostgreSQL, backend ve web sayfaları tek komutla yerelde çalışır; canlı ortama dokunmaz:
+
+```bash
+powershell -ExecutionPolicy Bypass -File demo/yeni-env.ps1
+docker compose up --build
+```
+
+Backend `http://localhost:8081/api`, yönetim paneli http://localhost:5500/admin-panel.html. Örnek veri, telefona kurulum ve sık hatalar: [docs/yerel-demo.md](docs/yerel-demo.md).
 
 ---
 

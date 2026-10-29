@@ -3,36 +3,47 @@ package com.bilpark.backend.repository;
 import com.bilpark.backend.model.ParkingRecord;
 import com.bilpark.backend.model.StreetLocation;
 import com.bilpark.backend.model.ParkingStatus;
+import com.bilpark.backend.model.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 //Muhasebe işleri sorguları/giriş-çıkış kayıtları ile ilgilenir.
+// Ciro sorguları yalnızca PAID kayıtları toplar: ödenmemiş kaçak borçlar (RUNAWAY) ciro değildir.
+// Tarih aralıkları yarı açıktır: start <= zaman < end.
 @Repository // Veritabani islerinden sorumlu | interface seçmemizin sebebi sadece Spring'e ne istediğimizi söyleriz o SQL kodunu Runtime da kendisi yazar.
 public interface ParkingRecordRepository extends JpaRepository<ParkingRecord, Long> //Mirasi ParkingRecord tablosu üzerinde kullanıcaz | Long -> tablonun ID'si bir sayidir
 {
 
-
-    // 1. Toplam Ciro Hesaplama
-    //Derived Query Methods | JPA (Türetilmiş Sorgular | metot isminden SQL üretebiliyordu)
-    @Query("SELECT SUM(r.fee) FROM ParkingRecord r") // @Query ->Özel Sorgu (JPQL) | SELECT SUM(r.fee) ->Bütün kayıtların "fee" alanlarını toplar | FROM ParkingRecord r ->ParkingRecord sınıfındaki ("r" onun takma adı) kayıtlara bakar.
+    // 1. Toplam Ciro (yalnızca tahsil edilmiş kayıtlar)
+    @Query("SELECT COALESCE(SUM(r.fee), 0) FROM ParkingRecord r WHERE r.status = com.bilpark.backend.model.ParkingStatus.PAID")
     Double getTotalIncome();
 
-    //2. Belirli İki Tarih Arasındaki Ciroyu Topla
-    // SQL ->SELECT SUM(fee) FROM parking_records WHERE exit_time BETWEEN :start AND :end
-    // WHERE->filtre ayarı (kriter çıkışSaati) | BETWEEN ... AND ... -> iki değer arasında kalanı seçer | " : " -> Parametre place holder
-    @Query("SELECT SUM(r.fee) FROM ParkingRecord r WHERE r.exitTime BETWEEN :start AND :end") // ParkingRecord(r) sınıfındaki kayıtlarda start-end arasını seçip, fee sütünlarını toplayıp bize vericek.
-    Double getIncomeByDateRange(@org.springframework.data.repository.query.Param("start") LocalDateTime start, @org.springframework.data.repository.query.Param("end") LocalDateTime end); //Veritabanı null dönerse hata olmasın diye "Double" yazdık
+    //2. Belirli İki Tarih Arasındaki Ciroyu Topla (çıkış zamanına göre)
+    @Query("SELECT COALESCE(SUM(r.fee), 0) FROM ParkingRecord r WHERE r.status = com.bilpark.backend.model.ParkingStatus.PAID AND r.exitTime >= :start AND r.exitTime < :end")
+    Double getIncomeByDateRange(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
-    @Query("SELECT SUM(r.fee) FROM ParkingRecord r WHERE r.zone = :zone AND r.exitTime BETWEEN :start AND :end")
-    Double getIncomeByZoneAndDateRange(
-        @org.springframework.data.repository.query.Param("zone") com.bilpark.backend.model.Zone zone, 
-        @org.springframework.data.repository.query.Param("start") LocalDateTime start, 
-        @org.springframework.data.repository.query.Param("end") LocalDateTime end
-    );
+    // 2.1 Bir vardiyanın cirosu: o kullanıcının o cihazdan tahsil ettikleri
+    @Query("SELECT COALESCE(SUM(r.fee), 0) FROM ParkingRecord r WHERE r.status = com.bilpark.backend.model.ParkingStatus.PAID AND r.collectedBy = :user AND r.deviceId = :deviceId AND r.exitTime >= :start AND r.exitTime < :end")
+    Double getIncomeByCollectorAndDevice(@Param("user") User user,
+                                         @Param("deviceId") String deviceId,
+                                         @Param("start") LocalDateTime start,
+                                         @Param("end") LocalDateTime end);
+
+    // 2.2 Araç tipine göre ciro: [kod, ciro, kayıt sayısı] satırları (kod null olabilir)
+    @Query("SELECT r.vehicleType, COALESCE(SUM(r.fee), 0), COUNT(r) FROM ParkingRecord r WHERE r.status = com.bilpark.backend.model.ParkingStatus.PAID GROUP BY r.vehicleType")
+    List<Object[]> sumPaidIncomeByVehicleType();
+
+    // 2.3 Duruma göre kayıt sayısı: [ParkingStatus, Long] satırları
+    @Query("SELECT r.status, COUNT(r) FROM ParkingRecord r GROUP BY r.status")
+    List<Object[]> countByStatus();
 
     //3. Sadece seçilen cadde filtresi ile en son 50 kaydı, bizim parametreyle birebir eşleşen, En yeni en üstte olacak şekilde getirir.
     // Geçmiş kayıt sorgusu | Sistemi yormamak için sadece son 50 olayı getirdik
@@ -41,18 +52,29 @@ public interface ParkingRecordRepository extends JpaRepository<ParkingRecord, Lo
     // 3.1. Tüm caddelerdeki son 100 kaydı getir.
     List<ParkingRecord> findTop100ByOrderByEntryTimeDesc();
 
+    // 3.2 Plakanın en son kapanan kaydı (eşzamanlı ikinci çıkış isteğine 409 vermek için)
+    Optional<ParkingRecord> findTopByLicensePlateOrderByExitTimeDesc(String licensePlate);
+
     // 4. Plakaya ve Duruma Göre (Örn: Sadece KAÇANLARI) getir.
     // Bu sayede bir araç caddeye girdiğinde "Geçmişten kaçak borcu var mı? " diye sorabileceğiz.!
-    List<ParkingRecord> findByLicensePlateIgnoreCaseAndStatus(String licensePLate,ParkingStatus status);
+    List<ParkingRecord> findByLicensePlateAndStatus(String licensePlate, ParkingStatus status);
 
-    // 5. Plakaya göre geçmiş fişleri getir. (Arama çubuğu için)
-    List<ParkingRecord> findByLicensePlateIgnoreCase(String licensePlate);
+    // 4.1 Ödenmemiş kaçak borç toplamı, plaka başına tek sorguda: [String plate, Double debt] satırları
+    @Query("SELECT r.licensePlate, COALESCE(SUM(r.fee), 0) FROM ParkingRecord r WHERE r.licensePlate IN :plates "
+            + "AND r.status = com.bilpark.backend.model.ParkingStatus.RUNAWAY AND r.debtPaid = false GROUP BY r.licensePlate")
+    List<Object[]> sumUnpaidRunawayDebtByPlate(@Param("plates") java.util.Collection<String> plates);
 
-    // 6. Dönem arşivleme için tarih aralığına göre kayıtları silme
-    @org.springframework.data.jpa.repository.Modifying
-    @org.springframework.transaction.annotation.Transactional
-    void deleteByEntryTimeBetween(LocalDateTime start, LocalDateTime end);
+    // 5. Plakaya göre geçmiş fişleri getir. (Arama çubuğu için; temizlenmiş plaka veya parçası)
+    List<ParkingRecord> findByLicensePlateContainingOrderByEntryTimeDesc(String platePart);
 
-    // 7. Tarih aralığına göre tüm kayıtları getir (Excel indirme için)
-    List<ParkingRecord> findByEntryTimeBetweenOrderByEntryTimeDesc(LocalDateTime start, LocalDateTime end);
+    // 6. Tarih aralığına göre tüm kayıtları getir (Excel indirme için, start <= entryTime < end)
+    @Query("SELECT r FROM ParkingRecord r WHERE r.entryTime >= :start AND r.entryTime < :end ORDER BY r.entryTime DESC")
+    List<ParkingRecord> findByEntryTimeRange(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    // 7. İptal edilmiş kayıtlar (cancelledAt azalan), start <= cancelledAt < end
+    @Query(value = "SELECT r FROM ParkingRecord r WHERE r.status = com.bilpark.backend.model.ParkingStatus.CANCELLED "
+            + "AND r.cancelledAt >= :start AND r.cancelledAt < :end ORDER BY r.cancelledAt DESC, r.id DESC",
+            countQuery = "SELECT COUNT(r) FROM ParkingRecord r WHERE r.status = com.bilpark.backend.model.ParkingStatus.CANCELLED "
+            + "AND r.cancelledAt >= :start AND r.cancelledAt < :end")
+    Page<ParkingRecord> findCancelled(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, Pageable pageable);
 }
