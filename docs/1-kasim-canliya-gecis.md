@@ -1,119 +1,217 @@
 # 1 Kasım 2026: canlıya geçiş kontrol listesi
 
-Bu liste, Neon kotası 1 Kasım'da sıfırlandığında sistemi Aşama 2-5 ile canlıya almak için sırayla izlenecek adımlardır. Her adımın sonunda **Kontrol** satırı var; o kontrol tutmadan sonraki adıma geçme.
+Bu liste, Neon kotası 1 Kasım'da sıfırlandığında yeni sürümü (Aşama 1-5, araç tipleri, saha kolaylıkları, çevrimdışı giriş saati) tek PR ile `main`'e alıp canlıya çıkarmak için adım adım izlenir. Her adımın sonunda bir **Kontrol** satırı var. O kontrol tutmadan sonraki adıma geçme.
 
-Gerekenler: Neon, Render, GitHub ve UptimeRobot hesaplarına giriş, bir tarayıcı ve PowerShell. Hiçbir adım ücretli değildir. Bir ekranda ücretli plan önerilirse kabul etme, önce sor.
+Gerekenler: Neon, Render, GitHub ve UptimeRobot hesaplarına giriş, bir tarayıcı, PowerShell, canlı API'ye bağlı saha uygulaması yüklü bir telefon ve QR okutmak için ikinci bir telefon. Hiçbir adım ücretli değildir. Bir ekran ücretli plan önerirse kabul etme, önce sor.
 
 Adresler:
 
 - API: `https://bilpark-api-rtdl.onrender.com` (aşağıda `API` diye geçiyor)
 - Swagger: `API/swagger-ui.html`
+- Vatandaş sayfası (QR): `https://kadir0642.github.io/bilpark-parking-system/web/customer-payment.html`
 
 ---
 
-## 0. Başlamadan önce (5 dk)
+## Neden bu sıra? (29 Ekim provası)
 
-- [ ] Bu listeyi ve bir not dosyasını aç. Yeni şifreleri bir parola yöneticisine kaydet; hiçbir şifreyi sohbete, commit'e ya da ekran görüntüsüne koyma.
-- [ ] Neon'da kotanın sıfırlandığını doğrula: Neon → Project → **Usage**. Compute hours sıfırlanmış olmalı.
-- [ ] Neon compute ayarının hâlâ **0.25 CU sabit** olduğunu ve **Scale to zero** açık olduğunu kontrol et.
+Canlı Neon veritabanında hâlâ Mart 2026 uygulamasının (commit `6abc999`) Hibernate ile kurduğu şema duruyor. Bu şemada yalnızca iki tablo var: `active_park_spots` ve `parking_records`. `users`, `zones`, `subscriptions` ve `fiscal_years` tabloları yok. `version`, `zone_id` ve `debt_paid` kolonları da yok. Enum'lar sayı olarak değil, ad olarak (`PAID`, `SMALL` gibi) saklanıyor.
 
-**Kontrol:** Neon SQL Editor'da `SELECT 1;` çalışıyor.
+Prova, bu şemanın ayrı bir Docker Postgres'te birebir kopyası üzerinde yapıldı. Kopya, Mart kodunun kendisiyle kuruldu ve veriler Mart API'si üzerinden girildi. Sonuçlar:
 
----
+- **Eski ayarla düşüyordu.** `baseline-version=1` olduğu için Flyway V1'i atlıyordu. V2, `relation "subscriptions" does not exist` hatasıyla düştü. Uygulama açılmadı.
+- **Düzeltme.** Ayar artık `baseline-version=0`. V1 yalnızca eksik tabloları kuruyor (`CREATE TABLE IF NOT EXISTS`). V2-V6 olduğu gibi çalışıyor. Yeni V7 eksik kolonları ekliyor:
+  - `version`: eski araçlarda 0.
+  - `zone_id`: eski kayıtlarda boş kalıyor. Uygulama bu kayıtlarda cadde üzerinden yetki kontrolü yapıyor.
+  - `debt_paid`: `RUNAWAY` kayıtlarda `false` (borç ödenmedi), diğer kayıtlarda `true`.
+  - Mart'tan kalan cadde ve durum CHECK kısıtları kaldırılıyor.
+- **Sonuç.** Yükseltilen şema, boş bir veritabanından kurulan şemayla birebir aynı. Hiçbir satır kaybolmadı. Eski kaçak borcu, araç tekrar girdiğinde görünüyor. Testler: `MarchLiveSchemaUpgradePostgresTest` ve `MarchLiveDatabaseAppPostgresTest`.
 
-## 1. Neon şifresini sıfırla
-
-Eski `neondb_owner` şifresi public repo geçmişinde açıkta kaldı. Bu yüzden önce şifre değişir.
-
-1. Neon → Project → **Roles** → `neondb_owner` → **Reset password**.
-2. Yeni şifreyi parola yöneticisine kaydet.
-
-**Kontrol:** Eski şifre artık çalışmamalı. Yeni bağlantı dizesi Neon'un **Connect** penceresinde görünüyor olmalı.
+> **Önemli:** 2. adımda Neon şifresi değiştiği anda şu an canlıda çalışan eski uygulama veritabanına bağlanamaz. Mart kodunda şifre koda gömülü. Site, 6. adımdaki deploy bitene kadar kapalı kalır. Bu yüzden 2-6. adımları **tek oturumda** yap: gece 22:00'den sonra, yaklaşık 1 saat ayırarak. Eski sürüme geri dönmek mümkün değil, geri dönüş planı 10. adımda.
 
 ---
 
-## 2. Render'da `DB_PASSWORD` değerini güncelle
+## 0. Başlamadan önce (gün içinde, 10 dk)
+
+- [ ] Yeni şifreleri bir parola yöneticisine kaydedeceksin. Hiçbir şifreyi sohbete, commit'e ya da ekran görüntüsüne koyma.
+- [ ] Neon → Project → **Usage**: Compute hours sıfırlanmış olmalı.
+- [ ] Neon compute ayarı hâlâ **0.25 CU sabit** ve **Scale to zero** açık olmalı.
+- [ ] GitHub'da tek PR açılmış ve CI yeşil olmalı (5. adım). PR'ı önceden açmak serbest, merge etme.
+- [ ] Saha ekibine haber ver: geçiş gecesi 22:00'den sabaha kadar sistem kapalı olabilir.
+
+**Kontrol:** Neon SQL Editor'da `SELECT 1;` çalışıyor. PR'da CI yeşil.
+
+---
+
+## 1. Neon'da yedek dal oluştur
+
+Her şeyden önce verinin bugünkü hâlini dondur.
+
+1. **Saati not al** (ör. `22:05`). 10. adımda zamana göre geri yükleme için gerekebilir.
+2. Neon → **Branches** → **Create branch**.
+   - Ad: `yedek-2026-11-01-mart`
+   - Kaynak: `main`, **Current data** (ya da "Head")
+3. Dal oluşunca SQL Editor'ın üstünden bu dalı seç ve çalıştır:
+
+   ```sql
+   SELECT (SELECT count(*) FROM active_park_spots) AS aktif,
+          (SELECT count(*) FROM parking_records)   AS kayit;
+   ```
+
+4. Aynı sorguyu `main` dalında da çalıştır.
+
+**Kontrol:** İki dal aynı sayıları veriyor. Yedek dal Branches listesinde görünüyor.
+
+---
+
+## 2. Neon şifresini sıfırla
+
+Eski `neondb_owner` şifresi, public repo geçmişindeki Mart commit'lerinde açıkta. Bu yüzden şifre değişmek zorunda.
+
+1. Neon → **Roles** (dal: `main`) → `neondb_owner` → **Reset password**. Yeni şifreyi parola yöneticisine kaydet.
+2. Rol şifreleri dal başınadır. Yedek dal eski şifreyle oluştu. Aynı işlemi `yedek-2026-11-01-mart` dalında da yap. Aynı yeni şifreyi kullanabilirsin.
+
+Bu andan sonra eski canlı uygulama veritabanına bağlanamaz. Bu beklenen bir durum.
+
+**Kontrol:** Neon'un **Connect** penceresinde yeni bağlantı bilgisi görünüyor.
+
+---
+
+## 3. Render'da ortam değişkenlerini ayarla
 
 1. Render → `bilpark-API` → **Environment**.
-2. `DB_PASSWORD` değerini yeni şifreyle değiştir. **Save changes**'e bas ama henüz deploy etme. Render "Save and deploy" sorarsa **Save only** seç.
-3. Aşağıdaki değişkenlerin dolu olduğunu kontrol et:
-   - `DB_URL`: `jdbc:postgresql://<neon-host>/neondb?sslmode=require`. `postgresql://` değil, başında `jdbc:` olmalı.
-   - `DB_USERNAME`: `neondb_owner`
-   - `JWT_SECRET`: en az 32 bayt. Boşsa PowerShell'de üret:
-     `[Convert]::ToBase64String((1..48 | % {Get-Random -Max 256}))`
-   - `ADMIN_PASSWORD` ve `OFFICER_PASSWORD`: yalnızca kullanıcı tablosu boşsa kullanılır. Canlıda kullanıcılar var, yine de dolu kalabilir.
-4. İsteğe bağlı: bakım hesabı için `DEVELOPER_PASSWORD` ekle. Bu, `gelistirici` adlı geliştirici hesabını bir kez oluşturur. Bu hesabın yetkileri `docs/sozlesme-eki-gelistirici-ve-lisans.md` belgesinde yazılıdır. Şifre en az 8 karakter olmalı ve harf ile rakam içermeli.
-5. **Settings → Build & Deploy → Auto-Deploy** ayarını **Off** yap. Sonraki adımdaki merge'ler hemen deploy tetiklemesin; yedek ve kontrol sorgusu deploy'dan önce yapılmalı.
+2. `DB_PASSWORD` değerini yeni şifreyle değiştir. **Save changes**. Render "Save and deploy" sorarsa **Save only** seç.
+3. Aşağıdakilerin dolu olduğunu kontrol et:
 
-**Kontrol:** Environment sayfasında `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` ve `JWT_SECRET` var. Auto-Deploy kapalı.
+   | Değişken | Değer |
+   |---|---|
+   | `DB_URL` | `jdbc:postgresql://<neon-host>/neondb?sslmode=require` (başında `jdbc:` olmalı) |
+   | `DB_USERNAME` | `neondb_owner` |
+   | `JWT_SECRET` | En az 32 bayt. Boşsa PowerShell'de üret: `[Convert]::ToBase64String((1..48 \| % {Get-Random -Max 256}))` |
+   | `ADMIN_PASSWORD` | **Zorunlu.** Canlıda `users` tablosu yok. İlk açılışta `admin` kullanıcısı bu şifreyle oluşur. |
+   | `OFFICER_PASSWORD` | **Zorunlu.** İlk açılışta örnek memur `tevfik` (Tevfik Bey, Bölüm 1) bu şifreyle oluşur. |
+   | `DEVELOPER_PASSWORD` | İsteğe bağlı. `gelistirici` bakım hesabını bir kez oluşturur (bkz. `docs/sozlesme-eki-gelistirici-ve-lisans.md`). |
 
----
+   Bu iki şifre de en az 8 karakter olmalı ve harf ile rakam içermeli. 7. adımda değiştirilecekler.
+4. **Settings → Build & Deploy → Auto-Deploy** ayarını **Off** yap. Böylece merge hemen deploy tetiklemez.
 
-## 3. Dalları sırayla `main`'e merge et
-
-Dallar üst üste kurulu ve her biri bir öncekini içeriyor. GitHub'da her dal için `main`'e bir PR aç ve sırayla **Create a merge commit** ile merge et. Her PR yalnızca kendi farkını gösterir.
-
-| Sıra | Dal | İçerik |
-|---|---|---|
-| 1 | `claude/dreamy-mccarthy-41ab1e` | Aşama 2: kilitli giriş/çıkış, Flyway V1+V2, vardiya, ödeme yöntemi |
-| 2 | `claude/musing-mahavira-fd4b78` | UI yenileme (mobile/ ve web/) |
-| 3 | `claude/lucid-roentgen-58dc28` | Aşama 3 backend: V3, sürümlü tarife, SSE, `/api/health` |
-| 4 | `claude/wonderful-ellis-5ce2ee` | Aşama 3 istemci |
-| 5 | `claude/funny-meninsky-fcc351` | Yerel demo (docker-compose) |
-| 6 | `claude/frosty-morse-b8aa87` | Aşama 5 backend: V4, kullanıcı yönetimi, raporlar, denetim kaydı, lisans, şifre değiştirme |
-
-- [ ] Her PR'da CI yeşil olmadan merge etme. Çakışma çıkarsa dur ve sor.
-- [ ] PR #2 (`claude/app-screens`, yalnızca ekran görüntüleri) 2. sıradan sonra merge edilebilir. Bekletilmesi de sorun olmaz.
-
-**Kontrol:** `main` en son 6. dalın commit'ini içeriyor. Auto-Deploy kapalı olduğu için Render'da yeni deploy başlamadı.
+**Kontrol:** Environment sayfasında `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `ADMIN_PASSWORD` ve `OFFICER_PASSWORD` var. Auto-Deploy kapalı.
 
 ---
 
-## 4. Aşama 2 öncesi yedek ve çakışma kontrol sorgusu
+## 4. Kontrol sorguları (salt okunur)
 
-Deploy açılışta Flyway V2, V3 ve V4'ü canlı veritabanına uygular. Önce veritabanının yedeğini al.
+Neon SQL Editor'da, **`main` dalında** çalıştır. Bu sorguların hiçbiri veriyi değiştirmez. Sonuçların ekran görüntüsünü al; içlerinde şifre yok.
 
-1. **Neon yedeği:** Neon → **Branches** → **Create branch**. Ad: `yedek-2026-11-01-asama2-oncesi`, kaynak: `main`, **Current data**. Ücretsiz plan bunu destekler. Bu dal, deploy bozulursa dönülecek kopyadır. Compute'u kullanılmadığında uyusun.
-2. **Git yedeği (isteğe bağlı):** merge öncesi `main`'i işaretlemek için GitHub'da `main`'in 3. adımdan önceki commit'inden (`0c4900d`) `yedek/main-2026-11-01` dalı oluştur.
-3. **Çakışma kontrol sorgusu:** Neon SQL Editor'da, ana (`main`) Neon dalında çalıştır:
+### 4.1 Hangi tablolar var?
 
-   ```sql
-   -- Normalize edilince aynı olan aktif plakalar (V2 bunları bulursa durur ve hiçbir şey değiştirmez)
-   SELECT upper(regexp_replace(current_plate, '[\s-]', '', 'g')) AS plaka,
-          count(*)                                               AS adet,
-          string_agg(id::text, ', ' ORDER BY id)                  AS idler
-     FROM active_park_spots
-    GROUP BY 1
-   HAVING count(*) > 1;
-   ```
+```sql
+SELECT table_name FROM information_schema.tables
+ WHERE table_schema = 'public' ORDER BY 1;
+```
 
-   - **0 satır:** devam et.
-   - **Satır varsa:** her plaka için yanlış olan aktif kaydı belirle. Hangisinin doğru olduğundan emin değilsen dur ve sor. Emin olduğunda yanlış kaydı sil: `DELETE FROM active_park_spots WHERE id = <id>;`. Sonra sorguyu tekrar çalıştır.
-4. Bilgi amaçlı, plaka başına birden fazla aktif abonelik var mı diye bak. V2 bunları kendisi düzeltir: en geç biteni tutar, diğerlerini `CANCELLED` yapar.
+| Sonuç | Ne yapmalı |
+|---|---|
+| Yalnızca `active_park_spots` ve `parking_records` | Beklenen durum (Mart şeması). Devam et. |
+| Bunlara ek olarak `users`, `zones`, `subscriptions`, `fiscal_years` | Aşama 1 şeması. Bu da destekleniyor (`FlywayBaselinePostgresTest`). Devam et, sonucu not al. |
+| `flyway_schema_history` var | **Dur ve sor.** Daha önce yarım kalmış bir deneme olmuş demektir. Bu durumda yeni ayar eksik tabloları kuramaz. |
+| Başka beklenmedik bir şey | Dur ve sor. |
 
-   ```sql
-   SELECT upper(regexp_replace(license_plate, '[\s-]', '', 'g')) AS plaka, count(*)
-     FROM subscriptions WHERE status = 'ACTIVE' GROUP BY 1 HAVING count(*) > 1;
-   ```
+### 4.2 Enum değerleri ad olarak mı saklanmış?
 
-**Kontrol:** Yedek dal Neon'da görünüyor. Çakışma sorgusu 0 satır döndürüyor.
+```sql
+SELECT 'aktif.status'  AS alan, status       AS deger, count(*) FROM active_park_spots GROUP BY 2
+UNION ALL SELECT 'aktif.tip',   current_type, count(*) FROM active_park_spots GROUP BY 2
+UNION ALL SELECT 'aktif.cadde', street,       count(*) FROM active_park_spots GROUP BY 2
+UNION ALL SELECT 'kayit.status', status,      count(*) FROM parking_records   GROUP BY 2
+UNION ALL SELECT 'kayit.tip',   vehicle_type, count(*) FROM parking_records   GROUP BY 2
+UNION ALL SELECT 'kayit.cadde', street,       count(*) FROM parking_records   GROUP BY 2
+ORDER BY 1, 2;
+```
+
+- Değerler yalnızca `ACTIVE`, `PAID`, `RUNAWAY`, `SMALL`, `LARGE`, `TEVFIK_BEY`, `ALI_RIZA_OZKAY`, `CUMHURIYET` ise (ya da boşsa) devam et.
+- `0`, `1`, `2` gibi **sayılar** görürsen **dur ve sor.** Mart kodunda enum'lar ad olarak saklanıyordu, sayı beklenmiyor. Sayı varsa V5 bunları `SMALL` sayar ve kamyonet bilgisi kaybolur.
+
+### 4.3 Plaka çakışması
+
+Yeni sürüm plakaları boşluksuz ve tiresiz saklar (`34 ABC 123` → `34ABC123`). Normalize edilince aynı olan iki aktif araç varsa V2 durur ve hiçbir şey değiştirmez.
+
+```sql
+SELECT upper(regexp_replace(current_plate, '[\s-]', '', 'g')) AS plaka,
+       count(*)                                               AS adet,
+       string_agg(id::text || ' ' || current_plate, ', ' ORDER BY id) AS kayitlar
+  FROM active_park_spots
+ GROUP BY 1
+HAVING count(*) > 1;
+```
+
+- **0 satır:** devam et.
+- **Satır varsa:** dur ve sor. Hangi kaydın yanlış olduğuna birlikte karar verelim. Kendi başına silme.
+
+### 4.4 Karşılaştırma için anlık görüntü
+
+Deploy'dan sonra aynı sorguyu çalıştırıp sayıları karşılaştıracaksın.
+
+```sql
+SELECT (SELECT count(*) FROM active_park_spots)                                       AS aktif_arac,
+       (SELECT count(*) FROM parking_records)                                         AS kayit,
+       (SELECT count(*) FROM parking_records WHERE status = 'PAID')                   AS odenen,
+       (SELECT coalesce(sum(fee), 0) FROM parking_records WHERE status = 'PAID')      AS ciro,
+       (SELECT count(*) FROM parking_records WHERE status = 'RUNAWAY')                AS kacak,
+       (SELECT coalesce(sum(fee), 0) FROM parking_records WHERE status = 'RUNAWAY')   AS kacak_borc,
+       (SELECT min(entry_time) FROM parking_records)                                  AS ilk_kayit,
+       (SELECT max(exit_time) FROM parking_records)                                   AS son_cikis;
+```
+
+### 4.5 Hâlâ "içeride" görünen araçlar
+
+```sql
+SELECT id, current_plate, street, current_type, entry_time
+  FROM active_park_spots ORDER BY entry_time;
+```
+
+Bilgi amaçlı, satır sayısını not al. Mart'ta bölge kavramı yoktu, bu yüzden bu araçlar yeni sürümde bölgesiz görünür:
+
+- Saha uygulaması yalnızca memurun kendi bölgesindeki araçları listeler. Bu yüzden memurlar bu araçları **göremez**.
+- Aynı plaka tekrar girilmek istenirse "zaten içeride" hatası alınır.
+
+Aylardır içeride görünen kayıtlar unutulmuş girişlerdir. Bunlar 7.4'te admin olarak iptal edilir; iptal edilen kayıt silinmez.
+
+**Kontrol:** 4.1 beklenen sonucu verdi, 4.2'de sayı yok, 4.3 boş döndü, 4.4'ün ekran görüntüsü alındı.
 
 ---
 
-## 5. Deploy
+## 5. Tek PR'ı `main`'e merge et
+
+Zincirin tamamı tek dalda: `claude/canli-gecis-provasi`. Bu dalda Aşama 2-5, araç tipleri, e2e düzeltmeleri, saha kolaylıkları, çevrimdışı giriş saati ve bu prova var. PR metninin taslağı `docs/pr-main-tek-pr-taslagi.md` dosyasında.
+
+1. GitHub → **Pull requests** → `claude/canli-gecis-provasi` → `main` PR'ı (yoksa **New pull request** ile aç ve taslağı yapıştır).
+2. CI (Java CI with Maven, Flutter CI) yeşil değilse merge etme.
+3. **Create a merge commit** ile merge et. Squash yapma; dal geçmişi korunsun.
+4. GitHub Pages `main`'den yayın yapıyor. Vatandaş sayfası birkaç dakika içinde güncellenir (Actions → "pages build and deployment").
+
+**Kontrol:** `main` en son merge commit'ini gösteriyor. Auto-Deploy kapalı olduğu için Render'da yeni deploy başlamadı.
+
+---
+
+## 6. Deploy
 
 1. Render → `bilpark-API` → **Manual Deploy → Deploy latest commit**.
-2. **Logs** sekmesini izle. Beklenen satırlar:
-   - `Migrating schema "public" to version "2 - stage2 multi device"`, ardından `3 - stage3 ...` ve `4 - stage5 admin audit license`
+2. **Logs** sekmesinde şu satırları bekle (sırayla):
+   - `Successfully baselined schema with version: 0`
+   - `Migrating schema "public" to version "1 - baseline"`, sonra `2 - stage2 multi device` … `7 - legacy march schema`
+   - `Successfully applied 7 migrations to schema "public", now at version v7`
+   - `Default users (admin, tevfik) created.`
    - `Started BackendApplication`
-3. Deploy başarılıysa Auto-Deploy'u tekrar **On** yap. İstersen kapalı da bırakabilirsin; o zaman her sürümü elle deploy edersin.
 
 Hata olursa:
 
-- `V2 durduruldu: ... aktif plakalar var`: 4. adımdaki sorguya dön. V2 tek transaction'dır, veritabanında hiçbir şey değişmemiştir.
-- Bağlantı hatası (`password authentication failed`): `DB_PASSWORD` veya `DB_URL` yanlıştır. 2. adıma dön.
-- `JWT_SECRET is missing or too short`: 2. adımdaki üretme komutunu kullan.
-- Başka bir hata: logun ilk `ERROR` satırını kaydet, dur ve sor. Gerekirse Neon'da `yedek-...` dalından geri dönülür.
+| Log'daki hata | Anlamı | Ne yapmalı |
+|---|---|---|
+| `password authentication failed` | `DB_PASSWORD` veya `DB_URL` yanlış | 3. adıma dön, düzelt, tekrar deploy et. |
+| `JWT_SECRET is missing or too short` | Secret eksik | 3. adımdaki komutla üret, tekrar deploy et. |
+| `ADMIN_PASSWORD env var is required…` veya `OFFICER_PASSWORD…` | Migration'lar bitti ama kullanıcılar oluşamadı | Değişkeni ekle, tekrar deploy et. Flyway kaldığı yerden devam eder; migration'lar tekrar çalışmaz. |
+| `V2 durduruldu: … aktif plakalar var` | 4.3'teki çakışma | V2 hiçbir şey değiştirmedi. V1'in kurduğu boş tablolar kalır, zararı yok. Dur ve sor. |
+| `Migration of schema "public" to version … failed` (başka) | Beklenmeyen durum | Log'daki ilk `ERROR` satırını kaydet, **dur ve sor.** 10. adıma bak. |
 
 **Kontrol (tarayıcıdan):**
 
@@ -121,17 +219,43 @@ Hata olursa:
 - `API/api/tariff/current` → tarife JSON'u
 - `API/api/streets` → 3 cadde
 
+**Kontrol (Neon SQL Editor, salt okunur):**
+
+```sql
+SELECT installed_rank, version, type, success FROM flyway_schema_history ORDER BY 1;
+```
+
+Sonuç 8 satır olmalı: `0 BASELINE`, sonra `1`-`7 SQL`; hepsinde `success = true`.
+
+4.4'teki anlık görüntü sorgusunu tekrar çalıştır. **Bütün sayılar aynı olmalı.** Plakalar artık boşluksuz görünür, bu beklenen bir değişiklik.
+
+```sql
+SELECT count(*) AS hatali FROM parking_records WHERE status = 'RUNAWAY' AND debt_paid;  -- 0 olmalı
+SELECT username, role FROM users ORDER BY 1;  -- admin, tevfik (ve varsa gelistirici)
+```
+
+Her şey tutuyorsa Auto-Deploy'u tekrar **On** yapabilirsin. İstersen kapalı bırakıp her sürümü elle deploy edebilirsin.
+
 ---
 
-## 6. Admin şifresini yeni uç noktayla değiştir
+## 7. İlk açılış: kullanıcılar ve admin şifresi
 
-Yeni uç nokta: `POST /api/me/password`. Mevcut şifre doğrulanır. Yeni şifre en az 8 karakter olmalı, harf ve rakam içermeli, kullanıcı adını içermemeli. İşlem denetim kaydına düşer. Eski oturumlar (token'lar) geçersiz olur ve yanıtta yeni bir token gelir.
+İlk açılışta `users` tablosu boş olduğu için iki kullanıcı oluştu:
+
+- `admin`: şifresi `ADMIN_PASSWORD`
+- `tevfik`: memur, Tevfik Bey Bölüm 1; şifresi `OFFICER_PASSWORD`
+
+Bu şifreler Render ekranında duruyor. Şimdi değiştir.
+
+### 7.1 Admin şifresini değiştir
+
+`POST /api/me/password` uç noktası mevcut şifreyi doğrular. Yeni şifre en az 8 karakter olmalı, harf ve rakam içermeli, kullanıcı adını içermemeli. İşlem denetim kaydına düşer, eski oturumlar kapanır ve yanıtta yeni bir token gelir.
 
 PowerShell:
 
 ```powershell
 $api  = "https://bilpark-api-rtdl.onrender.com"
-$cred = Get-Credential -UserName admin -Message "Mevcut admin şifresi"
+$cred = Get-Credential -UserName admin -Message "Mevcut admin şifresi (ADMIN_PASSWORD)"
 $login = Invoke-RestMethod -Method Post -Uri "$api/api/auth/login" -ContentType "application/json" `
   -Body (@{ username = "admin"; password = $cred.GetNetworkCredential().Password } | ConvertTo-Json)
 $new = Read-Host "Yeni admin şifresi" -AsSecureString
@@ -139,51 +263,120 @@ $newPlain = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropS
 Invoke-RestMethod -Method Post -Uri "$api/api/me/password" -ContentType "application/json" `
   -Headers @{ Authorization = "Bearer $($login.token)" } `
   -Body (@{ currentPassword = $cred.GetNetworkCredential().Password; newPassword = $newPlain } | ConvertTo-Json)
-Remove-Variable newPlain, cred, login
+Remove-Variable newPlain, new, cred, login
 ```
 
 Beklenen yanıt: `{"message":"Şifre değiştirildi.","token":"..."}`.
 
-Alternatif: `API/swagger-ui.html` → **Authorize** alanına önce `/api/auth/login` ile alınan token'ı yaz, sonra `POST /api/me/password` uç noktasını kullan.
+Alternatif: `API/swagger-ui.html`. Önce `/api/auth/login` ile token al, **Authorize** alanına yaz, sonra `POST /api/me/password` uç noktasını kullan.
 
-- [ ] Yeni şifreyi parola yöneticisine kaydet.
-- [ ] Yönetim panelinden yeni şifreyle giriş yap.
-- [ ] Saha personeli (`tevfik` vb.) şifreleri zayıfsa: panel ekranı gelene kadar `POST /api/admin/users/{id}/reset-password` uç noktasıyla değiştirilebilir (bkz. `docs/api-asama5.md`).
+### 7.2 Memur hesapları
 
-**Kontrol:** Eski şifreyle giriş `401` dönüyor, yenisiyle giriş yapılıyor. Admin token'ıyla `GET /api/admin/audit?action=PASSWORD_CHANGED` çağrısında kayıt görünüyor.
+- [ ] Yönetim panelinde yeni admin şifresiyle giriş yap.
+- [ ] `tevfik` şifresini panelden sıfırla, ya da memur ilk girişte `POST /api/me/password` ile kendisi değiştirsin.
+- [ ] Diğer memurları panelden oluştur ve her birine bölge ata.
+- [ ] Render → Environment: `ADMIN_PASSWORD` ve `OFFICER_PASSWORD` artık kullanılmıyor (yalnızca `users` boşken okunur). İstersen sil. Silersen ve tablo bir gün boşalırsa uygulama açılmayı reddeder; bu bir güvenlik önlemi.
+
+### 7.3 Lisans
+
+- [ ] Admin token'ıyla `GET /api/license/status` çağır. `state` alanı `ACTIVE` olmalı (V4 bitişi bir yıl sonraya, ek süreyi 15 güne kurar).
+- [ ] Sözleşme tarihleri farklıysa `gelistirici` hesabıyla `PUT /api/developer/license` uç noktasını çağır. Gövde: `{"expiresOn":"2027-11-01","graceDays":15}`.
+
+### 7.4 Mart'tan kalan aktif araçları kapat
+
+4.5'te satır çıktıysa yap; çıkmadıysa atla. Komutlar araçları önce listeler, ardından **bugünden önce** girmiş olanları "hatalı giriş" olarak iptal eder. İptal edilen kayıt `CANCELLED` olarak kalır, ciroya ve borca girmez, denetim kaydına düşer. Bugün girmiş bölgesiz bir araç varsa dokunulmaz; onu sahaya sor.
+
+Komutları PowerShell penceresine yapıştır. `.ps1` dosyası olarak kaydedeceksen UTF-8 **BOM'lu** kaydet; yoksa Türkçe gerekçe bozuk görünür.
+
+```powershell
+$api  = "https://bilpark-api-rtdl.onrender.com"
+$cred = Get-Credential -UserName admin -Message "Yeni admin şifresi"
+$login = Invoke-RestMethod -Method Post -Uri "$api/api/auth/login" -ContentType "application/json" `
+  -Body (@{ username = "admin"; password = $cred.GetNetworkCredential().Password } | ConvertTo-Json)
+$h = @{ Authorization = "Bearer $($login.token)"; "X-Device-Id" = "gecis-2026-11-01" }
+$spots = Invoke-RestMethod -Uri "$api/api/parking/spots" -Headers $h
+$eski = @($spots | Where-Object { $null -eq $_.zone })
+$eski | Select-Object id, currentPlate, street, entryTime | Format-Table -AutoSize
+```
+
+Liste 4.5'tekiyle aynıysa iptal et:
+
+```powershell
+$bugun = (Get-Date).Date
+$body = [Text.Encoding]::UTF8.GetBytes((@{ reason = "Mart sürümünden kalan kapanmamış giriş (canlı geçiş)" } | ConvertTo-Json))
+foreach ($s in $eski | Where-Object { [datetime]$_.entryTime -lt $bugun }) {
+  $null = Invoke-RestMethod -Method Post -Headers $h -ContentType "application/json; charset=utf-8" -Body $body `
+    -Uri "$api/api/parking/spots/cancel?plate=$([uri]::EscapeDataString($s.currentPlate))"
+  "{0} iptal edildi" -f $s.currentPlate
+}
+Remove-Variable cred, login, h
+```
+
+(29 Ekim'de prova veritabanında denendi.)
+
+**Kontrol:** Eski admin şifresiyle giriş `401` dönüyor, yenisiyle giriş yapılıyor. `GET /api/admin/audit?action=PASSWORD_CHANGED` kaydı gösteriyor. 4.5 sorgusu artık yalnızca bugünkü araçları döndürüyor (ya da boş).
 
 ---
 
-## 7. Lisans tarihini kontrol et
+## 8. UptimeRobot: `/api/health` ve bakım penceresi
 
-V4 lisans bitişini deploy gününden 1 yıl sonraya, ek süreyi 15 güne ayarlar.
-
-- [ ] Admin token'ıyla `GET /api/license/status` çağır. `state` alanı `ACTIVE` olmalı.
-- [ ] Sözleşmedeki tarihler farklıysa `gelistirici` hesabıyla `PUT /api/developer/license` uç noktasını kullan. Gövde: `{"expiresOn":"2027-11-01","graceDays":15}`. Bu işlem denetim kaydına düşer.
-
----
-
-## 8. UptimeRobot'u `/api/health`'e çevir ve bakım penceresini tanımla
-
-Eski monitör `/api/parking/spots` adresine gidiyordu. O adres kimlik istediği için 401 alıyor ve Neon'u uyanık tutuyordu. Yeni adres veritabanına hiç dokunmaz.
+Eski monitör `/api/parking/spots` adresine gidiyordu. O adres kimlik doğrulaması istiyor, bu yüzden 401 alıyor ve Neon'u boşuna uyanık tutuyordu. `/api/health` ise veritabanına hiç dokunmuyor.
 
 1. UptimeRobot → monitörü düzenle (yoksa **Add New Monitor**):
    - Monitor type: **HTTP(s)**
    - URL: `https://bilpark-api-rtdl.onrender.com/api/health`
-   - Method: **HEAD**. Seçenek yoksa varsayılan GET kalabilir.
+   - Method: **HEAD** (seçenek yoksa GET kalabilir)
    - Interval: 5 dakika
-2. **Maintenance window** ekle: her gün **22:00-07:45**, saat dilimi **Europe/Istanbul**. Gece istek gelmeyince Render uykuya geçer, Neon da sıfıra iner. Sabah 07:45'te ilk ping, 08:00 mesaisinden önce sistemi uyandırır.
-   - Bakım penceresi ücretsiz planda yoksa ücretli plana geçme. Bunun yerine bana sor; seçenekler: monitörü gece elle durdurmak veya ücretsiz bir cron ile sabah 07:45'te tek istek atmak.
+2. **Maintenance window** ekle: her gün **22:00-07:45**, saat dilimi **Europe/Istanbul**.
+   - Gece istek gelmezse Render uykuya geçer ve Neon sıfıra iner.
+   - Sabah 07:45'teki ilk ping, 08:00 mesaisinden önce sistemi uyandırır.
+   - Bakım penceresi ücretsiz planda yoksa ücretli plana geçme, önce sor. Seçenekler: monitörü gece elle durdurmak ya da ücretsiz bir cron ile sabah 07:45'te tek istek atmak.
 3. Monitörü **Resume** et (23 Ekim'de durdurulmuştu).
 
 **Kontrol:** Monitör "Up" görünüyor. Ertesi gün Neon → Usage'da gece saatlerinde compute kullanımı yok.
 
 ---
 
-## 9. Son kontroller
+## 9. QR testi (uçtan uca)
 
-- [ ] Saha uygulamasıyla (canlı API'ye bağlı sürüm) giriş, araç girişi, çıkış.
-- [ ] Panelde ciro ve son kayıtlar görünüyor.
-- [ ] `GET /api/admin/audit` çağrısında bugünkü giriş/çıkış kayıtları var.
-- [ ] Neon → Usage: bir gün sonra compute saatleri makul (günde birkaç saat).
-- [ ] Neon'daki `yedek-...` dalı birkaç gün sonra, her şey yolundaysa silinebilir. Free planda dal sayısı sınırlıdır.
+1. Canlı API'ye bağlı saha uygulamasıyla `tevfik` (ya da yeni bir memur) olarak giriş yap.
+2. Bölgene gerçek formatta bir test plakası gir. Plakayı not al.
+3. Araç kartını aç → **QR** göster.
+4. İkinci telefonla QR'ı okut. `…/web/customer-payment.html?plate=…` açılmalı ve plaka, giriş saati, süre ve tutar görünmeli.
+   - Sayfa "bağlanamadı" diyorsa Render uykudan uyanıyor olabilir. 30-60 saniye bekle ve yenile.
+   - Sayfa eski görünüyorsa GitHub Pages henüz güncellenmemiştir (5. adım, 4. madde).
+5. Saha uygulamasında araç kartından test girişini **iptal et** (hatalı giriş). Gerekçe: `Canlı geçiş QR testi`. İptal edilen kayıt ciroya ve borca girmez, denetim kaydında kalır.
+6. Panelde ciro ve son kayıtlar görünüyor. Eski Mart kayıtları da listede.
+
+**Kontrol:** QR sayfası doğru plakayı ve tutarı gösterdi. Test girişi iptal edildi.
+
+---
+
+## 10. Geri dönüş planı
+
+Bilinmesi gerekenler:
+
+- **Eski uygulamaya dönüş yok.** Mart kodu eski (sızmış) şifreyi kullanıyor ve yeni şemayla da çalışmaz: `debt_paid` zorunlu kolonunu bilmiyor. "Geri dönüş", veriyi yedeğe döndürüp yeni sürümü düzeltmek ve tekrar deploy etmek demek. Bu sürede site kapalı kalır. Gece olduğu için saha etkilenmez.
+- **Her migration kendi transaction'ında çalışır.** Düşen migration hiçbir iz bırakmaz, öncekiler kalır. Hata düzeltilip tekrar deploy edildiğinde Flyway kaldığı yerden devam eder. Hataların çoğunda veri geri yüklemeye gerek yoktur.
+- **Hiçbir zaman** `flyway_schema_history` tablosunu elle silme, migration SQL'ini elle çalıştırma ve tablo silme (`DROP`). Önce sor.
+
+Veriyi yedeğe döndür, eğer:
+
+- 6. adımdaki anlık görüntü sayıları tutmuyorsa (kayıt eksik ya da tutar farklı),
+- ya da bir migration yarıda kalıp beklenmedik bir durum bıraktıysa ve sorduktan sonra geri dönmeye karar verildiyse.
+
+Nasıl:
+
+1. Render → `bilpark-API` → **Suspend** (ya da Auto-Deploy kapalıyken yeni deploy yapma). Uygulama veritabanına yazmasın.
+2. **A seçeneği (tercih):** Neon → Branches → `main` → **Restore** (zamana göre geri yükleme). Zaman olarak 1. adımda not aldığın saati seç. Ekrandaki adlar farklıysa ya da seçenek yoksa B'ye geç.
+3. **B seçeneği:** Yedek dalı kullan. Neon → Branches → `yedek-2026-11-01-mart` → **Connect** → host'u kopyala. Render'da `DB_URL` değerini `jdbc:postgresql://<yedek-host>/neondb?sslmode=require` yap. Bu durumda yedek dal canlı veritabanı olur; silme.
+4. Log'daki ilk `ERROR` satırıyla birlikte sor. Düzeltilmiş sürüm hazır olunca 6. adımdan devam et. A seçeneğinde 4. adımdaki kontrol sorgularını da tekrar çalıştır.
+
+---
+
+## 11. Sonraki günler
+
+- [ ] Saha uygulamasında giriş, çıkış, kaçak ve abonelik akışları gerçek kullanımda sorunsuz.
+- [ ] `GET /api/admin/audit` çağrısında günün kayıtları var.
+- [ ] Neon → Usage: compute saatleri makul (günde birkaç saat).
+- [ ] Her şey yolundaysa `yedek-2026-11-01-mart` dalını birkaç gün sonra sil. Free planda dal sayısı sınırlı.
