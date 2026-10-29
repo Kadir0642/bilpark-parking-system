@@ -34,6 +34,7 @@ public class SettingsService {
     public static final String KEY_PERFORMANCE_WEIGHTS = "performance.weights";
     public static final String KEY_RENT_PREFIX = "rent.annual.";
     public static final String KEY_RETENTION_LAST_RUN = "retention.last-run";
+    public static final String KEY_LAST_APP_VERSION = "app.last-version";
 
     /**
      * Score weights in percent (sum must be 100) plus the punctuality rule: a work day counts as

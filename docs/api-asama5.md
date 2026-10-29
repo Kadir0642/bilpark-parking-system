@@ -208,7 +208,7 @@ Tüm filtreler isteğe bağlıdır. `from` ve `to` varsayılan olarak son 30 gü
 ```
 
 - `before` ve `after`, işlemden önceki ve sonraki özetin JSON nesnesidir (ör. tarife alanları, `{plate, fee, paymentMethod}`). Şifre ve kişisel iletişim bilgisi yazılmaz.
-- Geliştirici işlemlerini görmek için `actorRole=DEVELOPER` filtresi kullanılır.
+- Geliştirici işlemleri (aktör rolü `DEVELOPER`, `DEV_*` eylemleri, `DEVELOPER_ACCOUNT_CREATED`) varsayılan olarak listede ve indirmede **gizlidir**; silinmezler. `includeMaintenance=true` ile ya da `actorRole=DEVELOPER` filtresiyle görünür. Yanıttaki `maintenanceHidden`, gizlenen satır sayısıdır. Ayrıntı: `docs/api-bildirimler.md`.
 - `GET /api/admin/audit/actions`: filtre listesi için `[{ "action": "VEHICLE_CHECK_OUT", "label": "Araç çıkışı" }, ...]`.
 - `GET /api/admin/audit/export?<aynı filtreler>&format=csv|xlsx`: en fazla 50 000 satır. Dosya adı `denetim-kaydi.csv` veya `denetim-kaydi.xlsx`.
 - Bilinmeyen `action` adı veya hatalı tarih `400 VALIDATION_ERROR` döner. `actor` kullanıcı adında, `q` özette içerir araması yapar.
@@ -225,7 +225,7 @@ Kayda alınan işlemler (`action`):
 | Kullanıcı | `USER_CREATED`, `USER_UPDATED`, `USER_ZONE_ASSIGNED`, `USER_ACTIVATED`, `USER_DEACTIVATED`, `USER_PASSWORD_RESET` |
 | Mali dönem | `FISCAL_YEAR_CREATED`, `FISCAL_YEAR_ARCHIVED`, `FISCAL_YEAR_DELETED` |
 | Ayar, lisans, rapor, saklama | `SETTINGS_UPDATED`, `LICENSE_UPDATED`, `REPORT_EXPORTED`, `RETENTION_RUN` (sistem) |
-| Geliştirici | `DEVELOPER_ACCOUNT_CREATED` (sistem), `DEV_HEALTH_VIEWED`, `DEV_ERRORS_VIEWED`, `DEV_ADMIN_PASSWORD_RESET` |
+| Geliştirici | `DEVELOPER_ACCOUNT_CREATED` (sistem), `DEV_HEALTH_VIEWED`, `DEV_ERRORS_VIEWED`, `DEV_ADMIN_PASSWORD_RESET`, `DEV_ANNOUNCEMENT_CREATED` |
 
 `deviceId` her istekteki `X-Device-Id` başlığından alınır. Panel de sabit bir değer göndermeli (ör. `panel-<tarayıcı-uuid>`).
 
@@ -330,10 +330,12 @@ Panel için JSON: `GET /api/admin/reports/period/summary?from&to`
 
 | İstek | Gövde / yanıt |
 |---|---|
-| `PUT /api/developer/license` | `{"expiresOn":"2027-11-01","graceDays":15,"licensee"?,"note"?}` → lisans durumu (bkz. §1). Denetim kaydı: `LICENSE_UPDATED`, önce/sonra. |
+| `PUT /api/developer/license` | `{"expiresOn":"2027-11-01","graceDays":15,"licensee"?,"note"?}` → lisans durumu (bkz. §1). Denetim kaydı: `LICENSE_UPDATED`, önce/sonra. Yöneticiye ayrıca `LICENSE_UPDATED` bildirimi gider. |
 | `GET /api/developer/health` | `{status: UP\|DEGRADED, time, uptimeSeconds, javaVersion, memory{usedMb,maxMb}, database{ok,latencyMs}, flywayVersion, counts{activeSpots,parkingRecords,users,openShifts}, license, errorsLast24h, lastRetentionRun}`. Veritabanına ulaşılamazsa hata vermez: `database.ok=false` döner. Denetim kaydı: `DEV_HEALTH_VIEWED`. |
 | `GET /api/developer/errors?limit=50` | `[{id, createdAt, method, path, errorCode, exceptionClass, message, stackExcerpt, username}]`. Denetim kaydı: `DEV_ERRORS_VIEWED`. |
-| `POST /api/developer/admin-password-reset` | `{"username":"admin","newPassword":"..."}` → `{message, username}`. Yalnızca ADMIN hesapları (`400 PROTECTED_ACCOUNT`; bilinmeyen kullanıcıda `404`). Denetim kaydı: `DEV_ADMIN_PASSWORD_RESET`. |
+| `POST /api/developer/admin-password-reset` | `{"username":"admin","newPassword":"..."}` → `{message, username}`. Yalnızca ADMIN hesapları (`400 PROTECTED_ACCOUNT`; bilinmeyen kullanıcıda `404`). Denetim kaydı: `DEV_ADMIN_PASSWORD_RESET`. Yöneticiye ayrıca `ADMIN_PASSWORD_RESET` bildirimi gider. |
+
+Duyuru uç noktaları (`POST/GET /api/developer/announcements`) ve yönetici bildirim kutusu (`/api/admin/notifications`): bkz. `docs/api-bildirimler.md`.
 
 Bakım dönemi için eklenen salt okunur izleme uç noktaları (`/api/developer/audit`, `/api/developer/audit/actions`, `/api/developer/activity`, `health` eki `appVersion`/`startedAt`, plaka maskeleme, cihaz izi): bkz. `docs/api-gelistirici-izleme.md`.
 

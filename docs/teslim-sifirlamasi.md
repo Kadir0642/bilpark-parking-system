@@ -19,6 +19,7 @@ Tanıtım canlı sistemde yapıldı. Proje onaylanınca tanıtımda girilen kay�
 | `subscriptions` (abonelikler) | `license_info` (lisans) |
 | `sync_events` | `fiscal_years` (mali yıl tanımları) |
 | `error_logs` | `flyway_schema_history` |
+| `admin_notifications`, `admin_notification_reads` (bildirim kutusu) | `app_settings` içindeki `app.last-version` (son sürüm) da korunur: teslimden sonra gereksiz bir "Sistem güncellendi" bildirimi çıkmaz |
 | `audit_logs` (yerine tek satır eklenir) | `users`: `admin` ve `DEVELOPER` hesabı |
 | `users`: tüm OFFICER'lar ve `admin` dışındaki ADMIN'ler | |
 
@@ -101,6 +102,8 @@ UNION ALL SELECT 'subscriptions', count(*) FROM subscriptions
 UNION ALL SELECT 'shifts', count(*) FROM shifts
 UNION ALL SELECT 'sync_events', count(*) FROM sync_events
 UNION ALL SELECT 'error_logs', count(*) FROM error_logs
+UNION ALL SELECT 'admin_notifications', count(*) FROM admin_notifications
+UNION ALL SELECT 'admin_notification_reads', count(*) FROM admin_notification_reads
 UNION ALL SELECT 'audit_logs', count(*) FROM audit_logs;
 
 -- Yalnızca admin ve geliştirici kalmalı

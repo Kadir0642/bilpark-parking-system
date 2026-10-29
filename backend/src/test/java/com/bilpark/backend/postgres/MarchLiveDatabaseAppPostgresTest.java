@@ -61,7 +61,7 @@ class MarchLiveDatabaseAppPostgresTest {
 
     @Test
     void oldRowsWorkAfterTheFirstStart() {
-        assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8"),
+        assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8", "SQL:9"),
                 jdbc.queryForList("SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank",
                         String.class));
         // users did not exist in March: created from ADMIN_PASSWORD / OFFICER_PASSWORD on the first start

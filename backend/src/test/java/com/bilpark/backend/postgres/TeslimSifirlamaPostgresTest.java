@@ -51,7 +51,8 @@ class TeslimSifirlamaPostgresTest {
     @Autowired JdbcTemplate jdbc;
 
     private static final List<String> OPERATIONAL = List.of("parking_records", "active_park_spots",
-            "check_in_requests", "shifts", "subscriptions", "sync_events", "error_logs", "audit_logs");
+            "check_in_requests", "shifts", "subscriptions", "sync_events", "error_logs", "audit_logs",
+            "admin_notifications", "admin_notification_reads");
     private static final List<String> KEPT = List.of("zones", "streets", "tariff_vehicle_prices", "vehicle_types",
             "app_settings", "license_info", "fiscal_years", "flyway_schema_history");
 
@@ -97,6 +98,10 @@ class TeslimSifirlamaPostgresTest {
         jdbc.update("INSERT INTO sync_events (type, scope, payload, created_at) VALUES ('SPOT_ADDED', 'GLOBAL', '{}', now())");
         jdbc.update("INSERT INTO error_logs (created_at, message) VALUES (now(), 'demo hata')");
         jdbc.update("INSERT INTO check_in_requests (request_id, plate, created_at) VALUES ('req-1', '34DEMO1', now())");
+        jdbc.update("INSERT INTO app_settings (setting_key, setting_value, updated_at, updated_by) VALUES ('app.last-version', 'abc123def456', now(), 'system')");
+        jdbc.update("INSERT INTO admin_notifications (type, title, created_at, created_by) VALUES ('ANNOUNCEMENT', 'demo duyuru', now(), 'gelistirici')");
+        jdbc.update("INSERT INTO admin_notification_reads (notification_id, user_id, read_at) "
+                + "SELECT n.id, u.id, now() FROM admin_notifications n, users u WHERE u.username = 'admin'");
         jdbc.update("""
                 INSERT INTO audit_logs (created_at, actor_username, action, summary)
                 VALUES (now(), 'tevfik', 'VEHICLE_CHECK_IN', 'demo giris')""");
@@ -147,10 +152,13 @@ class TeslimSifirlamaPostgresTest {
         assertTrue(done.getStdout().contains("fiscal_years"), "the final SELECT shows the remaining counts");
 
         for (String t : List.of("parking_records", "active_park_spots", "check_in_requests", "shifts",
-                "subscriptions", "sync_events", "error_logs")) {
+                "subscriptions", "sync_events", "error_logs", "admin_notifications", "admin_notification_reads")) {
             assertEquals(0, count(t), t);
         }
         assertEquals(1, count("audit_logs"));
+        assertEquals("abc123def456", jdbc.queryForObject(
+                "SELECT setting_value FROM app_settings WHERE setting_key = 'app.last-version'", String.class),
+                "the stored version survives, so no needless update notification appears after delivery");
         assertEquals(List.of("SETTINGS_UPDATED:system:Teslim sıfırlaması yapıldı: tanıtım kayıtları silindi, sistem boş teslim edildi."),
                 jdbc.queryForList("SELECT action || ':' || actor_username || ':' || summary FROM audit_logs", String.class));
         assertEquals(List.of("admin:ADMIN", "gelistirici:DEVELOPER"),

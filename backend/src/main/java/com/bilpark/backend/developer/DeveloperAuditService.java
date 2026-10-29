@@ -45,7 +45,7 @@ public class DeveloperAuditService {
     public Map<String, Object> list(Query query, int page, int size) {
         String q = resolveSearch(query.q());
         AuditQueryService.Filter filter = new AuditQueryService.Filter(query.from(), query.to(), query.action(),
-                query.actor(), query.actorRole(), query.entityType(), null, q);
+                query.actor(), query.actorRole(), query.entityType(), null, q, true);
         Map<String, Object> body = queries.list(filter, page, size);
 
         List<Map<String, Object>> masked = new ArrayList<>();

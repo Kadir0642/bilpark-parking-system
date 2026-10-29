@@ -218,7 +218,7 @@ class DeveloperMonitoringIntegrationTest {
         assertFalse(viewed.getSummary().contains(p));
 
         // the admin sees the developer's look in his own audit screen
-        mvc.perform(get("/api/admin/audit").header("Authorization", adm).param("action", "DEV_AUDIT_VIEWED"))
+        mvc.perform(get("/api/admin/audit").header("Authorization", adm).param("action", "DEV_AUDIT_VIEWED").param("includeMaintenance", "true"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].actorUsername").value("gelistirici"));
     }

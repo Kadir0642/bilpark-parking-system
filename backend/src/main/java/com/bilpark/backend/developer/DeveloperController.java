@@ -22,9 +22,11 @@ public class DeveloperController {
     private final DeveloperService developerService;
     private final DeveloperAuditService auditService;
     private final DeveloperActivityService activityService;
+    private final AnnouncementService announcementService;
 
     public DeveloperController(DeveloperService developerService, DeveloperAuditService auditService,
-                               DeveloperActivityService activityService) {
+                               DeveloperActivityService activityService, AnnouncementService announcementService) {
+        this.announcementService = announcementService;
         this.auditService = auditService;
         this.activityService = activityService;
         this.developerService = developerService;
@@ -81,6 +83,20 @@ public class DeveloperController {
                     "hours 1 ile " + DeveloperActivityService.MAX_HOURS + " arasında olmalı.");
         }
         return activityService.activity(hours);
+    }
+
+    /** 201; the body is the created notification. */
+    @PostMapping("/announcements")
+    @ResponseStatus(org.springframework.http.HttpStatus.CREATED)
+    public Map<String, Object> createAnnouncement(@RequestBody(required = false) AnnouncementService.Request r,
+                                                  java.security.Principal principal) {
+        return announcementService.create(r, principal.getName());
+    }
+
+    /** Plain array, newest first, each item with readCount. */
+    @GetMapping("/announcements")
+    public List<Map<String, Object>> announcements(@RequestParam(defaultValue = "30") int limit) {
+        return announcementService.list(limit);
     }
 
     @PostMapping("/admin-password-reset")

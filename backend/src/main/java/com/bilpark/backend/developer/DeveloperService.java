@@ -14,6 +14,7 @@ import com.bilpark.backend.repository.ParkSpotRepository;
 import com.bilpark.backend.repository.ParkingRecordRepository;
 import com.bilpark.backend.repository.ShiftRepository;
 import com.bilpark.backend.repository.UserRepository;
+import com.bilpark.backend.notification.NotificationService;
 import com.bilpark.backend.settings.SettingsService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,9 @@ import java.util.function.Supplier;
 @Service
 public class DeveloperService {
 
+    private static final java.time.format.DateTimeFormatter TR_DATE =
+            java.time.format.DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.forLanguageTag("tr"));
+
     private final LicenseService licenseService;
     private final AuditService auditService;
     private final ErrorLogService errorLogService;
@@ -50,12 +54,15 @@ public class DeveloperService {
     private final JdbcTemplate jdbc;
     private final JsonMapper mapper;
     private final Clock clock;
+    private final NotificationService notificationService;
 
     public DeveloperService(LicenseService licenseService, AuditService auditService, ErrorLogService errorLogService,
                             PasswordService passwordService, SettingsService settingsService,
                             UserRepository userRepository, ParkSpotRepository spotRepository,
                             ParkingRecordRepository recordRepository, ShiftRepository shiftRepository,
-                            JdbcTemplate jdbc, JsonMapper mapper, Clock clock) {
+                            JdbcTemplate jdbc, JsonMapper mapper, Clock clock,
+                            NotificationService notificationService) {
+        this.notificationService = notificationService;
         this.licenseService = licenseService;
         this.auditService = auditService;
         this.errorLogService = errorLogService;
@@ -74,7 +81,11 @@ public class DeveloperService {
         if (expiresOn == null) {
             throw ApiException.badRequest(ErrorCodes.VALIDATION_ERROR, "expiresOn alanı gerekli (yyyy-MM-dd).");
         }
-        return licenseService.update(expiresOn, graceDays, licensee, note);
+        LicenseService.LicenseStatus st = licenseService.update(expiresOn, graceDays, licensee, note);
+        notificationService.create(NotificationService.LICENSE_UPDATED,
+                "Lisans güncellendi: bitiş " + TR_DATE.format(st.expiresOn()),
+                "Lisans tarihleri geliştirici tarafından güncellendi.", null, createdBy());
+        return st;
     }
 
     /** Never throws because of a database problem: database.ok=false instead. */
@@ -148,10 +159,19 @@ public class DeveloperService {
         }
         passwordService.resetPassword(target, newPassword, AuditAction.DEV_ADMIN_PASSWORD_RESET,
                 "Geliştirici yönetici şifresini sıfırladı: " + target.getUsername());
+        notificationService.create(NotificationService.ADMIN_PASSWORD_RESET,
+                target.getUsername() + " hesabının şifresi sıfırlandı",
+                "Şifre geliştirici tarafından sıfırlandı. İlk girişte şifrenizi değiştirin.", null, createdBy());
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("message", "Yönetici şifresi sıfırlandı.");
         m.put("username", target.getUsername());
         return m;
+    }
+
+    private static String createdBy() {
+        org.springframework.security.core.Authentication a =
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        return a != null && a.getName() != null ? a.getName() : AuditService.SYSTEM;
     }
 
     private static Map<String, Object> errorMap(ErrorLog e) {
@@ -174,7 +194,7 @@ public class DeveloperService {
     }
 
     /** Deploy commit (Render sets RENDER_GIT_COMMIT, others GIT_COMMIT) or the jar build version; null when unknown. */
-    private static String appVersion() {
+    static String appVersion() {
         for (String key : new String[]{"RENDER_GIT_COMMIT", "GIT_COMMIT", "SOURCE_VERSION"}) {
             String v = System.getenv(key);
             if (v != null && !v.isBlank()) return v.trim().length() > 12 ? v.trim().substring(0, 12) : v.trim();

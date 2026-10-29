@@ -3,8 +3,8 @@
 --
 -- Ne yapar: tanitimda girilen operasyonel kayitlari siler, sistemi musteriye bos teslim eder.
 --   SILER   : parking_records, active_park_spots, check_in_requests, shifts, subscriptions,
---             sync_events, error_logs, audit_logs, OFFICER kullanicilari, 'admin' disindaki ADMIN'ler
---   KORUR   : zones, streets, tariffs, tariff_vehicle_prices, vehicle_types, app_settings,
+--             sync_events, error_logs, audit_logs, admin_notifications, admin_notification_reads, OFFICER kullanicilari, 'admin' disindaki ADMIN'ler
+--   KORUR   : zones, streets, tariffs, tariff_vehicle_prices, vehicle_types, app_settings (son surum dahil),
 --             license_info, fiscal_years, flyway_schema_history, 'admin' ve DEVELOPER hesaplari
 --   EKLER   : audit_logs'a tek satir (action = SETTINGS_UPDATED, actor = system)
 --
@@ -52,6 +52,8 @@ DELETE FROM subscriptions;
 DELETE FROM sync_events;
 DELETE FROM error_logs;
 DELETE FROM audit_logs;
+DELETE FROM admin_notification_reads;
+DELETE FROM admin_notifications;
 
 -- 3) Kullanicilar: OFFICER'lar ve ana admin disindaki ADMIN'ler. Korunan tarifler silinen bir
 --    kullaniciya FK ile bagliysa baglanti bos birakilir (created_by_username yazili kalir).
@@ -90,6 +92,8 @@ UNION ALL SELECT 'subscriptions', count(*) FROM subscriptions
 UNION ALL SELECT 'sync_events', count(*) FROM sync_events
 UNION ALL SELECT 'error_logs', count(*) FROM error_logs
 UNION ALL SELECT 'audit_logs', count(*) FROM audit_logs
+UNION ALL SELECT 'admin_notifications', count(*) FROM admin_notifications
+UNION ALL SELECT 'admin_notification_reads', count(*) FROM admin_notification_reads
 UNION ALL SELECT 'users (OFFICER)', count(*) FROM users WHERE role = 'OFFICER'
 UNION ALL SELECT 'users (ADMIN)', count(*) FROM users WHERE role = 'ADMIN'
 UNION ALL SELECT 'users (DEVELOPER)', count(*) FROM users WHERE role = 'DEVELOPER'

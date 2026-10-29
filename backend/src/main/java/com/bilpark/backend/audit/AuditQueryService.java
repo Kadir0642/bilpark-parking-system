@@ -33,7 +33,8 @@ public class AuditQueryService {
 
     /** Raw filter values as they arrive in the query string. */
     public record Filter(String from, String to, String action, String actor, String actorRole,
-                         String entityType, String entityId, String q) {}
+                         String entityType, String entityId, String q,
+                         boolean includeMaintenance) {}
 
     private static final Map<AuditAction, String> LABELS = new LinkedHashMap<>();
     static {
@@ -71,6 +72,7 @@ public class AuditQueryService {
         LABELS.put(AuditAction.DEV_ERRORS_VIEWED, "Geliştirici: hatalar görüntülendi");
         LABELS.put(AuditAction.DEV_AUDIT_VIEWED, "Geliştirici: denetim kaydı görüntülendi");
         LABELS.put(AuditAction.DEV_ADMIN_PASSWORD_RESET, "Geliştirici: yönetici şifresi sıfırlandı");
+        LABELS.put(AuditAction.DEV_ANNOUNCEMENT_CREATED, "Geliştirici: duyuru gönderildi");
     }
 
     private final AuditLogRepository repository;
@@ -104,12 +106,14 @@ public class AuditQueryService {
         int s = Math.max(1, Math.min(size, 200));
         int p = Math.max(0, page);
         Page<AuditLog> result = repository.findAll(spec(f), PageRequest.of(p, s, order()));
+        long hidden = includesMaintenance(f) ? 0 : repository.count(spec(f, true)) - result.getTotalElements();
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("content", result.getContent().stream().map(this::toMap).toList());
         body.put("page", p);
         body.put("size", s);
         body.put("totalElements", result.getTotalElements());
         body.put("totalPages", result.getTotalPages());
+        body.put("maintenanceHidden", Math.max(0, hidden));
         return body;
     }
 
@@ -148,7 +152,27 @@ public class AuditQueryService {
         }
     }
 
+    /** Maintenance rows: DEVELOPER actors, DEV_* actions and DEVELOPER_ACCOUNT_CREATED. */
+    private static final EnumSet<AuditAction> MAINTENANCE_ACTIONS = EnumSet.noneOf(AuditAction.class);
+    static {
+        for (AuditAction a : AuditAction.values()) {
+            if (a.name().startsWith("DEV_") || a == AuditAction.DEVELOPER_ACCOUNT_CREATED) MAINTENANCE_ACTIONS.add(a);
+        }
+    }
+
+    /** Asking for actorRole=DEVELOPER or a maintenance action explicitly counts as includeMaintenance=true. */
+    private static boolean includesMaintenance(Filter f) {
+        if (f.includeMaintenance()) return true;
+        if (has(f.actorRole()) && f.actorRole().trim().equalsIgnoreCase("DEVELOPER")) return true;
+        return has(f.action()) && MAINTENANCE_ACTIONS.stream()
+                .anyMatch(a -> a.name().equalsIgnoreCase(f.action().trim()));
+    }
+
     private Specification<AuditLog> spec(Filter f) {
+        return spec(f, includesMaintenance(f));
+    }
+
+    private Specification<AuditLog> spec(Filter f, boolean withMaintenance) {
         LocalDate today = LocalDate.now(clock);
         LocalDate to = parseDate(f.to(), "to", today);
         LocalDate from = parseDate(f.from(), "from", to.minusDays(30));
@@ -163,6 +187,10 @@ public class AuditQueryService {
             List<Predicate> ps = new ArrayList<>();
             ps.add(cb.greaterThanOrEqualTo(root.<LocalDateTime>get("createdAt"), start));
             ps.add(cb.lessThan(root.<LocalDateTime>get("createdAt"), end));
+            if (!withMaintenance) {
+                ps.add(cb.or(cb.isNull(root.get("actorRole")), cb.notEqual(root.get("actorRole"), "DEVELOPER")));
+                ps.add(cb.not(root.get("action").in(MAINTENANCE_ACTIONS)));
+            }
             if (!actions.isEmpty()) ps.add(root.get("action").in(actions));
             if (has(f.actor())) {
                 ps.add(cb.like(cb.lower(root.<String>get("actorUsername")), like(f.actor()), '\\'));

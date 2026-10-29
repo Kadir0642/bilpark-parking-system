@@ -69,7 +69,7 @@ Müşteri, saklama sürelerinin dolmasından önce ilgili dönemlerin Excel/CSV 
 
 4.3. Geliştirici hesabı **operasyonel verilere erişemez**: araç kayıtları, ciro, raporlar, abonelikler ve kullanıcı yönetimi kapalıdır. Kayıt ekleyemez, değiştiremez veya silemez. Sistemi kapatamaz.
 
-4.4. Geliştirici hesabının **her işlemi**, görüntüleme işlemleri dahil, denetim kaydına düşer. Kayıtta kim, ne zaman, hangi cihaz ve IP'den, ne yaptığı ve önce/sonra özeti bulunur. Müşteri yöneticisi bu kayıtları panelde (`GET /api/admin/audit`, "Rol: DEVELOPER" filtresi) görebilir ve indirebilir. Denetim kayıtları uygulama içinden değiştirilemez.
+4.4. Geliştirici hesabının **her işlemi**, görüntüleme işlemleri dahil, denetim kaydına düşer. Kayıtta kim, ne zaman, hangi cihaz ve IP'den, ne yaptığı ve önce/sonra özeti bulunur. Bu kayıtlar silinmez ve gizli kanal yoktur. Yöneticinin günlük denetim ekranı sade kalsın diye geliştirici işlemleri varsayılan görünümde gizlenir; yönetici bunları panelde "Bakım işlemlerini göster" seçeneğiyle (`GET /api/admin/audit`, `includeMaintenance=true`) istediği an görebilir ve indirebilir. Yönetici şifresinin sıfırlanması ve lisans değişikliği ayrıca yöneticiye bildirim olarak iletilir. Denetim kayıtları uygulama içinden değiştirilemez.
 
 4.5. Yönetici şifresi sıfırlama yalnızca Müşterinin [yazılı / e-posta] talebiyle yapılır. Sıfırlamadan sonra eski oturumlar geçersiz olur ve işlem denetim kaydında görünür. Müşteri yeni şifreyi ilk girişte `POST /api/me/password` ile değiştirmelidir.
 

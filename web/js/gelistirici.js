@@ -53,10 +53,13 @@
                 #sec-gelistirici .g-bar { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; font-size: 12px; color: var(--text-2); }
                 #sec-gelistirici .g-bar > i { display: block; width: 100%; max-width: 48px; min-height: 2px; background: var(--primary); border-radius: 4px 4px 0 0; }
                 #sec-gelistirici .g-bar.has > i { background: var(--danger); }
+                #sec-gelistirici .g-ann-prev { margin-top: 12px; padding: var(--s-3) var(--s-4); border: 1px dashed var(--border-strong); border-radius: var(--r-md, 8px); background: var(--surface-2); }
+                #sec-gelistirici .g-ann-prev .nf-t { font-weight: 700; overflow-wrap: anywhere; }
+                #sec-gelistirici .g-ann-prev .nf-b { margin-top: 4px; color: var(--text-2); font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
             </style>
             <div class="page-head">
                 <div><h1>Geliştirici</h1>
-                    <div class="page-sub">Bu sayfada yapılan her işlem denetim kaydına düşer ve yönetici tarafından görülür. Gizli düğme yoktur.</div></div>
+                    <div class="page-sub">Bu sayfadaki her işlem denetim kaydına yazılır. Yönetici bu kayıtları 'Bakım işlemlerini göster' ile görebilir; şifre sıfırlama ve lisans değişikliği ona ayrıca bildirilir. Gizli düğme yoktur.</div></div>
             </div>
             <div class="card" style="margin-top:16px;">
                 <div class="card-head"><h2>Uyarılar</h2>
@@ -68,6 +71,33 @@
                 <div class="card-body">
                     <div class="muted" style="font-size:13px; margin-bottom:8px;" id="gActMeta">Sayfa açıkken dakikada bir kendiliğinden yenilenir.</div>
                     <div id="gAlerts">Yükleniyor...</div>
+                </div>
+            </div>
+            <div class="card" style="margin-top:16px;">
+                <div class="card-head"><h2>Duyuru gönder</h2></div>
+                <div class="card-body">
+                    <form id="gAnnForm" novalidate>
+                        <div class="filters">
+                            <label class="field" for="gAnnType">Tür
+                                <select class="select" id="gAnnType"><option value="ANNOUNCEMENT">Duyuru</option><option value="MAINTENANCE">Planlı bakım</option></select></label>
+                            <label class="field" for="gAnnTitle">Başlık
+                                <input type="text" class="input" id="gAnnTitle" maxlength="120" autocomplete="off">
+                                <span class="field-error" id="gAnnTitleErr" hidden></span></label>
+                            <label class="field" for="gAnnUntil" id="gAnnUntilWrap" hidden>Bitiş zamanı
+                                <input type="datetime-local" class="input" id="gAnnUntil">
+                                <span class="field-error" id="gAnnUntilErr" hidden></span></label>
+                        </div>
+                        <label class="field" for="gAnnBody" style="margin-top:12px;">Metin (isteğe bağlı)
+                            <textarea class="input textarea" id="gAnnBody" maxlength="2000" rows="3"></textarea>
+                            <span class="field-error" id="gAnnBodyErr" hidden></span></label>
+                        <div class="g-ann-prev" id="gAnnPrev" aria-live="polite"></div>
+                        <div class="toolbar" style="margin-top:12px;"><button type="submit" class="btn btn-primary" id="gAnnSend">Duyuruyu gönder</button></div>
+                    </form>
+                    <h3 class="sub-h" style="margin-top:20px;">Gönderilen duyurular</h3>
+                    <div class="table-wrap"><table class="table">
+                        <thead><tr><th>Başlık</th><th>Tür</th><th>Tarih</th><th>Okunma</th></tr></thead>
+                        <tbody id="gAnnBody2"><tr><td colspan="4" class="table-empty">Yükleniyor...</td></tr></tbody>
+                    </table></div>
                 </div>
             </div>
             <div class="card" style="margin-top:16px;">
@@ -164,6 +194,10 @@
                     </form>
                 </div>
             </div>`;
+        $('gAnnForm').addEventListener('submit', sendAnnouncement);
+        ['gAnnType', 'gAnnTitle', 'gAnnBody', 'gAnnUntil'].forEach(id => $(id).addEventListener('input', renderAnnPreview));
+        $('gAnnType').addEventListener('change', () => { $('gAnnUntilWrap').hidden = $('gAnnType').value !== 'MAINTENANCE'; renderAnnPreview(); });
+        renderAnnPreview();
         $('gLicForm').addEventListener('submit', saveLicense);
         $('gLicPlus').addEventListener('click', () => {
             const base = $('gLicExp').value || (licenseStatus && licenseStatus.expiresOn) || ymd(new Date());
@@ -192,6 +226,68 @@
         $('gPwGen').addEventListener('click', () => { $('gPwNew').value = genPassword(); setFieldError('gPwNew', 'gPwNewErr', ''); });
         $('gPwForm').addEventListener('submit', resetAdminPassword);
         built = true;
+    }
+
+    // ---- Duyuru gönder ----
+    const ANN_LABEL = { ANNOUNCEMENT: 'Duyuru', MAINTENANCE: 'Planlı bakım' };
+    function renderAnnPreview() {
+        const type = $('gAnnType').value, title = $('gAnnTitle').value.trim(), body = $('gAnnBody').value.trim(), until = $('gAnnUntil').value;
+        const when = type === 'MAINTENANCE' && until ? `<div class="muted" style="font-size:13px;">Geçerlilik sonu: ${escapeHtml(fmtFull(until))}</div>` : '';
+        $('gAnnPrev').innerHTML = `<div class="muted" style="font-size:12px; margin-bottom:4px;">Önizleme: yöneticinin bildirim kutusunda böyle görünür</div>
+            <span class="badge ${type === 'MAINTENANCE' ? 'badge-warning' : 'badge-sub'}">${escapeHtml(ANN_LABEL[type])}</span>
+            <div class="nf-t">${escapeHtml(title || 'Başlık')}</div>${body ? `<div class="nf-b">${escapeHtml(body)}</div>` : ''}${when}`;
+    }
+    async function sendAnnouncement(e) {
+        e.preventDefault();
+        const type = $('gAnnType').value, title = $('gAnnTitle').value.trim(), body = $('gAnnBody').value.trim(), until = $('gAnnUntil').value;
+        ['gAnnTitle', 'gAnnUntil', 'gAnnBody'].forEach(id => setFieldError(id, id + 'Err', ''));
+        let bad = false;
+        if (title.length < 3 || title.length > 120) { setFieldError('gAnnTitle', 'gAnnTitleErr', 'Başlık 3-120 karakter olmalı.'); bad = true; }
+        if (body.length > 2000) { setFieldError('gAnnBody', 'gAnnBodyErr', 'Metin en fazla 2000 karakter olabilir.'); bad = true; }
+        if (type === 'MAINTENANCE') {
+            if (!until) { setFieldError('gAnnUntil', 'gAnnUntilErr', 'Planlı bakım için bitiş zamanı zorunlu.'); bad = true; }
+            else if (new Date(until).getTime() <= Date.now()) { setFieldError('gAnnUntil', 'gAnnUntilErr', 'Bitiş zamanı gelecekte olmalı.'); bad = true; }
+        }
+        if (bad) return;
+        const ok = await confirmDialog({
+            title: 'Duyuruyu gönder',
+            message: `Tüm yöneticilere "${title}" ${type === 'MAINTENANCE' ? 'planlı bakım duyurusu' : 'duyurusu'} gönderilecek${type === 'MAINTENANCE' ? ` (geçerlilik sonu: ${fmtFull(until)})` : ''}. Gönderilen duyuru silinemez ve düzenlenemez. Bu işlem denetim kaydına yazılır.`,
+            confirmLabel: 'Gönder'
+        });
+        if (!ok) return;
+        const payload = { type, title };
+        if (body) payload.body = body;
+        if (type === 'MAINTENANCE') payload.validUntil = until.length === 16 ? until + ':00' : until;
+        const btn = $('gAnnSend');
+        btn.disabled = true;
+        try {
+            await apiJson('POST', '/api/developer/announcements', payload);
+            toast('Duyuru gönderildi.');
+            $('gAnnTitle').value = ''; $('gAnnBody').value = ''; $('gAnnUntil').value = '';
+            renderAnnPreview();
+            await loadAnnouncements();
+        } catch (err) {
+            if (err.name === 'AuthError') return;
+            if (err.code === 'VALIDATION_ERROR') setFieldError('gAnnTitle', 'gAnnTitleErr', err.message);
+            toast('Hata: ' + err.message, true);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+    async function loadAnnouncements() {
+        const tb = $('gAnnBody2');
+        try {
+            const d = await apiJson('GET', '/api/developer/announcements?limit=30');
+            const list = Array.isArray(d) ? d : ((d && d.items) || []);
+            tb.innerHTML = list.map(a => `<tr>
+                <td style="min-width:200px; overflow-wrap:anywhere;"><b>${escapeHtml(a.title)}</b></td>
+                <td>${escapeHtml(ANN_LABEL[a.type] || a.type || '-')}</td>
+                <td class="col-muted num">${a.createdAt ? escapeHtml(fmtFull(a.createdAt)) : '-'}</td>
+                <td class="num">${escapeHtml(a.readCount == null ? '-' : a.readCount)}</td>
+            </tr>`).join('') || '<tr><td colspan="4" class="table-empty">Henüz duyuru gönderilmedi.</td></tr>';
+        } catch (err) {
+            if (err.name !== 'AuthError') tb.innerHTML = `<tr><td colspan="4" class="table-empty">${escapeHtml(err.message)}</td></tr>`;
+        }
     }
 
     // ---- Lisans ----
@@ -487,6 +583,7 @@
         async onShow() {
             if (!built) build();
             loadLicenseCard();
+            loadAnnouncements();
             loadActivity();
             startTimer();
             if (!auActionsLoaded) loadAuditActions();
