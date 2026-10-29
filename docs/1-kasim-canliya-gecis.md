@@ -395,3 +395,9 @@ Nasıl:
 - [ ] `GET /api/admin/audit` çağrısında günün kayıtları var.
 - [ ] Neon → Usage: compute saatleri makul (günde birkaç saat).
 - [ ] Her şey yolundaysa `yedek-2026-11-01-mart` dalını birkaç gün sonra sil. Free planda dal sayısı sınırlı.
+
+---
+
+## Teslim öncesi
+
+Proje onaylandıktan sonra, müşteriye teslimden önce tanıtım kayıtları tek seferlik bir SQL betiğiyle silinir ve sistem boş teslim edilir. Adımlar, yedek alma, admin şifresinin yenilenmesi ve geri dönüş için [teslim-sifirlamasi.md](teslim-sifirlamasi.md) dosyasına bak. Betik: `scripts/teslim-sifirlama.sql`. Bunu canlıya geçiş günü çalıştırma; yalnızca onaydan sonra, bir kez.
