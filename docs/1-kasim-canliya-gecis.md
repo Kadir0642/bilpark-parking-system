@@ -1,8 +1,10 @@
-# 1 Kasım 2026: canlıya geçiş kontrol listesi
+# Canlıya geçiş kontrol listesi
 
-Bu liste, Neon kotası 1 Kasım'da sıfırlandığında yeni sürümü (Aşama 1-5, araç tipleri, saha kolaylıkları, çevrimdışı giriş saati) tek PR ile `main`'e alıp canlıya çıkarmak için adım adım izlenir. Her adımın sonunda bir **Kontrol** satırı var. O kontrol tutmadan sonraki adıma geçme.
+Bu liste, yeni sürümü (Aşama 1-5, araç tipleri, saha kolaylıkları, çevrimdışı giriş saati) canlıya çıkarmak için adım adım izlenir. Her adımın sonunda bir **Kontrol** satırı var. O kontrol tutmadan sonraki adıma geçme.
 
-Gerekenler: Neon, Render, GitHub ve UptimeRobot hesaplarına giriş, bir tarayıcı, PowerShell, canlı API'ye bağlı saha uygulaması yüklü bir telefon ve QR okutmak için ikinci bir telefon. Hiçbir adım ücretli değildir. Bir ekran ücretli plan önerirse kabul etme, önce sor.
+Liste ilk olarak 1 Kasım 2026 için yazıldı (dosya adı oradan geliyor). 17 Kasım 2026'da, canlı veritabanının gerçek durumuna göre güncellendi.
+
+Gerekenler: Neon, Render, GitHub ve UptimeRobot hesaplarına giriş, bir tarayıcı, PowerShell, canlı API'ye bağlı saha uygulaması yüklü bir telefon ve QR okutmak için ikinci bir telefon. Hiçbir adım ücretli değildir. Bir ekran ücretli plan ya da kredi önerirse (ör. Neon'daki "Claim $100 credit" bandı) kabul etme, önce sor.
 
 Adresler:
 
@@ -10,56 +12,83 @@ Adresler:
 - Swagger: `API/swagger-ui.html`
 - Vatandaş sayfası (QR): `https://kadir0642.github.io/bilpark-parking-system/web/customer-payment.html`
 
+Adlar:
+
+- Neon'da ana dalın adı **`production`** (GitHub'daki `main` ile karıştırma).
+- Yedek dal: **`yedek-2026-11-14-mart`**.
+
+## Durum (17 Kasım 2026)
+
+| Adım | Durum |
+|---|---|
+| 0. Başlamadan önce | Neon kısmı tamam (14 Kasım). Render'da Auto-Deploy'un **Off** olduğu teyit edilecek. |
+| 1. Yedek dal | **Tamam** (14 Kasım): iki dalda da 8 aktif araç, 67 kayıt. |
+| 4.1-4.5 Kontrol sorguları | **Tamam** (14 Kasım). Sonuçlar 4. adımda yazılı. |
+| 5. Merge | **Tamam** (29 Ekim, PR #3). O günkü otomatik deploy Neon kotası kapalı olduğu için düştü; veritabanına dokunulmadı. |
+| 2, 3, 4.6, 6-9 | **Bekliyor.** 2 → 3 → 4.6 → 6 tek oturumda yapılır. |
+
+Canlıda şu an hâlâ Mart sürümü (`6abc999`) çalışıyor.
+
 ---
 
-## Neden bu sıra? (29 Ekim provası)
+## Neden bu sıra? (29 Ekim ve 17 Kasım provaları)
 
-Canlı Neon veritabanında hâlâ Mart 2026 uygulamasının (commit `6abc999`) Hibernate ile kurduğu şema duruyor. Bu şemada yalnızca iki tablo var: `active_park_spots` ve `parking_records`. `users`, `zones`, `subscriptions` ve `fiscal_years` tabloları yok. `version`, `zone_id` ve `debt_paid` kolonları da yok. Enum'lar sayı olarak değil, ad olarak (`PAID`, `SMALL` gibi) saklanıyor.
+29 Ekim provası, canlıda yalnızca iki tablo (`active_park_spots`, `parking_records`) olduğu varsayımıyla yapıldı. 14 Kasım'da canlıda çalıştırılan sorgular durumun farklı olduğunu gösterdi:
 
-Prova, bu şemanın ayrı bir Docker Postgres'te birebir kopyası üzerinde yapıldı. Kopya, Mart kodunun kendisiyle kuruldu ve veriler Mart API'si üzerinden girildi. Sonuçlar:
+- **Altı tablo var.** `users`, `zones`, `subscriptions` ve `fiscal_years` da mevcut. Büyük olasılıkla Ekim'deki kod, şifre koda gömülüyken bir geliştirme bilgisayarından Neon'a karşı çalıştırıldı ve Hibernate bu tabloları ekledi. `flyway_schema_history` yok.
+- **Şema Aşama 1 biçiminde, tek eksikle.** `active_park_spots` tablosunda `version` ve `zone_id` var. `parking_records` tablosunda `zone_id` var, `debt_paid` yok. Kısıt adları Hibernate'in rastgele adları.
+- **`users` tablosunda iki hesap var:** `admin` ve `tevfik`. Bunları eski kod, kodda sabit yazılı şifrelerle oluşturdu. O şifreler herkese açık repo geçmişinde duruyor.
+- Enum'lar ad olarak saklı (`PAID`, `SMALL` gibi), sayı yok. Plaka çakışması yok.
 
-- **Eski ayarla düşüyordu.** `baseline-version=1` olduğu için Flyway V1'i atlıyordu. V2, `relation "subscriptions" does not exist` hatasıyla düştü. Uygulama açılmadı.
-- **Düzeltme.** Ayar artık `baseline-version=0`. V1 yalnızca eksik tabloları kuruyor (`CREATE TABLE IF NOT EXISTS`). V2-V6 olduğu gibi çalışıyor. Yeni V7 eksik kolonları ekliyor:
-  - `version`: eski araçlarda 0.
-  - `zone_id`: eski kayıtlarda boş kalıyor. Uygulama bu kayıtlarda cadde üzerinden yetki kontrolü yapıyor.
-  - `debt_paid`: `RUNAWAY` kayıtlarda `false` (borç ödenmedi), diğer kayıtlarda `true`.
-  - Mart'tan kalan cadde ve durum CHECK kısıtları kaldırılıyor.
-- **Sonuç.** Yükseltilen şema, boş bir veritabanından kurulan şemayla birebir aynı. Hiçbir satır kaybolmadı. Eski kaçak borcu, araç tekrar girdiğinde görünüyor. Testler: `MarchLiveSchemaUpgradePostgresTest` ve `MarchLiveDatabaseAppPostgresTest`.
+17 Kasım provası, bu şemanın birebir kopyası üzerinde yapıldı. Kopya, canlıdan dışa aktarılan kolon ve kısıt listesinden (48 kolon, 23 kısıt) ayrı bir Docker Postgres'te kuruldu ve `main`'deki sürüm (`ed5b207`) üzerinde çalıştırıldı. Sonuçlar:
 
-> **Önemli:** 2. adımda Neon şifresi değiştiği anda şu an canlıda çalışan eski uygulama veritabanına bağlanamaz. Mart kodunda şifre koda gömülü. Site, 6. adımdaki deploy bitene kadar kapalı kalır. Bu yüzden 2-6. adımları **tek oturumda** yap: gece 22:00'den sonra, yaklaşık 1 saat ayırarak. Eski sürüme geri dönmek mümkün değil, geri dönüş planı 10. adımda.
+- **Temizlik yapılmadan:** 7 migration hatasız geçiyor ve veri korunuyor. Ama `users` boş olmadığı için uygulama kullanıcı oluşturmuyor: `admin` ve `tevfik` eski, açıkta kalmış şifreleriyle kalıyor ve `ADMIN_PASSWORD` hiç kullanılmıyor. **Bu yüzden 4.6 zorunlu.**
+- **4.6'daki temizlikten sonra:** `admin` ve `tevfik`, Render'daki `ADMIN_PASSWORD` ve `OFFICER_PASSWORD` ile sıfırdan oluşuyor. Eski şifreyle giriş `401` dönüyor. Yeni şifreyle giriş, araç girişi ve mükerrer giriş engeli çalışıyor. Kimliksiz `GET /api/parking/spots` artık `401`.
+- **Şema karşılaştırması:** Yükseltilen şema, boş bir veritabanından kurulan şemayla birebir aynı (kolonlar, kısıtlar, indeksler).
+
+Migration'ların bu şemada yaptıkları:
+
+- `baseline-version=0` olduğu için V1 çalışır; tablolar zaten var olduğundan hiçbirini değiştirmez (`already exists, skipping` uyarıları normaldir).
+- V2-V6 eksik kolonları ve yeni tabloları ekler, Hibernate'in eski enum CHECK kısıtlarını kaldırır.
+- V7 `debt_paid` kolonunu ekler: `RUNAWAY` kayıtlarda `false`, diğerlerinde `true`.
+
+> **Önemli:** 2. adımda Neon şifresi değiştiği anda şu an canlıda çalışan eski uygulama veritabanına bağlanamaz. Mart kodunda şifre koda gömülü. Site, 6. adımdaki deploy bitene kadar kapalı kalır. Bu yüzden 2 → 3 → 4.6 → 6 adımlarını **tek oturumda** yap; yaklaşık 30-40 dakika sürer. Eski sürüme geri dönmek mümkün değil, geri dönüş planı 10. adımda.
 
 ---
 
-## 0. Başlamadan önce (gün içinde, 10 dk)
+## 0. Başlamadan önce
 
+- [ ] **Render → `bilpark-API` → Settings → Build & Deploy → Auto-Deploy: Off.** PR zaten merge edildiği için bu adım en başta gelir. Açık kalırsa `main`'e gelen herhangi bir commit, yedek ve temizlik yapılmadan deploy başlatabilir. 6. adıma kadar **Manual Deploy** düğmesine de basma.
 - [ ] Yeni şifreleri bir parola yöneticisine kaydedeceksin. Hiçbir şifreyi sohbete, commit'e ya da ekran görüntüsüne koyma.
-- [ ] Neon → Project → **Usage**: Compute hours sıfırlanmış olmalı.
-- [ ] Neon compute ayarı hâlâ **0.25 CU sabit** ve **Scale to zero** açık olmalı.
-- [ ] GitHub'da tek PR açılmış ve CI yeşil olmalı (5. adım). PR'ı önceden açmak serbest, merge etme.
-- [ ] Saha ekibine haber ver: geçiş gecesi 22:00'den sabaha kadar sistem kapalı olabilir.
+- [x] Neon → Usage: Compute saatleri sıfırlanmış (14 Kasım: 0,32 CU-saat).
+- [x] Neon compute **0.25 CU** ve uykuya geçme (scale to zero) çalışıyor.
+- [x] PR merge edildi (29 Ekim, PR #3).
+- [ ] Saha ekibi varsa haber ver: geçiş sırasında sistem yaklaşık bir saat kapalı olabilir.
 
-**Kontrol:** Neon SQL Editor'da `SELECT 1;` çalışıyor. PR'da CI yeşil.
+**Kontrol:** Render'da Auto-Deploy kutusunda `Off` yazıyor. Neon SQL Editor'da `SELECT 1;` çalışıyor.
 
 ---
 
-## 1. Neon'da yedek dal oluştur
+## 1. Neon'da yedek dal oluştur (tamamlandı: 14 Kasım)
 
-Her şeyden önce verinin bugünkü hâlini dondur.
+Her şeyden önce verinin o günkü hâli donduruldu.
 
-1. **Saati not al** (ör. `22:05`). 10. adımda zamana göre geri yükleme için gerekebilir.
-2. Neon → **Branches** → **Create branch**.
-   - Ad: `yedek-2026-11-01-mart`
-   - Kaynak: `main`, **Current data** (ya da "Head")
-3. Dal oluşunca SQL Editor'ın üstünden bu dalı seç ve çalıştır:
+1. Neon → **Branches** → **Create branch**.
+   - Ad: `yedek-2026-11-14-mart`
+   - Parent: `production`
+   - Seçenek: **Branch data and schema** (şu anki veri). Auto-delete: **Never**.
+2. Dal oluşunca SQL Editor'ın sol üstünden yedek dalı seç ve çalıştır:
 
    ```sql
    SELECT (SELECT count(*) FROM active_park_spots) AS aktif,
           (SELECT count(*) FROM parking_records)   AS kayit;
    ```
 
-4. Aynı sorguyu `main` dalında da çalıştır.
+3. Aynı sorguyu `production` dalında da çalıştır.
 
-**Kontrol:** İki dal aynı sayıları veriyor. Yedek dal Branches listesinde görünüyor.
+**Kontrol:** İki dal aynı sayıları veriyor: `8 | 67`. Yedek dal Branches listesinde görünüyor.
+
+> Yedek 14 Kasım'da alındı. Geçiş başka bir gün yapılacaksa ve arada canlıya kayıt girildiyse, 2. adımdan önce aynı sorguyu tekrar çalıştır. Sayılar değiştiyse yeni bir yedek dal al.
 
 ---
 
@@ -67,8 +96,8 @@ Her şeyden önce verinin bugünkü hâlini dondur.
 
 Eski `neondb_owner` şifresi, public repo geçmişindeki Mart commit'lerinde açıkta. Bu yüzden şifre değişmek zorunda.
 
-1. Neon → **Roles** (dal: `main`) → `neondb_owner` → **Reset password**. Yeni şifreyi parola yöneticisine kaydet.
-2. Rol şifreleri dal başınadır. Yedek dal eski şifreyle oluştu. Aynı işlemi `yedek-2026-11-01-mart` dalında da yap. Aynı yeni şifreyi kullanabilirsin.
+1. Neon → **Roles** (dal: `production`) → `neondb_owner` → **Reset password**. Yeni şifreyi parola yöneticisine kaydet.
+2. Rol şifreleri dal başınadır. Yedek dal eski şifreyle oluştu. Aynı işlemi `yedek-2026-11-14-mart` dalında da yap. Aynı yeni şifreyi kullanabilirsin.
 
 Bu andan sonra eski canlı uygulama veritabanına bağlanamaz. Bu beklenen bir durum.
 
@@ -84,23 +113,22 @@ Bu andan sonra eski canlı uygulama veritabanına bağlanamaz. Bu beklenen bir d
 
    | Değişken | Değer |
    |---|---|
-   | `DB_URL` | `jdbc:postgresql://<neon-host>/neondb?sslmode=require` (başında `jdbc:` olmalı) |
+   | `DB_URL` | `jdbc:postgresql://<neon-host>/neondb?sslmode=require` (başında `jdbc:` olmalı; host, `production` dalının host'u) |
    | `DB_USERNAME` | `neondb_owner` |
    | `JWT_SECRET` | En az 32 bayt. Boşsa PowerShell'de üret: `[Convert]::ToBase64String((1..48 \| % {Get-Random -Max 256}))` |
-   | `ADMIN_PASSWORD` | **Zorunlu.** Canlıda `users` tablosu yok. İlk açılışta `admin` kullanıcısı bu şifreyle oluşur. |
+   | `ADMIN_PASSWORD` | **Zorunlu.** 4.6'da `users` boşaltıldığı için ilk açılışta `admin` kullanıcısı bu şifreyle oluşur. |
    | `OFFICER_PASSWORD` | **Zorunlu.** İlk açılışta örnek memur `tevfik` (Tevfik Bey, Bölüm 1) bu şifreyle oluşur. |
-   | `DEVELOPER_PASSWORD` | İsteğe bağlı. `gelistirici` bakım hesabını bir kez oluşturur (bkz. `docs/sozlesme-eki-gelistirici-ve-lisans.md`). |
+   | `DEVELOPER_PASSWORD` | İsteğe bağlı, önerilir. `gelistirici` bakım hesabını bir kez oluşturur (bkz. `docs/sozlesme-eki-gelistirici-ve-lisans.md`). |
 
-   Bu iki şifre de en az 8 karakter olmalı ve harf ile rakam içermeli. 7. adımda değiştirilecekler.
-4. **Settings → Build & Deploy → Auto-Deploy** ayarını **Off** yap. Böylece merge hemen deploy tetiklemez.
+   Şifreler en az 8 karakter olmalı ve harf ile rakam içermeli. Kodda sabit yazılı eski şifreleri kullanma. `ADMIN_PASSWORD` ve `OFFICER_PASSWORD` 7. adımda değiştirilecek.
 
-**Kontrol:** Environment sayfasında `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `ADMIN_PASSWORD` ve `OFFICER_PASSWORD` var. Auto-Deploy kapalı.
+**Kontrol:** Environment sayfasında `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `ADMIN_PASSWORD` ve `OFFICER_PASSWORD` var. Auto-Deploy hâlâ kapalı ve deploy başlamadı.
 
 ---
 
-## 4. Kontrol sorguları ve deneme kayıtlarının silinmesi
+## 4. Kontrol sorguları ve temizlik
 
-Neon SQL Editor'da, **`main` dalında** çalıştır. 4.1-4.5 salt okunurdur, veriyi değiştirmez. Sonuçların ekran görüntüsünü al; içlerinde şifre yok. Veriyi silen tek adım 4.6'dır.
+Neon SQL Editor'da, **`production` dalında** çalıştırılır. 4.1-4.5 salt okunurdur ve 14 Kasım'da çalıştırıldı; sonuçları aşağıda. Veriyi değiştiren tek adım 4.6'dır ve henüz yapılmadı.
 
 ### 4.1 Hangi tablolar var?
 
@@ -109,11 +137,12 @@ SELECT table_name FROM information_schema.tables
  WHERE table_schema = 'public' ORDER BY 1;
 ```
 
+**14 Kasım sonucu:** `active_park_spots`, `fiscal_years`, `parking_records`, `subscriptions`, `users`, `zones`. Bu, 17 Kasım provasında denenen durum.
+
 | Sonuç | Ne yapmalı |
 |---|---|
-| Yalnızca `active_park_spots` ve `parking_records` | Beklenen durum (Mart şeması). Devam et. |
-| Bunlara ek olarak `users`, `zones`, `subscriptions`, `fiscal_years` | Aşama 1 şeması. Bu da destekleniyor (`FlywayBaselinePostgresTest`). Devam et, sonucu not al. |
-| `flyway_schema_history` var | **Dur ve sor.** Daha önce yarım kalmış bir deneme olmuş demektir. Bu durumda yeni ayar eksik tabloları kuramaz. |
+| Yukarıdaki altı tablo | Beklenen durum. Devam et. |
+| `flyway_schema_history` var | **Dur ve sor.** Yarım kalmış bir deploy olmuş demektir (ör. Auto-Deploy açık kalmış). |
 | Başka beklenmedik bir şey | Dur ve sor. |
 
 ### 4.2 Enum değerleri ad olarak mı saklanmış?
@@ -128,8 +157,7 @@ UNION ALL SELECT 'kayit.cadde', street,       count(*) FROM parking_records   GR
 ORDER BY 1, 2;
 ```
 
-- Değerler yalnızca `ACTIVE`, `PAID`, `RUNAWAY`, `SMALL`, `LARGE`, `TEVFIK_BEY`, `ALI_RIZA_OZKAY`, `CUMHURIYET` ise (ya da boşsa) devam et.
-- `0`, `1`, `2` gibi **sayılar** görürsen **dur ve sor.** Mart kodunda enum'lar ad olarak saklanıyordu, sayı beklenmiyor. Sayı varsa V5 bunları `SMALL` sayar ve kamyonet bilgisi kaybolur.
+**14 Kasım sonucu:** Yalnızca `ACTIVE`, `PAID`, `RUNAWAY`, `SMALL`, `LARGE`, `TEVFIK_BEY`, `ALI_RIZA_OZKAY`, `CUMHURIYET`. Sayı yok. Temiz.
 
 ### 4.3 Plaka çakışması
 
@@ -144,12 +172,9 @@ SELECT upper(regexp_replace(current_plate, '[\s-]', '', 'g')) AS plaka,
 HAVING count(*) > 1;
 ```
 
-- **0 satır:** devam et.
-- **Satır varsa:** dur ve sor. Hangi kaydın yanlış olduğuna birlikte karar verelim. Kendi başına silme.
+**14 Kasım sonucu:** 0 satır. Temiz.
 
-### 4.4 Karşılaştırma için anlık görüntü
-
-Deploy'dan sonra aynı sorguyu çalıştırıp sayıları karşılaştıracaksın.
+### 4.4 Anlık görüntü
 
 ```sql
 SELECT (SELECT count(*) FROM active_park_spots)                                       AS aktif_arac,
@@ -162,49 +187,59 @@ SELECT (SELECT count(*) FROM active_park_spots)                                 
        (SELECT max(exit_time) FROM parking_records)                                   AS son_cikis;
 ```
 
-### 4.5 Hâlâ "içeride" görünen araçlar
+**14 Kasım sonucu:** 8 aktif araç, 67 kayıt, 45 ödenen (117.490 TL), 22 kaçak (119.715 TL), ilk kayıt 2 Mart 2026, son çıkış 11 Ekim 2026. Kayıt başına yaklaşık 2.600 TL: bunlar günlerce açık bırakılmış deneme kayıtları.
+
+### 4.5 Kullanıcılar ve diğer tablolar
 
 ```sql
-SELECT id, current_plate, street, current_type, entry_time
-  FROM active_park_spots ORDER BY entry_time;
+SELECT (SELECT count(*) FROM users)         AS users,
+       (SELECT count(*) FROM zones)         AS zones,
+       (SELECT count(*) FROM subscriptions) AS abonelik,
+       (SELECT count(*) FROM fiscal_years)  AS mali_yil;
+SELECT id, username, role FROM users ORDER BY id;
 ```
 
-Bilgi amaçlı, satır sayısını not al. Mart'ta bölge kavramı yoktu, bu yüzden bu araçlar yeni sürümde bölgesiz görünür:
+**14 Kasım sonucu:** 2 kullanıcı (`admin` ADMIN, `tevfik` OFFICER), 6 saha, 0 abonelik, 0 mali yıl. Şifre kolonunu sorgulama ve ekran görüntüsüne koyma.
 
-- Saha uygulaması yalnızca memurun kendi bölgesindeki araçları listeler. Bu yüzden memurlar bu araçları **göremez**.
-- Aynı plaka tekrar girilmek istenirse "zaten içeride" hatası alınır.
+### 4.6 Temizlik (zorunlu; 3. adımdan sonra, deploy'dan hemen önce)
 
-4.6'da deneme kayıtları silineceği için bu araçlar da gider.
+Ne siliniyor ve neden:
 
-### 4.6 Deneme kayıtlarını sil (karar: 29 Ekim)
+- **Deneme kayıtları** (`active_park_spots`, `parking_records`): Hepsi geliştirme sırasında yapılan denemeler, gerçek müşteri kaydı yok (karar: 29 Ekim). Denemelerin ücretleri ciro raporlarına karışmaz.
+- **İki eski hesap** (`users`): Şifreleri repo geçmişinde açıkta. Silinmezlerse yeni sürüm bu hesapları eski şifreleriyle kullanmaya devam eder. Silinince ilk açılışta `ADMIN_PASSWORD` ve `OFFICER_PASSWORD` ile yeniden oluşurlar.
+- **İki eski CHECK kısıtı:** Hibernate'ten kalma `zones_street_check` ve `subscriptions_status_check`. Sıfırdan kurulan şemada yoklar; kaldırılınca canlı şema onunla birebir aynı olur.
 
-Canlıdaki kayıtların hepsi geliştirme sırasında yapılan denemeler. Gerçek müşteri kaydı yok. Bu yüzden yeni sürüme temiz başlanır. Denemelerin ücretleri ciro raporlarına karışmaz. Eski bölgesiz araç sorunu (7.4) da ortadan kalkar.
+Sahalar (`zones`, 6 satır) silinmez. Silinen her şey yedek dalda durur.
 
-Önce 4.4'teki ekran görüntüsüne bak. Tarihler ve plakalar denemelere benzemiyorsa, yani gerçek bir kayıt olabilecek bir şey görürsen, silme ve sor. Silinen her şey 1. adımdaki yedek dalda durur.
+Önce `production` dalının seçili olduğunu kontrol et. Sonra hepsini birlikte çalıştır:
 
 ```sql
+BEGIN;
 DELETE FROM active_park_spots;
 DELETE FROM parking_records;
+DELETE FROM users;
+ALTER TABLE zones DROP CONSTRAINT IF EXISTS zones_street_check;
+ALTER TABLE subscriptions DROP CONSTRAINT IF EXISTS subscriptions_status_check;
+COMMIT;
 SELECT (SELECT count(*) FROM active_park_spots) AS aktif,
-       (SELECT count(*) FROM parking_records)   AS kayit;
+       (SELECT count(*) FROM parking_records)   AS kayit,
+       (SELECT count(*) FROM users)             AS kullanici,
+       (SELECT count(*) FROM zones)             AS saha;
 ```
 
-Son sorgu `0 | 0` döndürmeli. Tablolar silinmez, yalnızca içleri boşalır. Migration'lar boş tablolarda da aynı şekilde çalışır.
+Son sorgu `0 | 0 | 0 | 6` döndürmeli. Tablolar silinmez, yalnızca içleri boşalır. (17 Kasım'da prova veritabanında denendi.)
 
-**Kontrol:** 4.1 beklenen sonucu verdi, 4.2'de sayı yok, 4.3 boş döndü, 4.4'ün ekran görüntüsü alındı, 4.6 sonrası iki tablo da boş.
+**Kontrol:** 4.6 sonrası sonuç `0 | 0 | 0 | 6`.
 
 ---
 
-## 5. Tek PR'ı `main`'e merge et
+## 5. Tek PR'ı `main`'e merge et (tamamlandı: 29 Ekim)
 
-Zincirin tamamı tek dalda: `claude/canli-gecis-provasi`. Bu dalda Aşama 2-5, araç tipleri, e2e düzeltmeleri, saha kolaylıkları, çevrimdışı giriş saati ve bu prova var. PR metninin taslağı `docs/pr-main-tek-pr-taslagi.md` dosyasında.
+Zincirin tamamı `claude/canli-gecis-provasi` dalındaydı ve 29 Ekim 2026'da PR #3 ile `main`'e merge edildi (merge commit `ed5b207`). Render o an otomatik deploy denedi; Neon kotası kapalı olduğu için deploy düştü ve veritabanına dokunulmadı. Canlıda Mart sürümü çalışmaya devam etti.
 
-1. GitHub → **Pull requests** → `claude/canli-gecis-provasi` → `main` PR'ı (yoksa **New pull request** ile aç ve taslağı yapıştır).
-2. CI (Java CI with Maven, Flutter CI) yeşil değilse merge etme.
-3. **Create a merge commit** ile merge et. Squash yapma; dal geçmişi korunsun.
-4. GitHub Pages `main`'den yayın yapıyor. Vatandaş sayfası birkaç dakika içinde güncellenir (Actions → "pages build and deployment").
+GitHub Pages `main`'den yayın yaptığı için vatandaş sayfası o gün güncellendi.
 
-**Kontrol:** `main` en son merge commit'ini gösteriyor. Auto-Deploy kapalı olduğu için Render'da yeni deploy başlamadı.
+**Kontrol:** Render → Deploys listesinde `ed5b207` satırı "Failed", `6abc999` "Live" görünüyor. Auto-Deploy kapalı.
 
 ---
 
@@ -215,8 +250,11 @@ Zincirin tamamı tek dalda: `claude/canli-gecis-provasi`. Bu dalda Aşama 2-5, a
    - `Successfully baselined schema with version: 0`
    - `Migrating schema "public" to version "1 - baseline"`, sonra `2 - stage2 multi device` … `7 - legacy march schema`
    - `Successfully applied 7 migrations to schema "public", now at version v7`
-   - `Default users (admin, tevfik) created.`
    - `Started BackendApplication`
+   - `Default users (admin, tevfik) created.`
+   - `Developer account 'gelistirici' created.` (`DEVELOPER_PASSWORD` girildiyse)
+
+   Arada `relation "zones" already exists, skipping` ve `column "version" … already exists, skipping` gibi `WARN` satırları görünür. Bunlar normaldir: tablolar ve kolonlar zaten var.
 
 Hata olursa:
 
@@ -225,6 +263,7 @@ Hata olursa:
 | `password authentication failed` | `DB_PASSWORD` veya `DB_URL` yanlış | 3. adıma dön, düzelt, tekrar deploy et. |
 | `JWT_SECRET is missing or too short` | Secret eksik | 3. adımdaki komutla üret, tekrar deploy et. |
 | `ADMIN_PASSWORD env var is required…` veya `OFFICER_PASSWORD…` | Migration'lar bitti ama kullanıcılar oluşamadı | Değişkeni ekle, tekrar deploy et. Flyway kaldığı yerden devam eder; migration'lar tekrar çalışmaz. |
+| `Default users (admin, tevfik) created.` satırı **yok** | `users` tablosu boş değildi, yani 4.6 çalışmadı | **Dur ve sor.** Eski hesaplar eski şifreleriyle duruyor olabilir. Kimseye adres verme. |
 | `V2 durduruldu: … aktif plakalar var` | 4.3'teki çakışma | V2 hiçbir şey değiştirmedi. V1'in kurduğu boş tablolar kalır, zararı yok. Dur ve sor. |
 | `Migration of schema "public" to version … failed` (başka) | Beklenmeyen durum | Log'daki ilk `ERROR` satırını kaydet, **dur ve sor.** 10. adıma bak. |
 
@@ -242,7 +281,7 @@ SELECT installed_rank, version, type, success FROM flyway_schema_history ORDER B
 
 Sonuç 8 satır olmalı: `0 BASELINE`, sonra `1`-`7 SQL`; hepsinde `success = true`.
 
-4.4'teki anlık görüntü sorgusunu tekrar çalıştır. 4.6'yı yaptıysan **bütün sayılar 0** olmalı. Yapmadıysan sayılar 4.4'tekiyle aynı olmalı; plakalar boşluksuz görünür, bu beklenen bir değişiklik.
+4.4'teki anlık görüntü sorgusunu tekrar çalıştır. **Bütün sayılar 0** olmalı.
 
 ```sql
 SELECT count(*) AS hatali FROM parking_records WHERE status = 'RUNAWAY' AND debt_paid;  -- 0 olmalı
@@ -255,7 +294,7 @@ Her şey tutuyorsa Auto-Deploy'u tekrar **On** yapabilirsin. İstersen kapalı b
 
 ## 7. İlk açılış: kullanıcılar ve admin şifresi
 
-İlk açılışta `users` tablosu boş olduğu için iki kullanıcı oluştu:
+4.6'da `users` tablosu boşaltıldığı için ilk açılışta iki kullanıcı oluştu:
 
 - `admin`: şifresi `ADMIN_PASSWORD`
 - `tevfik`: memur, Tevfik Bey Bölüm 1; şifresi `OFFICER_PASSWORD`
@@ -297,39 +336,11 @@ Alternatif: `API/swagger-ui.html`. Önce `/api/auth/login` ile token al, **Autho
 - [ ] Admin token'ıyla `GET /api/license/status` çağır. `state` alanı `ACTIVE` olmalı (V4 bitişi bir yıl sonraya, ek süreyi 15 güne kurar).
 - [ ] Sözleşme tarihleri farklıysa `gelistirici` hesabıyla `PUT /api/developer/license` uç noktasını çağır. Gövde: `{"expiresOn":"2027-11-01","graceDays":15}`.
 
-### 7.4 Mart'tan kalan aktif araçları kapat
+### 7.4 Eski aktif araçlar
 
-**4.6'yı yaptıysan bu adımı atla.** Yalnızca deneme kayıtları silinmeden geçildiyse ve 4.5'te satır çıktıysa gerekir. Komutlar araçları önce listeler, ardından **bugünden önce** girmiş olanları "hatalı giriş" olarak iptal eder. İptal edilen kayıt `CANCELLED` olarak kalır, ciroya ve borca girmez, denetim kaydına düşer. Bugün girmiş bölgesiz bir araç varsa dokunulmaz; onu sahaya sor.
+Gerekmiyor. 4.6'da bütün deneme kayıtları silindiği için bölgesiz eski araç kalmadı.
 
-Komutları PowerShell penceresine yapıştır. `.ps1` dosyası olarak kaydedeceksen UTF-8 **BOM'lu** kaydet; yoksa Türkçe gerekçe bozuk görünür.
-
-```powershell
-$api  = "https://bilpark-api-rtdl.onrender.com"
-$cred = Get-Credential -UserName admin -Message "Yeni admin şifresi"
-$login = Invoke-RestMethod -Method Post -Uri "$api/api/auth/login" -ContentType "application/json" `
-  -Body (@{ username = "admin"; password = $cred.GetNetworkCredential().Password } | ConvertTo-Json)
-$h = @{ Authorization = "Bearer $($login.token)"; "X-Device-Id" = "gecis-2026-11-01" }
-$spots = Invoke-RestMethod -Uri "$api/api/parking/spots" -Headers $h
-$eski = @($spots | Where-Object { $null -eq $_.zone })
-$eski | Select-Object id, currentPlate, street, entryTime | Format-Table -AutoSize
-```
-
-Liste 4.5'tekiyle aynıysa iptal et:
-
-```powershell
-$bugun = (Get-Date).Date
-$body = [Text.Encoding]::UTF8.GetBytes((@{ reason = "Mart sürümünden kalan kapanmamış giriş (canlı geçiş)" } | ConvertTo-Json))
-foreach ($s in $eski | Where-Object { [datetime]$_.entryTime -lt $bugun }) {
-  $null = Invoke-RestMethod -Method Post -Headers $h -ContentType "application/json; charset=utf-8" -Body $body `
-    -Uri "$api/api/parking/spots/cancel?plate=$([uri]::EscapeDataString($s.currentPlate))"
-  "{0} iptal edildi" -f $s.currentPlate
-}
-Remove-Variable cred, login, h
-```
-
-(29 Ekim'de prova veritabanında denendi.)
-
-**Kontrol:** Eski admin şifresiyle giriş `401` dönüyor, yenisiyle giriş yapılıyor. `GET /api/admin/audit?action=PASSWORD_CHANGED` kaydı gösteriyor. 4.5 sorgusu artık yalnızca bugünkü araçları döndürüyor (ya da boş).
+**Kontrol:** Eski admin şifresiyle giriş `401` dönüyor, yenisiyle giriş yapılıyor. `GET /api/admin/audit?action=PASSWORD_CHANGED` kaydı gösteriyor.
 
 ---
 
@@ -361,7 +372,7 @@ Eski monitör `/api/parking/spots` adresine gidiyordu. O adres kimlik doğrulama
    - Sayfa "bağlanamadı" diyorsa Render uykudan uyanıyor olabilir. 30-60 saniye bekle ve yenile.
    - Sayfa eski görünüyorsa GitHub Pages henüz güncellenmemiştir (5. adım, 4. madde).
 5. Saha uygulamasında araç kartından test girişini **iptal et** (hatalı giriş). Gerekçe: `Canlı geçiş QR testi`. İptal edilen kayıt ciroya ve borca girmez, denetim kaydında kalır.
-6. Panelde ciro ve son kayıtlar görünüyor. 4.6'yı yaptıysan yalnızca bu geceki test kaydı var.
+6. Panelde ciro ve son kayıtlar görünüyor. Yalnızca bu geceki test kaydı var.
 
 **Kontrol:** QR sayfası doğru plakayı ve tutarı gösterdi. Test girişi iptal edildi.
 
@@ -371,20 +382,20 @@ Eski monitör `/api/parking/spots` adresine gidiyordu. O adres kimlik doğrulama
 
 Bilinmesi gerekenler:
 
-- **Eski uygulamaya dönüş yok.** Mart kodu eski (sızmış) şifreyi kullanıyor ve yeni şemayla da çalışmaz: `debt_paid` zorunlu kolonunu bilmiyor. "Geri dönüş", veriyi yedeğe döndürüp yeni sürümü düzeltmek ve tekrar deploy etmek demek. Bu sürede site kapalı kalır. Gece olduğu için saha etkilenmez.
+- **Eski uygulamaya dönüş yok.** Mart kodu eski (sızmış) şifreyi kullanıyor ve yeni şemayla da çalışmaz: `debt_paid` zorunlu kolonunu bilmiyor. "Geri dönüş", veriyi yedeğe döndürüp yeni sürümü düzeltmek ve tekrar deploy etmek demek. Bu sürede site kapalı kalır. Henüz gerçek saha kullanımı olmadığı için kimse etkilenmez.
 - **Her migration kendi transaction'ında çalışır.** Düşen migration hiçbir iz bırakmaz, öncekiler kalır. Hata düzeltilip tekrar deploy edildiğinde Flyway kaldığı yerden devam eder. Hataların çoğunda veri geri yüklemeye gerek yoktur.
 - **Hiçbir zaman** `flyway_schema_history` tablosunu elle silme, migration SQL'ini elle çalıştırma ve tablo silme (`DROP`). Önce sor.
 
 Veriyi yedeğe döndür, eğer:
 
-- 6. adımdaki anlık görüntü sayıları tutmuyorsa (kayıt eksik ya da tutar farklı),
+- 4.6'da yanlış bir şey silindiyse (ör. yanlış dal seçiliydi),
 - ya da bir migration yarıda kalıp beklenmedik bir durum bıraktıysa ve sorduktan sonra geri dönmeye karar verildiyse.
 
 Nasıl:
 
 1. Render → `bilpark-API` → **Suspend** (ya da Auto-Deploy kapalıyken yeni deploy yapma). Uygulama veritabanına yazmasın.
-2. **A seçeneği (tercih):** Neon → Branches → `main` → **Restore** (zamana göre geri yükleme). Zaman olarak 1. adımda not aldığın saati seç. Ekrandaki adlar farklıysa ya da seçenek yoksa B'ye geç.
-3. **B seçeneği:** Yedek dalı kullan. Neon → Branches → `yedek-2026-11-01-mart` → **Connect** → host'u kopyala. Render'da `DB_URL` değerini `jdbc:postgresql://<yedek-host>/neondb?sslmode=require` yap. Bu durumda yedek dal canlı veritabanı olur; silme.
+2. **A seçeneği (tercih):** Neon → Branches → `production` → **Restore** (zamana göre geri yükleme). Zaman olarak 2. adıma başlamadan hemen önceki saati seç. Bu seçenek yalnızca son **6 saat** için çalışır (History retention 6 saat). Süre geçtiyse, ekrandaki adlar farklıysa ya da seçenek yoksa B'ye geç.
+3. **B seçeneği:** Yedek dalı kullan. Neon → Branches → `yedek-2026-11-14-mart` → **Connect** → host'u kopyala. Render'da `DB_URL` değerini `jdbc:postgresql://<yedek-host>/neondb?sslmode=require` yap. Bu durumda yedek dal canlı veritabanı olur; silme.
 4. Log'daki ilk `ERROR` satırıyla birlikte sor. Düzeltilmiş sürüm hazır olunca 6. adımdan devam et. A seçeneğinde 4. adımdaki kontrol sorgularını da tekrar çalıştır.
 
 ---
@@ -394,7 +405,7 @@ Nasıl:
 - [ ] Saha uygulamasında giriş, çıkış, kaçak ve abonelik akışları gerçek kullanımda sorunsuz.
 - [ ] `GET /api/admin/audit` çağrısında günün kayıtları var.
 - [ ] Neon → Usage: compute saatleri makul (günde birkaç saat).
-- [ ] Her şey yolundaysa `yedek-2026-11-01-mart` dalını birkaç gün sonra sil. Free planda dal sayısı sınırlı.
+- [ ] Her şey yolundaysa `yedek-2026-11-14-mart` dalını birkaç gün sonra sil. Free planda dal sayısı sınırlı.
 
 ---
 
