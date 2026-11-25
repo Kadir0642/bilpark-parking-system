@@ -44,8 +44,19 @@ InputImageRotation? mlkitRotation({
   return InputImageRotationValue.fromRawValue(comp);
 }
 
+/// Tarama sonucu: [plate] '' ise "Elle yaz". [foreign]: yabancı / özel plaka modunda okundu
+/// (TR düzeltmesi yapılmadı; giriş formunda anahtar açık gelir).
+class PlateScan {
+  final String plate;
+  final bool foreign;
+  const PlateScan(this.plate, {this.foreign = false});
+}
+
+/// OCR metninden plaka: TR modunda TR biçimine göre düzeltilmiş aday, yabancı / özel modda ham temiz metin.
+String? plateFromOcr(String text, {required bool foreign}) => foreign ? extractRawPlate(text) : extractPlate(text);
+
 /// Canlı kamerada plaka okur. Aynı plaka art arda 2 karede okununca kendiliğinden kapanıp
-/// plakayı döner. '' = "Elle yaz", null = kapat. Kamera açılamazsa fotoğraf çekme akışına düşer.
+/// plakayı döner. PlateScan('') = "Elle yaz", null = kapat. Kamera açılamazsa fotoğraf çekme akışına düşer.
 class PlateScannerScreen extends StatefulWidget {
   const PlateScannerScreen({super.key});
 
@@ -65,6 +76,7 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
   bool _fallbackStarted = false;
   DateTime _lastRun = DateTime.fromMillisecondsSinceEpoch(0);
   String? _candidate;
+  bool _foreign = false; // yabancı / özel plaka: ham metin, görevli formda onaylar
 
   @override
   void initState() {
@@ -109,7 +121,7 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
         return;
       }
       final text = await _recognizer!.processImage(InputImage.fromFilePath(photo.path));
-      result = extractPlate(text.text) ?? '';
+      result = plateFromOcr(text.text, foreign: _foreign) ?? '';
     } catch (e) {
       debugPrint(e.toString());
     }
@@ -149,7 +161,7 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
       final input = _toInputImage(image);
       if (input == null) return;
       final text = await _recognizer!.processImage(input);
-      final plate = extractPlate(text.text);
+      final plate = plateFromOcr(text.text, foreign: _foreign);
       final confirmed = _reads.add(plate);
       if (mounted && plate != _candidate) setState(() => _candidate = plate);
       if (confirmed != null) _finish(confirmed);
@@ -167,7 +179,15 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
     if (cam != null && cam.value.isStreamingImages) {
       cam.stopImageStream().catchError((_) {});
     }
-    if (mounted) Navigator.pop(context, result);
+    if (mounted) Navigator.pop(context, result == null ? null : PlateScan(result, foreign: _foreign));
+  }
+
+  void _setForeign(bool on) {
+    setState(() {
+      _foreign = on;
+      _candidate = null;
+    });
+    _reads.add(null); // önceki moddaki okuma sayılmaz
   }
 
   Future<void> _toggleTorch() async {
@@ -269,7 +289,14 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+                FilterChip(
+                  key: const Key('scanForeignChip'),
+                  label: const Text('Yabancı / özel plaka'),
+                  selected: _foreign,
+                  onSelected: _setForeign,
+                ),
+                const SizedBox(height: 8),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                   child: SizedBox(
