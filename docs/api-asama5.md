@@ -249,7 +249,7 @@ Her ağırlık 0-100 arasında olmalı ve toplamları tam 100 olmalı. Kurala uy
 - `GET /api/admin/settings/rent` → `{"years":[{"year":2026,"annualRent":1200000.0,"monthlyShare":100000.0}]}`
 - `PUT /api/admin/settings/rent` `{"year":2026,"annualRent":1200000}` → `{"year":2026,"annualRent":1200000.0,"monthlyShare":100000.0}`
 
-Kira, 3 caddenin tek ihalesi olduğu için toplam tutar olarak girilir ve yıl bazında saklanır. Böylece geçmiş raporlar, o yılın kirasıyla hesaplanmaya devam eder. Değişiklikler `SETTINGS_UPDATED` olarak denetim kaydına düşer.
+Kira yıllık tek bir toplam tutar olarak girilir ve yıl bazında saklanır. Böylece geçmiş raporlar, o yılın kirasıyla hesaplanmaya devam eder. Değişiklikler `SETTINGS_UPDATED` olarak denetim kaydına düşer.
 
 ---
 

@@ -159,7 +159,7 @@
         <div class="card" style="margin-top:16px;">
             <div class="card-head"><h2>Ayarlar: yıllık kira bedeli</h2></div>
             <div class="card-body">
-                <p class="muted" style="margin:0 0 12px;">3 caddenin tek ihalesi olduğu için toplam tutar girilir;
+                <p class="muted" style="margin:0 0 12px;">Kira yıllık tek bir toplam tutar olarak girilir;
                     geçmiş raporlar o yılın kirasıyla hesaplanır.</p>
                 <div class="filters">
                     <label class="field">Yıl<input class="input" type="number" min="2000" max="2100" id="rpYear" value="${new Date().getFullYear()}"></label>
