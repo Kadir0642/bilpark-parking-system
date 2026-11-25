@@ -1,8 +1,8 @@
 package com.bilpark.backend;
 
-import com.bilpark.backend.model.AuditLog;
 import com.bilpark.backend.repository.AuditLogRepository;
 import com.bilpark.backend.repository.ParkSpotRepository;
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -46,10 +46,11 @@ class CheckInIdempotencyTest {
         return mvc.perform(req);
     }
 
+    // The spot's own top-level id. A regex for the first "id" would match the nested zone id (zone.id) instead,
+    // which only equals the spot id when this is the very first spot in the shared H2 database.
     private long idOf(MvcResult r) throws Exception {
-        Matcher m = Pattern.compile("\"id\"\\s*:\\s*(\\d+)").matcher(r.getResponse().getContentAsString());
-        if (!m.find()) throw new IllegalStateException(r.getResponse().getContentAsString());
-        return Long.parseLong(m.group(1));
+        Number id = JsonPath.read(r.getResponse().getContentAsString(), "$.id");
+        return id.longValue();
     }
 
     private long checkInAudits(long spotId) {

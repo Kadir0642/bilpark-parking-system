@@ -11,7 +11,7 @@
 
 import 'package:bilpark/core/format.dart';
 import 'package:bilpark/core/vehicle_types.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/e2e.dart';
