@@ -1,6 +1,6 @@
 # Contributing to BilPark
 
-Thanks for your interest. BilPark is a production system maintained by one developer, so outside pull requests are reviewed case by case. Bug reports and suggestions through issues are welcome.
+Thanks for your interest. BilPark is a production system maintained by one developer, and the code is not open source: all rights are reserved (see [LICENSE](LICENSE)). Bug reports and suggestions through issues are welcome. Please ask in an issue before opening a pull request; contributions are accepted only with the copyright holder's written agreement.
 
 ## Workflow
 

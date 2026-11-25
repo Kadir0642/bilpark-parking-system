@@ -4,7 +4,7 @@
 
 [![Java CI with Maven](https://github.com/Kadir0642/bilpark-parking-system/actions/workflows/maven.yml/badge.svg)](https://github.com/Kadir0642/bilpark-parking-system/actions/workflows/maven.yml)
 [![Flutter CI](https://github.com/Kadir0642/bilpark-parking-system/actions/workflows/flutter.yml/badge.svg)](https://github.com/Kadir0642/bilpark-parking-system/actions/workflows/flutter.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: All rights reserved](https://img.shields.io/badge/license-All%20rights%20reserved-red)](LICENSE)
 ![Java 21](https://img.shields.io/badge/Java-21-orange)
 ![Spring Boot 4](https://img.shields.io/badge/Spring%20Boot-4-brightgreen)
 ![Flutter](https://img.shields.io/badge/Flutter-3.38-02569B)
@@ -208,4 +208,4 @@ web-admin/      Early React prototype, not used
 
 <!-- LinkedIn / e-posta -->
 
-Released under the [MIT License](LICENSE).
+All rights reserved; see [LICENSE](LICENSE).
