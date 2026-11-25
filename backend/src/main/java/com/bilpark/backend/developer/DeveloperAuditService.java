@@ -185,7 +185,8 @@ public class DeveloperAuditService {
         add(used, "actorRole", q.actorRole());
         add(used, "entityType", q.entityType());
         if (search != null) {
-            add(used, "q", search.text() == null ? PlateMasker.maskPlate(search.plate())
+            // a value that may be a plate (also a letter-only one such as "TAXI") is stored masked
+            add(used, "q", search.plate() != null ? PlateMasker.maskPlate(search.plate())
                     : PlateMasker.maskText(search.text()));
         }
         return "Geliştirici denetim kaydını görüntüledi" + (used.isEmpty() ? "" : " (" + String.join(", ", used) + ")");
