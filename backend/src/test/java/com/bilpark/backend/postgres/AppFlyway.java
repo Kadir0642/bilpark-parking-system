@@ -19,6 +19,11 @@ final class AppFlyway {
     private AppFlyway() {}
 
     static Flyway forUrl(String url, String user, String password) {
+        return forUrl(url, user, password, null);
+    }
+
+    /** Same settings, but stops at the given version (null = latest): used to reproduce "live is at V7". */
+    static Flyway forUrl(String url, String user, String password, String target) {
         Properties app = new Properties();
         try (InputStream in = AppFlyway.class.getResourceAsStream("/application.properties")) {
             app.load(in);
@@ -30,6 +35,7 @@ final class AppFlyway {
                 .locations("classpath:db/migration")
                 .baselineOnMigrate(Boolean.parseBoolean(app.getProperty("spring.flyway.baseline-on-migrate")))
                 .baselineVersion(app.getProperty("spring.flyway.baseline-version"))
+                .target(target == null ? "latest" : target)
                 .load();
     }
 

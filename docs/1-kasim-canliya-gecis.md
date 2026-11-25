@@ -27,7 +27,7 @@ Adlar:
 | 5. Merge | **Tamam** (29 Ekim, PR #3). O günkü otomatik deploy Neon kotası kapalı olduğu için düştü; veritabanına dokunulmadı. |
 | 2, 3, 4.6, 6-9 | **Bekliyor.** 2 → 3 → 4.6 → 6 tek oturumda yapılır. |
 
-Canlıda şu an hâlâ Mart sürümü (`6abc999`) çalışıyor.
+> **Güncelleme (25 Kasım 2026):** İlk canlıya geçiş yapıldı; canlı veritabanı Flyway **V7**'de (eski şemadan, `baseline-version=0` ile yükseltildi). Yukarıdaki tablo ve aşağıdaki 2-10. adımlar bu ilk geçişin kaydıdır. Sonraki sürüm (V8 ve V9) için sayfanın sonundaki **Sonraki deploy (V8+V9)** bölümüne bak. `main`'e ayrıca release derlemesi için R8 kuralları (`mobile/android/app/proguard-rules.pro`) ve Flutter 3.38.9 sabitlemesi (CI) girdi; canlı sistemi etkilemez.
 
 ---
 
@@ -397,6 +397,24 @@ Nasıl:
 2. **A seçeneği (tercih):** Neon → Branches → `production` → **Restore** (zamana göre geri yükleme). Zaman olarak 2. adıma başlamadan hemen önceki saati seç. Bu seçenek yalnızca son **6 saat** için çalışır (History retention 6 saat). Süre geçtiyse, ekrandaki adlar farklıysa ya da seçenek yoksa B'ye geç.
 3. **B seçeneği:** Yedek dalı kullan. Neon → Branches → `yedek-2026-11-14-mart` → **Connect** → host'u kopyala. Render'da `DB_URL` değerini `jdbc:postgresql://<yedek-host>/neondb?sslmode=require` yap. Bu durumda yedek dal canlı veritabanı olur; silme.
 4. Log'daki ilk `ERROR` satırıyla birlikte sor. Düzeltilmiş sürüm hazır olunca 6. adımdan devam et. A seçeneğinde 4. adımdaki kontrol sorgularını da tekrar çalıştır.
+
+---
+
+## Sonraki deploy (V8+V9)
+
+Canlı V7'de. Bu sürüm iki migration ekler: V8 (`users` tablosuna `last_seen_at`, `last_app_version`, `last_device` kolonları) ve V9 (`admin_notifications`, `admin_notification_reads` tabloları). İkisi de yalnızca ekler, mevcut veriye dokunmaz; gerçek bir V7 şemasında uygulandığı Postgres testiyle doğrulandı. Render'da Auto-Deploy kapalı olduğu için deploy elle yapılır.
+
+1. **Yedek:** Neon → Branches → `production` → **Create branch** (ör. `yedek-v7-oncesi`, bugünün tarihiyle). Dalın oluştuğunu görmeden devam etme.
+2. **PR'ı merge et**, sonra Render → `bilpark-API` → **Manual Deploy → Deploy latest commit**.
+3. **Logs'ta beklenen satırlar:**
+   - `Migrating schema "public" to version "8 - developer monitoring"`
+   - `Migrating schema "public" to version "9 - admin notifications"`
+   - `Successfully applied 2 migrations to schema "public", now at version v9`
+   - `Started BackendApplication`
+
+   `Default users … created.` satırı **çıkmaz** (kullanıcılar zaten var), bu normaldir. `DEVELOPER_PASSWORD` girilmişse ve henüz geliştirici hesabı yoksa `Developer account 'gelistirici' created.` görünür.
+4. **Kontrol:** `API/api/health` → `UP`. Neon SQL Editor'da: `SELECT version, success FROM flyway_schema_history ORDER BY installed_rank;` son iki satır `8` ve `9`, ikisi de `success = true`. Yönetici panelinde zil simgesi açılıyor olmalı.
+5. **Geri dönüş:** Migration'lar yalnızca ekler, bu yüzden eski uygulama sürümü şemayla çalışmaya devam eder: Render → **Events** → önceki başarılı deploy → **Rollback**. Veritabanı elle geri alınmaz. Bozulma olursa 1. adımdaki yedek dalı (ya da Neon → **Restore**, son 6 saat) kullanılır; bu durumda önce Render'ı **Suspend** et, sonra bu sayfadaki 10. adımın yönergesini izle ve sor.
 
 ---
 
