@@ -253,7 +253,7 @@ public class DeveloperActivityService {
                 }, now.minusHours(1), now, FAILED_LOGINS_PER_HOUR);
 
         // ---- errors ----
-        out.put("errors", errors(now, alerts));
+        out.put("errors", errors(now, hours, alerts));
 
         // ---- versions ----
         Optional<AppVersion> latest = allUsers.stream().filter(User::isActive)
@@ -374,7 +374,7 @@ public class DeveloperActivityService {
         return map;
     }
 
-    private Map<String, Object> errors(LocalDateTime now, List<Map<String, Object>> alerts) {
+    private Map<String, Object> errors(LocalDateTime now, int hours, List<Map<String, Object>> alerts) {
         long last24 = count("SELECT COUNT(*) FROM error_logs WHERE created_at >= ? AND created_at <= ?",
                 now.minusHours(24), now);
         long lastHour = count("SELECT COUNT(*) FROM error_logs WHERE created_at >= ? AND created_at <= ?",
@@ -404,7 +404,7 @@ public class DeveloperActivityService {
             m.put("path", rs.getString(2));
             m.put("count", rs.getInt(3));
             top.add(m);
-        }, now.minusHours(24), now);
+        }, now.minusHours(hours), now);
 
         if (lastHour >= ERROR_SPIKE_PER_HOUR) {
             alert(alerts, "CRIT", "ERROR_SPIKE", "Son 1 saatte " + lastHour + " hata oluştu.", null, null);

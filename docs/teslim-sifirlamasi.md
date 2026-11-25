@@ -72,15 +72,15 @@ Her iki yolda da yeni şifreyi müşteriye güvenli kanaldan ilet ve ilk girişt
 
 Bağlantı dizesini (`DB_URL`'in psql karşılığı) Neon → Connect ekranından al. Şifreyi komut satırına ya da repoya yazma.
 
-**Seçenek 1: Neon SQL Editor.** `main` dalını seç (yedek dalı değil). Önce şu satırı çalıştır, sonra betiğin **tamamını** aynı oturumda çalıştır:
+**Seçenek 1: Neon SQL Editor.** `main` dalını seç (yedek dalı değil). Betiğin en üstüne şu satırı ekle ve **betiğin tamamını, onay satırıyla birlikte, tek seferde Run ile çalıştır** (parça parça ya da satır satır çalıştırma):
 
 ```sql
 SET bilpark.teslim_onay = 'EVET';
 ```
 
-Editör her çalıştırmada yeni oturum açıyorsa onay satırı kaybolur ve betik "onaylanmadı" hatasıyla durur; bu güvenli taraftır. Bu durumda onay satırını betiğin en üstüne yapıştırıp hepsini tek seferde çalıştır.
+Onay kontrolü (guard) "onaylanmadı" hatası verirse (editör `SET` ile betiği aynı oturumda tutmuyor olabilir), bu güvenli taraftır ve hiçbir şey silinmemiştir. Bu durumda **Seçenek 2 (psql)** yedek yoldur.
 
-**Seçenek 2: psql** (aynı oturum, ayrı `-c` ile):
+**Seçenek 2: psql** (yedek yol; onay ve betik aynı oturumda çalışır):
 
 ```bash
 psql "<neon-baglanti-dizesi>" -v ON_ERROR_STOP=1 \

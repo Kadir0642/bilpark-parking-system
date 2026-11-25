@@ -261,8 +261,13 @@ class DeveloperMonitoringIntegrationTest {
     @Test
     void auditSearchRefusesPartialPlateGuessing_andListsActions() throws Exception {
         String dv = dev();
-        mvc.perform(get("/api/developer/audit").header("Authorization", dv).param("q", "34AB"))
-                .andExpect(status().isBadRequest());
+        // only a full plate or digit-free free text is accepted; anything else is refused
+        for (String bad : List.of("34AB", "ABC123", "123", "34 ABC 1", "abc 12")) {
+            mvc.perform(get("/api/developer/audit").header("Authorization", dv).param("q", bad))
+                    .andExpect(status().isBadRequest());
+        }
+        mvc.perform(get("/api/developer/audit").header("Authorization", dv).param("q", plate()))
+                .andExpect(status().isOk());
         mvc.perform(get("/api/developer/audit").header("Authorization", dv).param("q", "giriş"))
                 .andExpect(status().isOk());
         mvc.perform(get("/api/developer/audit/actions").header("Authorization", dv))
@@ -429,6 +434,47 @@ class DeveloperMonitoringIntegrationTest {
         assertEquals("9.9.9+9", versions.get("latest"));
         assertTrue(((List<?>) versions.get("outdatedUsers")).contains(f.officer().getUsername()));
         assertEquals("INFO", alert(act, "OUTDATED_APP", null).get("level"));
+    }
+
+    @Test
+    void errorsEndpointMasksPlatesInMessageAndStack() throws Exception {
+        String p = plate();
+        String masked = p.substring(0, 2) + "*".repeat(p.length() - 4) + p.substring(p.length() - 2);
+        ErrorLog e = new ErrorLog();
+        e.setCreatedAt(LocalDateTime.now());
+        e.setErrorCode("INTERNAL_ERROR");
+        e.setPath("/api/test-maske");
+        e.setMessage("Araç " + p + " işlenemedi");
+        e.setStackExcerpt("java.lang.IllegalStateException: plaka=" + p + " (Y.java:1)");
+        ErrorLog saved = errorLogs.save(e);
+        cleanup.add(() -> errorLogs.delete(saved));
+
+        String body = mvc.perform(get("/api/developer/errors?limit=20").header("Authorization", dev()))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertFalse(body.contains(p), "full plate must not leave the server: " + body);
+        assertTrue(body.contains(masked), "masked plate expected: " + body);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void topCodesFollowTheRequestedWindow() {
+        LocalDateTime now = LocalDateTime.of(2026, 11, 5, 12, 0);
+        List<ErrorLog> errs = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            ErrorLog e = new ErrorLog();
+            e.setCreatedAt(now.minusHours(5).minusMinutes(i));
+            e.setErrorCode("ESKI_PENCERE_HATASI");
+            e.setPath("/api/test-pencere");
+            errs.add(errorLogs.save(e));
+        }
+        cleanup.add(() -> errorLogs.deleteAll(errs));
+
+        List<Map<String, Object>> wide = (List<Map<String, Object>>)
+                ((Map<String, Object>) activityService.activity(24, now).get("errors")).get("topCodes");
+        assertTrue(wide.stream().anyMatch(m -> "ESKI_PENCERE_HATASI".equals(m.get("code"))), "inside 24h window");
+        List<Map<String, Object>> narrow = (List<Map<String, Object>>)
+                ((Map<String, Object>) activityService.activity(2, now).get("errors")).get("topCodes");
+        assertTrue(narrow.stream().noneMatch(m -> "ESKI_PENCERE_HATASI".equals(m.get("code"))), "outside 2h window");
     }
 
     @Test

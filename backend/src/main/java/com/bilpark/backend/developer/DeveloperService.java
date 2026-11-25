@@ -3,6 +3,7 @@ package com.bilpark.backend.developer;
 import com.bilpark.backend.audit.AuditService;
 import com.bilpark.backend.audit.ErrorLogService;
 import com.bilpark.backend.auth.PasswordService;
+import com.bilpark.backend.common.PlateMasker;
 import com.bilpark.backend.common.ApiException;
 import com.bilpark.backend.common.ErrorCodes;
 import com.bilpark.backend.license.LicenseService;
@@ -182,8 +183,8 @@ public class DeveloperService {
         m.put("path", e.getPath());
         m.put("errorCode", e.getErrorCode());
         m.put("exceptionClass", e.getExceptionClass());
-        m.put("message", e.getMessage());
-        m.put("stackExcerpt", e.getStackExcerpt());
+        m.put("message", PlateMasker.maskText(e.getMessage()));
+        m.put("stackExcerpt", PlateMasker.maskText(e.getStackExcerpt()));
         m.put("username", e.getUsername());
         return m;
     }

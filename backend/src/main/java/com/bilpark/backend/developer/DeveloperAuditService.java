@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  * Read-only audit log for the developer: the admin's list (same filters, same page shape) with every plate
@@ -25,9 +24,6 @@ public class DeveloperAuditService {
     /** Query string values as they arrive (entityId is deliberately absent). */
     public record Query(String from, String to, String action, String actor, String actorRole,
                         String entityType, String q) {}
-
-    // Province code followed by letters/digits: looks like the start of a plate
-    private static final Pattern PLATE_PREFIX = Pattern.compile("^(0[1-9]|[1-7][0-9]|8[01])[A-Z]{1,3}[0-9]{0,5}$");
 
     private final AuditQueryService queries;
     private final AuditService auditService;
@@ -66,18 +62,17 @@ public class DeveloperAuditService {
     }
 
     /**
-     * A full plate (any spelling) is matched exactly, in its stored form. A text that only looks like the start
-     * of a plate is refused, so the search cannot be used to guess plates piece by piece.
+     * `q` is accepted in two forms only: a full plate (any spelling, matched exactly in its stored form), or free
+     * text without any digit (an action or summary word). Everything else (digits mixed with letters that are
+     * not a full plate, digits only) is refused, so the search cannot be used to guess plates piece by piece.
      */
     static String resolveSearch(String raw) {
         if (raw == null || raw.isBlank()) return raw;
         String cleaned = PlateNormalizer.clean(raw);
         if (PlateNormalizer.isValid(cleaned)) return cleaned;
-        if (PLATE_PREFIX.matcher(cleaned).matches()) {
-            throw ApiException.badRequest(ErrorCodes.VALIDATION_ERROR,
-                    "Plaka aramak için tam plaka girin (örnek: 34 ABC 123).");
-        }
-        return raw;
+        if (raw.chars().noneMatch(Character::isDigit)) return raw;
+        throw ApiException.badRequest(ErrorCodes.VALIDATION_ERROR,
+                "Plaka aramak için tam plaka girin (örnek: 34 ABC 123). Rakam içeren kısmi arama yapılamaz.");
     }
 
     private static String viewedSummary(Query q) {

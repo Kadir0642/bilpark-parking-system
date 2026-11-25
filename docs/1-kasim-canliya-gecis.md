@@ -414,7 +414,17 @@ Canlı V7'de. Bu sürüm iki migration ekler: V8 (`users` tablosuna `last_seen_a
 
    `Default users … created.` satırı **çıkmaz** (kullanıcılar zaten var), bu normaldir. `DEVELOPER_PASSWORD` girilmişse ve henüz geliştirici hesabı yoksa `Developer account 'gelistirici' created.` görünür.
 4. **Kontrol:** `API/api/health` → `UP`. Neon SQL Editor'da: `SELECT version, success FROM flyway_schema_history ORDER BY installed_rank;` son iki satır `8` ve `9`, ikisi de `success = true`. Yönetici panelinde zil simgesi açılıyor olmalı.
-5. **Geri dönüş:** Migration'lar yalnızca ekler, bu yüzden eski uygulama sürümü şemayla çalışmaya devam eder: Render → **Events** → önceki başarılı deploy → **Rollback**. Veritabanı elle geri alınmaz. Bozulma olursa 1. adımdaki yedek dalı (ya da Neon → **Restore**, son 6 saat) kullanılır; bu durumda önce Render'ı **Suspend** et, sonra bu sayfadaki 10. adımın yönergesini izle ve sor.
+5. **Geri dönüş:** V8 ve V9 yalnızca ekler, ama **kodu eski sürüme döndürmek tek başına yetmez**: eski sürüm yeni enum değerlerini okuyamaz (`sync_events.type = NOTIFICATION_CREATED`; `audit_logs.action = DEV_AUDIT_VIEWED`, `DEV_ANNOUNCEMENT_CREATED`). Bu satırlar varken SSE yeniden oynatma ve yönetici denetim ekranı `500` verir.
+   - **Tercih edilen yol:** veriyi geri al. Neon'da 1. adımdaki yedek dala dön (yedek dalı `DB_URL` ile bağla) ya da `production` dalını deploy öncesi bir zamana **Restore** et (son 6 saat). Önce Render'ı **Suspend** et. Deploy sonrası girilen kayıtlar kaybolur, bunu bilerek seç.
+   - **Kodu eski sürüme döndürmek şart olursa**, eski sürümü açmadan önce Neon SQL Editor'da şu temizliği çalıştır. Yalnızca yeni değerlerin satırlarını siler, V8/V9 tablolarına ve kolonlarına dokunmaz (eski kod fazla tabloyu ve kolonu yok sayar):
+
+     ```sql
+     DELETE FROM sync_events WHERE type = 'NOTIFICATION_CREATED';
+     DELETE FROM audit_logs  WHERE action IN ('DEV_AUDIT_VIEWED', 'DEV_ANNOUNCEMENT_CREATED');
+     ```
+
+     Silinen denetim satırları geliştiricinin denetim görüntüleme ve duyuru kayıtlarıdır; operasyonel kayıtlara dokunmaz. Sonra Render → **Events** → önceki başarılı deploy → **Rollback**. Yeni sürüme tekrar çıkınca V8/V9 zaten uygulanmış olduğundan Flyway bir şey yapmaz.
+   - Bozulma olursa dur ve sor; `flyway_schema_history` ve tablolar elle silinmez (bkz. 10. adım).
 
 ---
 
