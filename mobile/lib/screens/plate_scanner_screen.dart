@@ -6,6 +6,8 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import 'package:image_picker/image_picker.dart';
 import '../core/plate.dart';
 import '../core/theme.dart';
+import '../widgets/bp_snack.dart';
+import '../widgets/status_badge.dart';
 
 /// Üst üste aynı plaka [needed] kez okunursa onaylar (tek seferlik yanlış okumayı eler).
 class ConsecutiveReads {
@@ -77,6 +79,7 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
   DateTime _lastRun = DateTime.fromMillisecondsSinceEpoch(0);
   String? _candidate;
   bool _foreign = false; // yabancı / özel plaka: ham metin, görevli formda onaylar
+  String? _error; // kamera / OCR hatası: sessiz yutulmaz, ekranda görünür
 
   @override
   void initState() {
@@ -105,6 +108,7 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
       if (mounted) setState(() {});
     } catch (e) {
       debugPrint('Kamera açılamadı: $e');
+      _showError(e);
       _fallbackToPhoto();
     }
   }
@@ -124,8 +128,24 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
       result = plateFromOcr(text.text, foreign: _foreign) ?? '';
     } catch (e) {
       debugPrint(e.toString());
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          bpSnackBar(context, 'Kamera/OCR başlatılamadı: ${_shortReason(e)}', tone: BadgeTone.danger),
+        );
+      }
     }
     _finish(result);
+  }
+
+  /// Hatanın kısa, sahada okunabilir özeti (ilk satır, en çok 90 karakter).
+  static String _shortReason(Object e) {
+    final line = e.toString().split('\n').first.trim();
+    return line.length > 90 ? '${line.substring(0, 90)}...' : line;
+  }
+
+  void _showError(Object e) {
+    final msg = 'Kamera/OCR başlatılamadı: ${_shortReason(e)}';
+    if (mounted && msg != _error) setState(() => _error = msg);
   }
 
   InputImage? _toInputImage(CameraImage image) {
@@ -163,10 +183,16 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
       final text = await _recognizer!.processImage(input);
       final plate = plateFromOcr(text.text, foreign: _foreign);
       final confirmed = _reads.add(plate);
-      if (mounted && plate != _candidate) setState(() => _candidate = plate);
+      if (mounted && (plate != _candidate || _error != null)) {
+        setState(() {
+          _candidate = plate;
+          _error = null; // okuma çalışıyor
+        });
+      }
       if (confirmed != null) _finish(confirmed);
     } catch (e) {
       debugPrint(e.toString());
+      _showError(e);
     } finally {
       _busy = false;
     }
@@ -279,13 +305,13 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(BpSize.rMd)),
                   child: Text(
-                    _candidate ?? 'Plakayı çerçeveye getirin',
+                    _error ?? _candidate ?? 'Plakayı çerçeveye getirin',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: _candidate == null ? Colors.white70 : Colors.white,
-                      fontSize: _candidate == null ? 16 : 28,
+                      color: _error != null ? Colors.redAccent : (_candidate == null ? Colors.white70 : Colors.white),
+                      fontSize: _error != null ? 14 : (_candidate == null ? 16 : 28),
                       fontWeight: FontWeight.w800,
-                      letterSpacing: _candidate == null ? 0 : 2,
+                      letterSpacing: (_candidate == null || _error != null) ? 0 : 2,
                     ),
                   ),
                 ),
