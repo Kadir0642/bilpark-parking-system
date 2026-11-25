@@ -29,6 +29,7 @@ public class ReadOnlyModeInterceptor implements HandlerInterceptor {
             "/api/health",
             "/api/developer/",
             "/api/me/password",
+            "/api/admin/notifications/",
             "/api/events/"
     );
 

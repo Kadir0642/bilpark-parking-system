@@ -88,6 +88,12 @@ public class SyncService implements ChangePublisher {
         publish(type, SyncScope.USER, null, null, targetUserId, payload);
     }
 
+    /** USER scope aimed at a user id nobody has: only ADMIN viewers (who see every event) receive it. */
+    @Override
+    public void adminEvent(SyncEventType type, Map<String, Object> payload) {
+        publish(type, SyncScope.USER, null, null, -1L, payload);
+    }
+
     private void publish(SyncEventType type, SyncScope scope, Long zoneId, String street, Long userId,
                          Map<String, Object> payload) {
         SyncEvent e = new SyncEvent();
@@ -305,6 +311,15 @@ public class SyncService implements ChangePublisher {
 
     public int connectedCount() {
         return clients.size();
+    }
+
+    /** Ids of the users that currently hold an open stream (developer monitoring). */
+    public java.util.Set<Long> connectedUserIds() {
+        java.util.Set<Long> ids = new java.util.HashSet<>();
+        for (Client c : clients) {
+            if (!c.closed && c.viewer.userId() != null) ids.add(c.viewer.userId());
+        }
+        return ids;
     }
 
     // ---- scheduled jobs ---------------------------------------------------------------------

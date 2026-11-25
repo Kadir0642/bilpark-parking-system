@@ -3,6 +3,7 @@ package com.bilpark.backend.developer;
 import com.bilpark.backend.audit.AuditService;
 import com.bilpark.backend.audit.ErrorLogService;
 import com.bilpark.backend.auth.PasswordService;
+import com.bilpark.backend.common.PlateMasker;
 import com.bilpark.backend.common.ApiException;
 import com.bilpark.backend.common.ErrorCodes;
 import com.bilpark.backend.license.LicenseService;
@@ -14,6 +15,7 @@ import com.bilpark.backend.repository.ParkSpotRepository;
 import com.bilpark.backend.repository.ParkingRecordRepository;
 import com.bilpark.backend.repository.ShiftRepository;
 import com.bilpark.backend.repository.UserRepository;
+import com.bilpark.backend.notification.NotificationService;
 import com.bilpark.backend.settings.SettingsService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -38,6 +40,9 @@ import java.util.function.Supplier;
 @Service
 public class DeveloperService {
 
+    private static final java.time.format.DateTimeFormatter TR_DATE =
+            java.time.format.DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.forLanguageTag("tr"));
+
     private final LicenseService licenseService;
     private final AuditService auditService;
     private final ErrorLogService errorLogService;
@@ -50,12 +55,15 @@ public class DeveloperService {
     private final JdbcTemplate jdbc;
     private final JsonMapper mapper;
     private final Clock clock;
+    private final NotificationService notificationService;
 
     public DeveloperService(LicenseService licenseService, AuditService auditService, ErrorLogService errorLogService,
                             PasswordService passwordService, SettingsService settingsService,
                             UserRepository userRepository, ParkSpotRepository spotRepository,
                             ParkingRecordRepository recordRepository, ShiftRepository shiftRepository,
-                            JdbcTemplate jdbc, JsonMapper mapper, Clock clock) {
+                            JdbcTemplate jdbc, JsonMapper mapper, Clock clock,
+                            NotificationService notificationService) {
+        this.notificationService = notificationService;
         this.licenseService = licenseService;
         this.auditService = auditService;
         this.errorLogService = errorLogService;
@@ -74,7 +82,11 @@ public class DeveloperService {
         if (expiresOn == null) {
             throw ApiException.badRequest(ErrorCodes.VALIDATION_ERROR, "expiresOn alanı gerekli (yyyy-MM-dd).");
         }
-        return licenseService.update(expiresOn, graceDays, licensee, note);
+        LicenseService.LicenseStatus st = licenseService.update(expiresOn, graceDays, licensee, note);
+        notificationService.create(NotificationService.LICENSE_UPDATED,
+                "Lisans güncellendi: bitiş " + TR_DATE.format(st.expiresOn()),
+                "Lisans tarihleri geliştirici tarafından güncellendi.", null, createdBy());
+        return st;
     }
 
     /** Never throws because of a database problem: database.ok=false instead. */
@@ -99,6 +111,8 @@ public class DeveloperService {
         db.put("latencyMs", (System.nanoTime() - t0) / 1_000_000);
 
         h.put("status", dbOk ? "UP" : "DEGRADED");
+        h.put("appVersion", appVersion());
+        h.put("startedAt", startedAt());
         h.put("time", LocalDateTime.now(clock));
         h.put("uptimeSeconds", uptimeSeconds());
         h.put("javaVersion", System.getProperty("java.version"));
@@ -146,10 +160,19 @@ public class DeveloperService {
         }
         passwordService.resetPassword(target, newPassword, AuditAction.DEV_ADMIN_PASSWORD_RESET,
                 "Geliştirici yönetici şifresini sıfırladı: " + target.getUsername());
+        notificationService.create(NotificationService.ADMIN_PASSWORD_RESET,
+                target.getUsername() + " hesabının şifresi sıfırlandı",
+                "Şifre geliştirici tarafından sıfırlandı. İlk girişte şifrenizi değiştirin.", null, createdBy());
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("message", "Yönetici şifresi sıfırlandı.");
         m.put("username", target.getUsername());
         return m;
+    }
+
+    private static String createdBy() {
+        org.springframework.security.core.Authentication a =
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        return a != null && a.getName() != null ? a.getName() : AuditService.SYSTEM;
     }
 
     private static Map<String, Object> errorMap(ErrorLog e) {
@@ -160,8 +183,8 @@ public class DeveloperService {
         m.put("path", e.getPath());
         m.put("errorCode", e.getErrorCode());
         m.put("exceptionClass", e.getExceptionClass());
-        m.put("message", e.getMessage());
-        m.put("stackExcerpt", e.getStackExcerpt());
+        m.put("message", PlateMasker.maskText(e.getMessage()));
+        m.put("stackExcerpt", PlateMasker.maskText(e.getStackExcerpt()));
         m.put("username", e.getUsername());
         return m;
     }
@@ -169,6 +192,21 @@ public class DeveloperService {
     private long uptimeSeconds() {
         long startMs = ManagementFactory.getRuntimeMXBean().getStartTime();
         return Math.max(0, Duration.between(Instant.ofEpochMilli(startMs), Instant.now()).toSeconds());
+    }
+
+    /** Deploy commit (Render sets RENDER_GIT_COMMIT, others GIT_COMMIT) or the jar build version; null when unknown. */
+    static String appVersion() {
+        for (String key : new String[]{"RENDER_GIT_COMMIT", "GIT_COMMIT", "SOURCE_VERSION"}) {
+            String v = System.getenv(key);
+            if (v != null && !v.isBlank()) return v.trim().length() > 12 ? v.trim().substring(0, 12) : v.trim();
+        }
+        String impl = DeveloperService.class.getPackage().getImplementationVersion();
+        return impl == null || impl.isBlank() ? null : impl;
+    }
+
+    private LocalDateTime startedAt() {
+        long startMs = ManagementFactory.getRuntimeMXBean().getStartTime();
+        return LocalDateTime.ofInstant(Instant.ofEpochMilli(startMs), clock.getZone());
     }
 
     private String flywayVersion() {

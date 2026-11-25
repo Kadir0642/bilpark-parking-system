@@ -119,6 +119,8 @@
         .license-banner i { font-size: 18px; }
         .license-banner b { font-weight: 800; }
         .license-banner .lb-text { flex: 1 1 280px; min-width: 0; }
+        .topbar { display: flex; justify-content: flex-end; align-items: center; margin-bottom: calc(var(--s-3) * -1); }
+        .topbar[hidden] { display: none; }
         .ro-band { position: sticky; top: 0; z-index: 50; border-width: 2px; box-shadow: var(--shadow); }
         .ro-note { font-size: 13px; color: var(--danger); font-weight: 600; }
         .tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--border); }
@@ -187,6 +189,9 @@
     </aside>
 
     <main class="main">
+        <!-- Üst çubuk: yönetici bildirim zili (js/bildirimler.js doldurur) -->
+        <div class="topbar" data-role="ADMIN" hidden><div id="notifHost"></div></div>
+
         <!-- Lisans uyarısı / okunur mod bandı (loadLicense doldurur) -->
         <div id="licenseBanner" role="status" aria-live="polite" hidden></div>
 
@@ -2179,11 +2184,12 @@
 
     // ---- 14. Canlı akış (SSE) ----
     const LIVE_EVENTS = ['HELLO', 'HEARTBEAT', 'RESET', 'VEHICLE_ENTERED', 'VEHICLE_EXITED', 'VEHICLE_RUNAWAY', 'TARIFF_UPDATED', 'VEHICLE_TYPES_UPDATED', 'USER_DEACTIVATED',
-        'USER_UPDATED', 'VEHICLE_CANCELLED', 'RECORD_CANCELLED', 'LICENSE_UPDATED'];
+        'USER_UPDATED', 'VEHICLE_CANCELLED', 'RECORD_CANCELLED', 'LICENSE_UPDATED', 'NOTIFICATION_CREATED'];
     const WATCHDOG_MS = 60000;
     const live = { gen: 0, stopped: true, es: null, version: 0, userId: null, state: 'idle', retry: 0, fails: 0, watchdog: null, reconnect: null, vehicleTimer: null, catching: false };
 
     function liveStop() {
+        if (window.Bildirimler) Bildirimler.stop();
         live.gen++;
         live.stopped = true;
         closeStream();
@@ -2210,6 +2216,7 @@
         const gen = live.gen;
         live.stopped = false;
         wiz = newWiz();
+        if (window.Bildirimler) Bildirimler.start(); // yalnız ADMIN; geliştiricide hiçbir şey yapmaz
         if (currentRole() === 'DEVELOPER') {
             // Geliştiricinin SSE ve senkron yetkisi yok; veriler sayfa açılınca çekilir
             await updateDashboard();
@@ -2427,5 +2434,6 @@
 <script src="js/raporlar.js"></script>
 <script src="js/denetim.js"></script>
 <script src="js/gelistirici.js"></script>
+<script src="js/bildirimler.js"></script>
 </body>
 </html>

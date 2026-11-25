@@ -20,4 +20,8 @@ public interface ChangePublisher {
 
     /** One user and admins (e.g. USER_DEACTIVATED). */
     void userEvent(SyncEventType type, Long targetUserId, Map<String, Object> payload);
+
+    /** Admins only (other roles never see it, also not on replay). */
+    default void adminEvent(SyncEventType type, Map<String, Object> payload) {
+    }
 }

@@ -16,7 +16,7 @@
         const to = new Date(), from = new Date(Date.now() - 30 * 86400000);
         $('sec-denetim').innerHTML = `
         <div class="page-head"><div><h1>Denetim kaydı</h1>
-            <div class="page-sub">Sistemde kim, ne zaman, ne yaptı; geliştirici işlemleri dahil.</div></div>
+            <div class="page-sub">Sistemde kim, ne zaman, ne yaptı; bakım işlemleri varsayılan olarak gizlidir.</div></div>
             <div class="toolbar">
                 <button class="btn btn-success" id="auXlsx"><i class="fa-solid fa-file-excel" aria-hidden="true"></i> Excel</button>
                 <button class="btn btn-secondary" id="auCsv"><i class="fa-solid fa-file-csv" aria-hidden="true"></i> CSV</button>
@@ -35,6 +35,10 @@
                 </select></label>
                 <label class="field">Ara<input class="input" type="search" id="auQ" placeholder="Özet metninde ara" autocomplete="off"></label>
             </div>
+            <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; margin-top:12px;">
+                <label style="display:inline-flex; align-items:center; gap:8px; min-height:var(--tap); font-weight:600; cursor:pointer;"><input type="checkbox" id="auMaint" style="width:18px; height:18px;"> Bakım işlemlerini göster</label>
+                <span class="muted" id="auHidden" role="status" hidden style="font-size:14px;"></span>
+            </div>
             <div class="alert alert-danger" id="auErr" hidden style="margin-top:12px;"></div>
         </div>
         <div class="table-wrap"><table class="table">
@@ -47,10 +51,13 @@
         </div>
         <dialog id="auDlg"><div class="dlg-body" id="auDlgBody"></div></dialog>`;
 
-        ['auFrom', 'auTo', 'auAction', 'auRole'].forEach(id => { $(id).onchange = () => { page = 0; load(); }; });
+        ['auFrom', 'auTo', 'auAction', 'auRole', 'auMaint'].forEach(id => { $(id).onchange = () => { page = 0; load(); }; });
         ['auActor', 'auQ'].forEach(id => {
             $(id).oninput = () => { clearTimeout(timer); timer = setTimeout(() => { page = 0; load(); }, 400); };
         });
+        // Rol "Geliştirici" seçilirse sunucu bakım işlemlerini kendiliğinden dahil eder; kutu da bunu yansıtır
+        $('auRole').addEventListener('change', () => { if ($('auRole').value === 'DEVELOPER') $('auMaint').checked = true; });
+        $('auHidden').onclick = e => { if (e.target.closest('button')) { $('auMaint').checked = true; page = 0; load(); } };
         $('auPrev').onclick = () => { if (page > 0) { page--; load(); } };
         $('auNext').onclick = () => { page++; load(); };
         $('auCsv').onclick = e => exportFile(e.currentTarget, 'csv');
@@ -67,6 +74,7 @@
         const q = new URLSearchParams();
         const map = { from: 'auFrom', to: 'auTo', action: 'auAction', actor: 'auActor', actorRole: 'auRole', q: 'auQ' };
         Object.keys(map).forEach(k => { const v = $(map[k]).value.trim(); if (v) q.set(k, v); });
+        q.set('includeMaintenance', $('auMaint').checked || $('auRole').value === 'DEVELOPER' ? 'true' : 'false');
         return q;
     }
 
@@ -108,6 +116,10 @@
                 <td style="min-width:220px;">${escapeHtml(r.summary || '')}</td>
                 <td class="col-muted">${escapeHtml(r.deviceId ? shortDevice(r.deviceId) : '-')}<div style="font-size:13px;">${escapeHtml(r.ipAddress || '')}</div></td>
             </tr>`).join('') || '<tr><td colspan="5" class="table-empty">Bu filtreyle kayıt yok.</td></tr>';
+            const hid = d && Number(d.maintenanceHidden) > 0 && !$('auMaint').checked ? Number(d.maintenanceHidden) : 0;
+            const hn = $('auHidden');
+            hn.hidden = !hid;
+            hn.innerHTML = hid ? `${escapeHtml(hid)} bakım işlemi gizlendi · <button type="button" class="link-btn" style="min-height:0; color:var(--primary); text-decoration:underline;">Göster</button>` : '';
             const total = d ? d.totalElements : 0, pages = Math.max(1, d ? d.totalPages : 1);
             $('auInfo').textContent = total ? `${total} kayıt · Sayfa ${page + 1} / ${pages}` : '0 kayıt';
             $('auPrev').disabled = page <= 0;

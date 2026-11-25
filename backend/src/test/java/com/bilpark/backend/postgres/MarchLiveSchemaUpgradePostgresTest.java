@@ -81,7 +81,7 @@ class MarchLiveSchemaUpgradePostgresTest {
 
         try (Connection c = conn(url); Statement st = c.createStatement()) {
             // baselined below V1, so the idempotent V1 creates users, zones, subscriptions and fiscal_years
-            assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7"),
+            assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8", "SQL:9"),
                     strings(c, "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank"));
             assertEquals(0, count(c, "SELECT count(*) FROM flyway_schema_history WHERE NOT success"));
 
@@ -141,6 +141,46 @@ class MarchLiveSchemaUpgradePostgresTest {
         }
 
         // a restart is a no-op
+        assertEquals(0, migrate(url).migrationsExecuted);
+    }
+
+    @Test
+    void liveAtV7UpgradesToV9WithExactlyTwoMigrationsAndKeepsEveryRow() throws Exception {
+        // production state: March schema upgraded by the app up to V7 (baseline-version=0), then the V8+V9 deploy
+        String url = createDatabase("live_at_v7");
+        try (Connection c = conn(url); Statement st = c.createStatement()) {
+            st.execute(marchSql());
+        }
+        assertTrue(AppFlyway.forUrl(url, postgres.getUsername(), postgres.getPassword(), "7").migrate().success);
+
+        List<String> before;
+        try (Connection c = conn(url)) {
+            assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7"),
+                    strings(c, "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank"));
+            before = strings(c, "SELECT id || ':' || license_plate || ':' || status FROM parking_records ORDER BY id");
+            assertFalse(before.isEmpty());
+        }
+
+        MigrateResult result = migrate(url);
+        assertTrue(result.success);
+        assertEquals(2, result.migrationsExecuted, "only V8 and V9 are pending");
+
+        try (Connection c = conn(url)) {
+            assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8", "SQL:9"),
+                    strings(c, "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank"));
+            assertEquals(0, count(c, "SELECT count(*) FROM flyway_schema_history WHERE NOT success"));
+            assertEquals(before, strings(c, "SELECT id || ':' || license_plate || ':' || status FROM parking_records ORDER BY id"));
+            assertEquals(3, count(c, "SELECT count(*) FROM information_schema.columns WHERE table_name = 'users' "
+                    + "AND column_name IN ('last_seen_at', 'last_app_version', 'last_device')"));
+            assertEquals(2, count(c, "SELECT count(*) FROM information_schema.tables "
+                    + "WHERE table_name IN ('admin_notifications', 'admin_notification_reads')"));
+        }
+
+        String freshUrl = createDatabase("fresh_for_compare_v7");
+        assertTrue(migrate(freshUrl).success);
+        try (Connection upgraded = conn(url); Connection fresh = conn(freshUrl)) {
+            assertEquals(AppFlyway.schemaFingerprint(fresh), AppFlyway.schemaFingerprint(upgraded));
+        }
         assertEquals(0, migrate(url).migrationsExecuted);
     }
 

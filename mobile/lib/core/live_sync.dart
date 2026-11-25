@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'api_client.dart';
+import 'app_info.dart';
 import 'constants.dart';
 
 enum LiveStatus { connecting, online, reconnecting, offline }
@@ -205,6 +206,7 @@ class LiveSync {
     if (t != null) h['Authorization'] = 'Bearer $t';
     final d = deviceId;
     if (d != null) h['X-Device-Id'] = await d();
+    h.addAll(await AppInfo.headers());
     if (stream) {
       h['Accept'] = 'text/event-stream';
       h['Cache-Control'] = 'no-cache';

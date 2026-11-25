@@ -37,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@TestPropertySource(properties = "spring.datasource.url=jdbc:h2:mem:vehicle_types_test;DB_CLOSE_DELAY=-1")
+@TestPropertySource(properties = "spring.datasource.url=jdbc:h2:mem:vehicle_types_test;DB_CLOSE_DELAY=-1;INIT=SET TIME ZONE 'Europe/Istanbul'")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class VehicleTypesIntegrationTest {
 

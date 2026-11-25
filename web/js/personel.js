@@ -117,11 +117,11 @@
                 <div class="table-wrap">
                     <table class="table">
                         <thead><tr>
-                            <th>Personel</th><th>Rol</th><th>Saha</th><th>Son giriş</th>
+                            <th>Personel</th><th>Rol</th><th>Saha</th><th>Son giriş</th><th>Son görülme</th><th>Uygulama sürümü</th>
                             <th class="right" title="Performans puanı yalnızca bu panelde görünür; saha uygulamasında gösterilmez.">Bu ay puanı</th>
                             <th>Durum</th><th>İşlemler</th>
                         </tr></thead>
-                        <tbody id="pBody"><tr><td colspan="7" class="table-empty">Yükleniyor...</td></tr></tbody>
+                        <tbody id="pBody"><tr><td colspan="9" class="table-empty">Yükleniyor...</td></tr></tbody>
                     </table>
                 </div>
             </div>`;
@@ -143,7 +143,7 @@
             render();
         } catch (e) {
             if (seq !== loadSeq || e.name === 'AuthError') return;
-            $('pBody').innerHTML = `<tr><td colspan="7" class="table-empty">${escapeHtml(e.message)}</td></tr>`;
+            $('pBody').innerHTML = `<tr><td colspan="9" class="table-empty">${escapeHtml(e.message)}</td></tr>`;
             return;
         }
         // Puanlar ayrı gelir; hata olursa "-" gösterilir
@@ -198,11 +198,13 @@
                 <td>${roleBadge}${dev ? '<div class="muted" style="font-size:13px;">Değiştirilemez</div>' : ''}</td>
                 <td>${escapeHtml(u.zoneName || '-')}</td>
                 <td class="col-muted num">${u.lastLoginTime ? escapeHtml(fmtFull(u.lastLoginTime)) : '-'}</td>
+                <td class="col-muted">${u.lastSeenAt ? escapeHtml(fmtFull(u.lastSeenAt)) : '-'}</td>
+                <td class="col-muted">${u.appVersion || u.device ? `${escapeHtml(u.appVersion || '-')}<div style="font-size:13px;">${escapeHtml(u.device || '-')}</div>` : '-'}</td>
                 <td class="right num">${dev ? '<span class="muted">-</span>' : scoreHtml(u)}</td>
                 <td>${u.active ? '<span class="badge badge-success">Aktif</span>' : '<span class="badge badge-neutral">Pasif</span>'}</td>
                 <td>${actionsHtml(u)}</td>
             </tr>`;
-        }).join('') || '<tr><td colspan="7" class="table-empty">Personel bulunamadı.</td></tr>';
+        }).join('') || '<tr><td colspan="9" class="table-empty">Personel bulunamadı.</td></tr>';
         applyReadOnly($('pBody'));
     }
 

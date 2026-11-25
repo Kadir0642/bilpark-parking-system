@@ -96,6 +96,9 @@ public class UserAdminController {
         m.put("streetCode", u.getAssignedZone() != null ? u.getAssignedZone().getStreet().name() : null);
         m.put("lastLoginTime", u.getLastLoginTime());
         m.put("createdAt", u.getCreatedAt());
+        m.put("lastSeenAt", u.getLastSeenAt());
+        m.put("appVersion", u.getLastAppVersion());
+        m.put("device", u.getLastDevice());
         return m;
     }
 }

@@ -53,6 +53,17 @@ public class User {
     @Column(name = "password_changed_at")
     private java.time.LocalDateTime passwordChangedAt;
 
+    // Device trace (Flyway V8). Written only by DeviceTraceService with a direct UPDATE, so a stale entity
+    // saved elsewhere can never overwrite them: read-only for Hibernate.
+    @Column(name = "last_seen_at", insertable = false, updatable = false)
+    private java.time.LocalDateTime lastSeenAt;
+
+    @Column(name = "last_app_version", length = 40, insertable = false, updatable = false)
+    private String lastAppVersion;
+
+    @Column(name = "last_device", length = 80, insertable = false, updatable = false)
+    private String lastDevice;
+
     public User(String username, String password, Role role, Zone assignedZone) {
         this.username = username;
         this.password = password;

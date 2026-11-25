@@ -52,9 +52,10 @@ public class AuditController {
                                     @RequestParam(required = false) String entityType,
                                     @RequestParam(required = false) String entityId,
                                     @RequestParam(required = false) String q,
+                                    @RequestParam(defaultValue = "false") boolean includeMaintenance,
                                     @RequestParam(defaultValue = "0") int page,
                                     @RequestParam(defaultValue = "50") int size) {
-        return queries.list(new Filter(from, to, action, actor, actorRole, entityType, entityId, q), page, size);
+        return queries.list(new Filter(from, to, action, actor, actorRole, entityType, entityId, q, includeMaintenance), page, size);
     }
 
     @GetMapping("/actions")
@@ -71,12 +72,13 @@ public class AuditController {
                                          @RequestParam(required = false) String entityType,
                                          @RequestParam(required = false) String entityId,
                                          @RequestParam(required = false) String q,
+                                         @RequestParam(defaultValue = "false") boolean includeMaintenance,
                                          @RequestParam(defaultValue = "xlsx") String format) throws IOException {
         String fmt = format == null ? "xlsx" : format.trim().toLowerCase(Locale.ROOT);
         if (!fmt.equals("csv") && !fmt.equals("xlsx")) {
             throw ApiException.badRequest(ErrorCodes.VALIDATION_ERROR, "Geçersiz biçim: xlsx veya csv olmalıdır.");
         }
-        List<AuditLog> rows = queries.forExport(new Filter(from, to, action, actor, actorRole, entityType, entityId, q));
+        List<AuditLog> rows = queries.forExport(new Filter(from, to, action, actor, actorRole, entityType, entityId, q, includeMaintenance));
         if (fmt.equals("csv")) {
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"denetim-kaydi.csv\"")
