@@ -2,7 +2,7 @@
 // Sözleşme: docs/api-arac-tipleri.md. Giriş formu yalnızca etkin tipleri gösterir; ad/ikon çözümleme
 // ise pasifleşmiş tipleri de bilir (park hâlindeki bir motosiklet kapatıldıktan sonra da "Motosiklet" görünür).
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'api_client.dart';
 
 class VehicleTypeInfo {
