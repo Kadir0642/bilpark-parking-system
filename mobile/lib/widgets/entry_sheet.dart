@@ -65,7 +65,40 @@ class _EntrySheetState extends State<EntrySheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Araç girişi', style: TextStyle(fontSize: kb > 0 ? 18 : 22, fontWeight: FontWeight.w700)),
+            // Başlık satırında "Yabancı / özel plaka" anahtarı (Türk biçimine uymayan plaka: yabancı ülke,
+            // diplomatik CD...): açıkken TR denetimi yok. Başlık yüksekliğini aşmaz, küçük ekranda klavye
+            // açıkken "Sola/Sağa park" görünür kalır.
+            Row(
+              children: [
+                Expanded(
+                  child: Text('Araç girişi', style: TextStyle(fontSize: kb > 0 ? 18 : 22, fontWeight: FontWeight.w700)),
+                ),
+                MergeSemantics(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(BpSize.rMd),
+                    onTap: () => setState(() => _foreign = !_foreign),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Yabancı / özel plaka',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.text2)),
+                        SizedBox(
+                          height: 24,
+                          width: 44,
+                          child: FittedBox(
+                            child: Switch(
+                              key: const Key('foreignPlateSwitch'),
+                              value: _foreign,
+                              onChanged: (on) => setState(() => _foreign = on),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
             SizedBox(height: gap),
             ValueListenableBuilder<TextEditingValue>(
               valueListenable: _plate,
@@ -93,15 +126,7 @@ class _EntrySheetState extends State<EntrySheet> {
                               ),
                       ),
                     ),
-                    // Türk biçimine uymayan plaka (yabancı ülke, diplomatik CD...): TR denetimi kapanır
-                    SwitchListTile(
-                      key: const Key('foreignPlateSwitch'),
-                      contentPadding: EdgeInsets.zero,
-                      dense: kb > 0,
-                      title: const Text('Yabancı / özel plaka', style: TextStyle(fontWeight: FontWeight.w600)),
-                      value: _foreign,
-                      onChanged: (on) => setState(() => _foreign = on),
-                    ),
+                    SizedBox(height: kb > 0 ? 2 : 6),
                     // Canlı doğrulama: geçerliyse yeşil, değilse nedeni kırmızı gösterilir
                     Align(
                       alignment: Alignment.centerLeft,
