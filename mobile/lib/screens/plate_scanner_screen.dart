@@ -130,7 +130,7 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
       debugPrint(e.toString());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          bpSnackBar(context, 'Kamera/OCR başlatılamadı: ${_shortReason(e)}', tone: BadgeTone.danger),
+          bpSnackBar(context, 'Fotoğraf okunamadı: ${_shortReason(e)}', tone: BadgeTone.danger),
         );
       }
     }
