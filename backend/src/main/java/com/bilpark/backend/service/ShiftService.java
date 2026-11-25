@@ -57,7 +57,7 @@ public class ShiftService {
         // Tek açık vardiya: bu memurun başka cihazlarda kalmış açık vardiyalarını kapat
         for (Shift other : shiftRepository.findByUserAndEndTimeIsNull(user)) {
             if (deviceId.equals(other.getDeviceId())) continue;
-            autoClose(other, now, "Vardiya otomatik kapandı (başka cihazdan giriş)", deviceId);
+            autoClose(other, closingTimeFor(other, now), "Vardiya otomatik kapandı (başka cihazdan giriş)", deviceId);
         }
 
         Optional<Shift> open = shiftRepository
@@ -67,30 +67,37 @@ public class ShiftService {
             if (s.getStartTime().toLocalDate().equals(LocalDate.now(clock))) {
                 return s; // aynı gün aynı cihaz: yeniden girişte başlangıç sıfırlanmaz
             }
-            // önceki günden kalmış: sistem kapatır
-            s.setEndTime(now);
-            s.setAutoClosed(true);
-            shiftRepository.save(s);
+            // önceki günden kalmış: sistem kapatır (süre şişmesin diye o günün sınırında)
+            autoClose(s, closingTimeFor(s, now), "Vardiya otomatik kapandı (önceki günden kalmış)", null);
         }
         return shiftRepository.save(new Shift(user, user.getAssignedZone(), deviceId, now));
     }
 
     /**
-     * Nightly clean-up: closes every still-open shift at that day's 22:00 (a shift that started after
-     * 22:00 is closed now). Returns how many shifts were closed.
+     * Nightly clean-up: closes every still-open shift at {@link #closingTimeFor}. Returns how many were closed.
      */
     @Transactional
     public int closeForgottenShifts() {
         LocalDateTime now = LocalDateTime.now(clock);
         int n = 0;
         for (Shift s : shiftRepository.findByEndTimeIsNullOrderByStartTimeAsc()) {
-            LocalDateTime cutoff = s.getStartTime().toLocalDate().atTime(WORK_END);
-            LocalDateTime end = s.getStartTime().isBefore(cutoff) ? cutoff : now;
-            if (end.isAfter(now)) end = now;
-            autoClose(s, end, "Vardiya otomatik kapandı (gün sonu)", null);
+            autoClose(s, closingTimeFor(s, now), "Vardiya otomatik kapandı (gün sonu)", null);
             n++;
         }
         return n;
+    }
+
+    /**
+     * End time for a system-closed shift, so that forgotten shifts do not inflate worked hours.
+     * boundary = 22:00 of the start day for shifts started before 22:00, else 23:59:59 of the start day.
+     * Result = min(now, boundary), never before the start time.
+     */
+    static LocalDateTime closingTimeFor(Shift s, LocalDateTime now) {
+        LocalDateTime start = s.getStartTime();
+        LocalDateTime workEnd = start.toLocalDate().atTime(WORK_END);
+        LocalDateTime boundary = start.isBefore(workEnd) ? workEnd : start.toLocalDate().atTime(LocalTime.of(23, 59, 59));
+        LocalDateTime end = now.isBefore(boundary) ? now : boundary;
+        return end.isBefore(start) ? start : end;
     }
 
     private void autoClose(Shift s, LocalDateTime end, String summary, String newDeviceId) {

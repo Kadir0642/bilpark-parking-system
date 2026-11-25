@@ -166,6 +166,57 @@ class ShiftServiceTest {
     }
 
     @Test
+    void shiftLeftFromYesterdayClosesAtYesterdaysTenPmOnOtherDeviceLogin() {
+        Shift old = serviceAt(LocalDateTime.of(2026, 11, 24, 18, 54)).openShift(officer, "devA");
+        Shift fresh = serviceAt(LocalDateTime.of(2026, 11, 25, 8, 0)).openShift(officer, "devB");
+        assertEquals(LocalDateTime.of(2026, 11, 24, 22, 0), old.getEndTime());
+        assertTrue(old.isAutoClosed());
+        assertTrue(fresh.isOpen());
+    }
+
+    @Test
+    void shiftLeftFromYesterdayClosesAtYesterdaysTenPmOnSameDeviceLogin() {
+        Shift old = serviceAt(LocalDateTime.of(2026, 11, 24, 18, 54)).openShift(officer, "devA");
+        Shift fresh = serviceAt(LocalDateTime.of(2026, 11, 25, 8, 0)).openShift(officer, "devA");
+        assertNotSame(old, fresh);
+        assertEquals(LocalDateTime.of(2026, 11, 24, 22, 0), old.getEndTime());
+        assertTrue(fresh.isOpen());
+    }
+
+    @Test
+    void sameDayBeforeTenPmOtherDeviceLoginClosesAtNow() {
+        Shift a = serviceAt(LocalDateTime.of(2026, 11, 25, 9, 0)).openShift(officer, "devA");
+        serviceAt(LocalDateTime.of(2026, 11, 25, 15, 30)).openShift(officer, "devB");
+        assertEquals(LocalDateTime.of(2026, 11, 25, 15, 30), a.getEndTime());
+    }
+
+    @Test
+    void shiftStartedAfterTenPmClosesAtEndOfThatDayByNextNightsJob() {
+        Shift late = serviceAt(LocalDateTime.of(2026, 11, 25, 22, 40)).openShift(officer, "devA");
+        // that night's 22:30 run happened before it started; the next night closes it at 23:59:59 of its own day
+        serviceAt(LocalDateTime.of(2026, 11, 26, 22, 30)).closeForgottenShifts();
+        assertEquals(LocalDateTime.of(2026, 11, 25, 23, 59, 59), late.getEndTime());
+        assertTrue(late.isAutoClosed());
+    }
+
+    @Test
+    void closingTimeIsNeverBeforeStartTime() {
+        LocalDateTime[] starts = {
+                LocalDateTime.of(2026, 11, 25, 9, 0), LocalDateTime.of(2026, 11, 25, 22, 0),
+                LocalDateTime.of(2026, 11, 25, 22, 40), LocalDateTime.of(2026, 11, 25, 23, 59, 59)};
+        LocalDateTime[] nows = {
+                LocalDateTime.of(2026, 11, 25, 8, 0), LocalDateTime.of(2026, 11, 25, 22, 30),
+                LocalDateTime.of(2026, 11, 26, 22, 30), LocalDateTime.of(2026, 11, 25, 9, 0)};
+        for (LocalDateTime st : starts) {
+            Shift s = new Shift(officer, officer.getAssignedZone(), "devA", st);
+            for (LocalDateTime now : nows) {
+                LocalDateTime end = ShiftService.closingTimeFor(s, now);
+                assertFalse(end.isBefore(st), "start " + st + " now " + now + " end " + end);
+            }
+        }
+    }
+
+    @Test
     void adminGetsNoShift() {
         User admin = new User("admin", "x", Role.ADMIN, null);
         assertNull(service.openShift(admin, "devA"));

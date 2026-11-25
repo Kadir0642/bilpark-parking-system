@@ -8,6 +8,8 @@ import org.springframework.stereotype.Component;
 /**
  * Every night at 22:30 (Europe/Istanbul; working hours end at 22:00) closes shifts the officers
  * forgot to close. One query a day, so it is fine for a scale-to-zero database. Never throws.
+ * Render may be asleep at 22:30 and miss the run; the next night's run closes the leftovers with the
+ * same boundary (ShiftService.closingTimeFor), so worked hours are not inflated.
  */
 @Component
 public class ShiftAutoCloseJob {
