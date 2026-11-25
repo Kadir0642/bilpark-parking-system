@@ -90,6 +90,8 @@ class CheckInClientEntryTimeTest {
     }
 
     private static void assertServerTime(LocalDateTime before, LocalDateTime actual, LocalDateTime after) {
+        // the DB column keeps microseconds; a nanosecond 'before' (Windows clock) would look later than the stored value
+        before = before.truncatedTo(ChronoUnit.MICROS);
         assertFalse(actual.isBefore(before), actual + " < " + before);
         assertFalse(actual.isAfter(after), actual + " > " + after);
     }
