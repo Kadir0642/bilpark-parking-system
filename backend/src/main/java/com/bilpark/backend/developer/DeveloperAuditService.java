@@ -25,6 +25,8 @@ public class DeveloperAuditService {
     public record Query(String from, String to, String action, String actor, String actorRole,
                         String entityType, String q) {}
 
+    private static final int MIN_TEXT_LENGTH = 4;
+
     private final AuditQueryService queries;
     private final AuditService auditService;
 
@@ -70,9 +72,10 @@ public class DeveloperAuditService {
         if (raw == null || raw.isBlank()) return raw;
         String cleaned = PlateNormalizer.clean(raw);
         if (PlateNormalizer.isValid(cleaned)) return cleaned;
-        if (raw.chars().noneMatch(Character::isDigit)) return raw;
+        // a plate's letter group is at most 3 letters, so free text needs at least 4 characters
+        if (raw.chars().noneMatch(Character::isDigit) && raw.strip().length() >= MIN_TEXT_LENGTH) return raw;
         throw ApiException.badRequest(ErrorCodes.VALIDATION_ERROR,
-                "Plaka aramak için tam plaka girin (örnek: 34 ABC 123). Rakam içeren kısmi arama yapılamaz.");
+                "Plaka aramak için tam plaka girin (örnek: 34 ABC 123). Rakam içeren ya da 4 karakterden kısa kısmi arama yapılamaz.");
     }
 
     private static String viewedSummary(Query q) {

@@ -416,7 +416,7 @@ Canlı V7'de. Bu sürüm iki migration ekler: V8 (`users` tablosuna `last_seen_a
 4. **Kontrol:** `API/api/health` → `UP`. Neon SQL Editor'da: `SELECT version, success FROM flyway_schema_history ORDER BY installed_rank;` son iki satır `8` ve `9`, ikisi de `success = true`. Yönetici panelinde zil simgesi açılıyor olmalı.
 5. **Geri dönüş:** V8 ve V9 yalnızca ekler, ama **kodu eski sürüme döndürmek tek başına yetmez**: eski sürüm yeni enum değerlerini okuyamaz (`sync_events.type = NOTIFICATION_CREATED`; `audit_logs.action = DEV_AUDIT_VIEWED`, `DEV_ANNOUNCEMENT_CREATED`). Bu satırlar varken SSE yeniden oynatma ve yönetici denetim ekranı `500` verir.
    - **Tercih edilen yol:** veriyi geri al. Neon'da 1. adımdaki yedek dala dön (yedek dalı `DB_URL` ile bağla) ya da `production` dalını deploy öncesi bir zamana **Restore** et (son 6 saat). Önce Render'ı **Suspend** et. Deploy sonrası girilen kayıtlar kaybolur, bunu bilerek seç.
-   - **Kodu eski sürüme döndürmek şart olursa**, eski sürümü açmadan önce Neon SQL Editor'da şu temizliği çalıştır. Yalnızca yeni değerlerin satırlarını siler, V8/V9 tablolarına ve kolonlarına dokunmaz (eski kod fazla tabloyu ve kolonu yok sayar):
+   - **Kodu eski sürüme döndürmek şart olursa**, önce Render'ı **Suspend** et (uygulama temizlik sırasında yazmasın), sonra Neon SQL Editor'da şu temizliği çalıştır, eski sürümü ondan sonra aç. Yalnızca yeni değerlerin satırlarını siler, V8/V9 tablolarına ve kolonlarına dokunmaz (eski kod fazla tabloyu ve kolonu yok sayar):
 
      ```sql
      DELETE FROM sync_events WHERE type = 'NOTIFICATION_CREATED';

@@ -262,7 +262,7 @@ class DeveloperMonitoringIntegrationTest {
     void auditSearchRefusesPartialPlateGuessing_andListsActions() throws Exception {
         String dv = dev();
         // only a full plate or digit-free free text is accepted; anything else is refused
-        for (String bad : List.of("34AB", "ABC123", "123", "34 ABC 1", "abc 12")) {
+        for (String bad : List.of("34AB", "ABC123", "123", "34 ABC 1", "abc 12", "ABC", "AB")) {
             mvc.perform(get("/api/developer/audit").header("Authorization", dv).param("q", bad))
                     .andExpect(status().isBadRequest());
         }

@@ -90,9 +90,7 @@ class CheckInClientEntryTimeTest {
     }
 
     private static void assertServerTime(LocalDateTime before, LocalDateTime actual, LocalDateTime after) {
-        // the database stores microseconds; the Windows clock has 100 ns resolution
-        LocalDateTime beforeMicros = before.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
-        assertFalse(actual.isBefore(beforeMicros), actual + " < " + before);
+        assertFalse(actual.isBefore(before), actual + " < " + before);
         assertFalse(actual.isAfter(after), actual + " > " + after);
     }
 

@@ -17,7 +17,7 @@ Bu belge, 1 yıllık bakım döneminde sistem aksaklıklarını uzaktan fark etm
 
 Yöneticinin `GET /api/admin/audit` uç noktasıyla aynı filtreler ve aynı sayfalı yanıt biçimi (`AuditQueryService` yeniden kullanılır), iki farkla:
 
-- Plakalar maskelenir. `q` yalnızca iki biçimde kabul edilir: tam bir TR plakası (sunucuda tam eşleşir, yanıt yine maskelidir) ya da rakam içermeyen serbest metin (eylem/özet sözcüğü). Rakam içeren diğer her girdi (`ABC123`, `34AB`, `123`) `400` döner; böylece plaka parça parça tahmin edilemez.
+- Plakalar maskelenir. `q` yalnızca iki biçimde kabul edilir: tam bir TR plakası (sunucuda tam eşleşir, yanıt yine maskelidir) ya da rakam içermeyen, en az 4 karakterlik serbest metin (eylem/özet sözcüğü). Diğer her girdi (`ABC123`, `34AB`, `123`, ayrıca `ABC` gibi kısa harf grupları) `400` döner; böylece plaka parça parça tahmin edilemez.
 - `entityId` filtresi yoktur.
 
 `GET /api/developer/audit/actions`: yöneticideki gibi eylem listesi.
