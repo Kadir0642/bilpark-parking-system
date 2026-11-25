@@ -1,8 +1,22 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Release imzası: önce BILPARK_KEY_PROPERTIES ortam değişkeni, yoksa mobile/android/key.properties.
+// Dosya yoksa debug anahtarına düşer (CI ve anahtarsız makineler derleyebilsin diye).
+val keyPropertiesFile: File? = System.getenv("BILPARK_KEY_PROPERTIES")
+    ?.takeIf { it.isNotBlank() }
+    ?.let { File(it) }
+    ?: rootProject.file("key.properties")
+val keyProperties = Properties()
+val hasReleaseKey = keyPropertiesFile != null && keyPropertiesFile.exists()
+if (hasReleaseKey) {
+    keyPropertiesFile!!.inputStream().use { keyProperties.load(it) }
 }
 
 android {
@@ -33,11 +47,28 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasReleaseKey) {
+            create("release") {
+                storeFile = file(keyProperties.getProperty("storeFile"))
+                storePassword = keyProperties.getProperty("storePassword")
+                keyAlias = keyProperties.getProperty("keyAlias")
+                keyPassword = keyProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseKey) {
+                signingConfigs.getByName("release")
+            } else {
+                logger.warn(
+                    "UYARI: release anahtarı bulunamadı (BILPARK_KEY_PROPERTIES / android/key.properties). " +
+                        "Release derlemesi DEBUG anahtarıyla imzalanıyor; dağıtım için uygun değildir."
+                )
+                signingConfigs.getByName("debug")
+            }
             // R8 açık kalır; eksik ML Kit dil paketleri için -dontwarn kuralları burada.
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

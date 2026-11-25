@@ -1,0 +1,6 @@
+# Bu dosyayı key.properties adıyla kopyalayıp doldurun. key.properties commit edilmez.
+# Alternatif: dosyayı repo dışında tutup BILPARK_KEY_PROPERTIES ortam değişkeniyle gösterin.
+storePassword=BURAYA_PAROLA
+keyPassword=BURAYA_PAROLA
+keyAlias=bilpark
+storeFile=C:/yol/bilpark-release.jks
