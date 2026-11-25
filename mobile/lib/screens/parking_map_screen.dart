@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:math';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
 import '../core/entry_queue.dart';

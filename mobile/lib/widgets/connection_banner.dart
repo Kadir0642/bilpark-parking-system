@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../core/entry_queue.dart';
 import '../core/format.dart';
 import '../core/live_sync.dart';

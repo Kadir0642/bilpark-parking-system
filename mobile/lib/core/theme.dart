@@ -1,7 +1,7 @@
 // BilPark tasarım sistemi: renk tokenları ve tema.
 // Ekranlar renkleri yalnızca buradan alır: context.bp.primary, context.bp.dangerSoft ...
 // Sabit Color(...) ya da Colors.xxx yalnızca bu dosyada bulunur.
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 @immutable
 class BilParkColors extends ThemeExtension<BilParkColors> {
