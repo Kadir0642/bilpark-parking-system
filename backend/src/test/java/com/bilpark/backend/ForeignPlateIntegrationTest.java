@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** Foreign / special plates (V10, docs/api-asama3.md "Yabancı / özel plaka"): check-in foreignPlate=true. */
+/** Foreign / special plates (V10, docs/api-arac-tipleri.md "Yabancı / özel plaka"): check-in foreignPlate=true. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
