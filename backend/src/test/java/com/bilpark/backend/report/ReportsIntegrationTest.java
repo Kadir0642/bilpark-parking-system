@@ -504,7 +504,8 @@ class ReportsIntegrationTest {
     @Test
     void reportsStayAvailableInReadOnlyMode() throws Exception {
         String adminToken = admin();
-        LicenseInfo before = licenseRepo.findById(LicenseInfo.SINGLETON_ID).orElseThrow();
+        // current() creates the singleton row when missing (it is created lazily, so it may not exist yet)
+        LicenseInfo before = licenseService.current();
         LocalDate oldExpires = before.getExpiresOn();
         int oldGrace = before.getGraceDays();
         try {
@@ -522,7 +523,7 @@ class ReportsIntegrationTest {
             mvc.perform(get("/api/admin/settings/rent").header("Authorization", adminToken))
                     .andExpect(status().isOk());
         } finally {
-            LicenseInfo restore = licenseRepo.findById(LicenseInfo.SINGLETON_ID).orElseThrow();
+            LicenseInfo restore = licenseService.current();
             restore.setExpiresOn(oldExpires);
             restore.setGraceDays(oldGrace);
             licenseRepo.save(restore);
