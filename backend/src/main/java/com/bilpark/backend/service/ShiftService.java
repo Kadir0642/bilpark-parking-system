@@ -1,7 +1,9 @@
 package com.bilpark.backend.service;
 
+import com.bilpark.backend.audit.AuditService;
 import com.bilpark.backend.common.ApiException;
 import com.bilpark.backend.common.ErrorCodes;
+import com.bilpark.backend.model.AuditAction;
 import com.bilpark.backend.model.Role;
 import com.bilpark.backend.model.Shift;
 import com.bilpark.backend.model.User;
@@ -17,20 +19,33 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
-/** Per (user, device) officer shifts: opened at login, closed at logout. */
+/**
+ * Officer shifts: opened at login, closed at logout. One officer has at most one open shift:
+ * logging in on another device closes the shifts left open on other devices (e.g. after a
+ * reinstall, whose new random device id would otherwise orphan the old shift), and a nightly job
+ * closes forgotten shifts.
+ */
 @Service
 public class ShiftService {
 
     private final ShiftRepository shiftRepository;
     private final Clock clock;
+    private final AuditService auditService;
 
-    public ShiftService(ShiftRepository shiftRepository, Clock clock) {
+    /** End of the working day (working hours 08:00-22:00): forgotten shifts are closed at this time. */
+    public static final LocalTime WORK_END = LocalTime.of(22, 0);
+
+    public ShiftService(ShiftRepository shiftRepository, Clock clock, AuditService auditService) {
         this.shiftRepository = shiftRepository;
         this.clock = clock;
+        this.auditService = auditService;
     }
 
     /** Opens (or reuses) the officer's shift on this device. Returns null for non-officers. */
@@ -38,6 +53,12 @@ public class ShiftService {
     public Shift openShift(User user, String deviceId) {
         if (user == null || user.getRole() != Role.OFFICER) return null;
         LocalDateTime now = LocalDateTime.now(clock);
+
+        // Tek açık vardiya: bu memurun başka cihazlarda kalmış açık vardiyalarını kapat
+        for (Shift other : shiftRepository.findByUserAndEndTimeIsNull(user)) {
+            if (deviceId.equals(other.getDeviceId())) continue;
+            autoClose(other, now, "Vardiya otomatik kapandı (başka cihazdan giriş)", deviceId);
+        }
 
         Optional<Shift> open = shiftRepository
                 .findFirstByUserAndDeviceIdAndEndTimeIsNullOrderByStartTimeDesc(user, deviceId);
@@ -52,6 +73,39 @@ public class ShiftService {
             shiftRepository.save(s);
         }
         return shiftRepository.save(new Shift(user, user.getAssignedZone(), deviceId, now));
+    }
+
+    /**
+     * Nightly clean-up: closes every still-open shift at that day's 22:00 (a shift that started after
+     * 22:00 is closed now). Returns how many shifts were closed.
+     */
+    @Transactional
+    public int closeForgottenShifts() {
+        LocalDateTime now = LocalDateTime.now(clock);
+        int n = 0;
+        for (Shift s : shiftRepository.findByEndTimeIsNullOrderByStartTimeAsc()) {
+            LocalDateTime cutoff = s.getStartTime().toLocalDate().atTime(WORK_END);
+            LocalDateTime end = s.getStartTime().isBefore(cutoff) ? cutoff : now;
+            if (end.isAfter(now)) end = now;
+            autoClose(s, end, "Vardiya otomatik kapandı (gün sonu)", null);
+            n++;
+        }
+        return n;
+    }
+
+    private void autoClose(Shift s, LocalDateTime end, String summary, String newDeviceId) {
+        Map<String, Object> before = new LinkedHashMap<>();
+        before.put("deviceId", s.getDeviceId());
+        before.put("startTime", s.getStartTime().toString());
+        Map<String, Object> after = new LinkedHashMap<>();
+        after.put("endTime", end.toString());
+        after.put("autoClosed", true);
+        if (newDeviceId != null) after.put("newDeviceId", newDeviceId);
+        s.setEndTime(end);
+        s.setAutoClosed(true);
+        shiftRepository.save(s);
+        auditService.logSystem(AuditAction.SHIFT_AUTO_CLOSED, "Shift", s.getId(),
+                s.getUsername() + ": " + summary, before, after);
     }
 
     /** Closes this user's open shift on this device only; no-op when none. */

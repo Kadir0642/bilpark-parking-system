@@ -41,6 +41,7 @@ public class AuditQueryService {
         LABELS.put(AuditAction.LOGIN, "Giriş");
         LABELS.put(AuditAction.LOGIN_FAILED, "Başarısız giriş");
         LABELS.put(AuditAction.LOGOUT, "Çıkış");
+        LABELS.put(AuditAction.SHIFT_AUTO_CLOSED, "Vardiya otomatik kapandı");
         LABELS.put(AuditAction.PASSWORD_CHANGED, "Şifre değiştirildi");
         LABELS.put(AuditAction.VEHICLE_CHECK_IN, "Araç girişi");
         LABELS.put(AuditAction.VEHICLE_CHECK_OUT, "Araç çıkışı");
