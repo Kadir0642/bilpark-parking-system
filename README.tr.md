@@ -191,9 +191,11 @@ web-admin/      İlk React denemesi, kullanılmıyor
 | Ekim 2026 | Gerçek kullanım için yeniden yapım | Sırlar ortam değişkenlerine taşındı, JWT rolleri ve görevli sahaları, Flyway, kilitli ve tekrara dayanıklı giriş, SSE ile çok cihazlı canlı senkron, zamanlanabilir sürümlü tarife, yeni arayüz, personel, vardiya, rapor, denetim kaydı, lisans ve okunur mod, veriden gelen araç tipleri, gerçek telefonda uçtan uca testler. |
 | Kasım 2026 | Canlı | Eski canlı şema kopyada prova edildikten sonra yükseltildi, deneme verisi temizlendi, release derlemesi telefonda doğrulandı ve sistem canlıya alındı. Ardından geliştirici izleme ve yönetici bildirimleri geldi. |
 
-| Şubat 2026 mimari | Şubat 2026 kroki | Şubat 2026 saha uygulaması | Ekim 2026 panel |
+| Şubat 2026 mimari | Çalışma sahası | Şubat 2026 saha uygulaması | Ekim 2026 panel |
 |---|---|---|---|
-| ![Şubat 2026 mimari şeması](docs/images/evolution/2026-02-architecture.png) | ![Şubat 2026 cadde krokisi](docs/images/evolution/2026-02-street-sketch.jpg) | ![Şubat 2026 sabit ızgara ekranı, plakalar bulanık](docs/images/evolution/2026-02-mobile-street.png) | ![Ekim 2026 panel genel bakışı](docs/images/evolution/2026-10-panel-overview.png) |
+| ![Şubat 2026 mimari şeması](docs/images/evolution/2026-02-architecture.png) | ![Çalışma sahası: üç cadde, T = Tevfik Bey, A = Ali Rıza Özkay, C = Cumhuriyet](docs/images/field-map.jpg) | ![Şubat 2026 sabit ızgara ekranı, plakalar bulanık](docs/images/evolution/2026-02-mobile-street.png) | ![Ekim 2026 panel genel bakışı](docs/images/evolution/2026-10-panel-overview.png) |
+
+Çalışma sahası: sistemin kapsadığı üç cadde (T = Tevfik Bey, A = Ali Rıza Özkay, C = Cumhuriyet). Uydu görüntüsü: Google Maps.
 
 ## Yol haritası
 

@@ -191,9 +191,11 @@ web-admin/      Early React prototype, not used
 | Oct 2026 | Rebuilt for real use | Secrets moved to environment variables, JWT roles and officer zones, Flyway, locked and idempotent check-in, multi-device live sync over SSE, versioned tariffs with scheduling, redesigned UI, staff, shifts, reports, audit log, license and read-only mode, vehicle types as data, real-phone e2e tests. |
 | Nov 2026 | Production | The legacy production schema was upgraded after a rehearsal on a copy, test data was cleared, a release build was verified on a phone, and the system went live. Developer monitoring and admin notifications followed. |
 
-| Feb 2026 architecture | Feb 2026 street sketch | Feb 2026 field app | Oct 2026 panel |
+| Feb 2026 architecture | Field area | Feb 2026 field app | Oct 2026 panel |
 |---|---|---|---|
-| ![Feb 2026 architecture diagram](docs/images/evolution/2026-02-architecture.png) | ![Feb 2026 street sketch](docs/images/evolution/2026-02-street-sketch.jpg) | ![Feb 2026 street grid screen, plates blurred](docs/images/evolution/2026-02-mobile-street.png) | ![October 2026 panel overview](docs/images/evolution/2026-10-panel-overview.png) |
+| ![Feb 2026 architecture diagram](docs/images/evolution/2026-02-architecture.png) | ![Field area: three streets, T = Tevfik Bey, A = Ali Rıza Özkay, C = Cumhuriyet](docs/images/field-map.jpg) | ![Feb 2026 street grid screen, plates blurred](docs/images/evolution/2026-02-mobile-street.png) | ![October 2026 panel overview](docs/images/evolution/2026-10-panel-overview.png) |
+
+Field area: the three streets the system covers (T = Tevfik Bey, A = Ali Rıza Özkay, C = Cumhuriyet). Satellite imagery: Google Maps.
 
 ## Roadmap
 
