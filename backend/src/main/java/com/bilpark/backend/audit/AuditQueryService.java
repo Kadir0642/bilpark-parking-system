@@ -120,7 +120,13 @@ public class AuditQueryService {
 
     @Transactional(readOnly = true)
     public List<AuditLog> forExport(Filter f) {
-        return repository.findAll(spec(f), PageRequest.of(0, EXPORT_LIMIT, order())).getContent();
+        return scan(f, EXPORT_LIMIT);
+    }
+
+    /** At most {@code limit} matching rows, newest first (export, developer search that filters further in Java). */
+    @Transactional(readOnly = true)
+    public List<AuditLog> scan(Filter f, int limit) {
+        return repository.findAll(spec(f), PageRequest.of(0, Math.max(1, limit), order())).getContent();
     }
 
     private static Sort order() {

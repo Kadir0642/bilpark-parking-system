@@ -41,6 +41,10 @@ public class ParkSpot {
     @Enumerated(EnumType.STRING)
     private ParkingStatus status = ParkingStatus.ACTIVE;
 
+    // true: the officer entered a foreign / special (non-TR format) plate (V10). JSON: "foreignPlate"
+    @Column(name = "foreign_plate", nullable = false)
+    private boolean foreignPlate = false;
+
     @Transient
     private Double accumulatedDebt; // Used to show unpaid runaway debts on check-in
 

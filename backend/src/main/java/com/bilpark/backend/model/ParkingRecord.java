@@ -85,6 +85,10 @@ public class ParkingRecord {
     @Column(name = "plate_anonymized", nullable = false)
     private boolean plateAnonymized = false;
 
+    // Copied from the active spot on check-out / runaway / cancel (V10): foreign / special plate. JSON: "foreignPlate"
+    @Column(name = "foreign_plate", nullable = false)
+    private boolean foreignPlate = false;
+
     public ParkingRecord(String licensePlate, StreetLocation street, Zone zone,
                          String region, String neighborhood, LocalDateTime entryTime) {
         this.licensePlate = licensePlate;

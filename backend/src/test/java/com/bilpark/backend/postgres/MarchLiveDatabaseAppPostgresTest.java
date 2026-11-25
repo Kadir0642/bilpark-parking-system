@@ -61,7 +61,7 @@ class MarchLiveDatabaseAppPostgresTest {
 
     @Test
     void oldRowsWorkAfterTheFirstStart() {
-        assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8", "SQL:9"),
+        assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8", "SQL:9", "SQL:10"),
                 jdbc.queryForList("SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank",
                         String.class));
         // users did not exist in March: created from ADMIN_PASSWORD / OFFICER_PASSWORD on the first start
@@ -102,5 +102,15 @@ class MarchLiveDatabaseAppPostgresTest {
         assertEquals(List.of("06FG303", "11ABC123", "11HJ404", "11MN606", "16KL505"),
                 jdbc.queryForList("SELECT license_plate FROM parking_records WHERE id <= 5 ORDER BY 1", String.class));
         assertEquals(7, recordRepository.count());
+
+        // V10: the old rows are Turkish plates; a foreign plate goes in and out with its flag
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM parking_records WHERE foreign_plate", Long.class));
+        ParkSpot foreign = parkingService.checkInVehicle("M AB 1234", "SMALL", StreetLocation.TEVFIK_BEY, "LEFT",
+                zoneId, officer, null, null, true);
+        assertTrue(foreign.isForeignPlate());
+        ParkingRecord foreignOut = parkingService.checkOutVehicle("MAB1234", PaymentMethod.CASH, officer, "prova-1");
+        assertTrue(foreignOut.isForeignPlate());
+        assertEquals(List.of("MAB1234"),
+                jdbc.queryForList("SELECT license_plate FROM parking_records WHERE foreign_plate", String.class));
     }
 }

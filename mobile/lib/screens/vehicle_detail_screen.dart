@@ -261,7 +261,7 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Align(alignment: Alignment.centerLeft, child: PlateBadge(_plate, size: PlateSize.large)),
+                  Align(alignment: Alignment.centerLeft, child: PlateBadge(_plate, size: PlateSize.large, foreign: widget.vehicle['foreignPlate'] == true)),
                   const SizedBox(height: 6),
                   Row(
                     children: [
