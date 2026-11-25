@@ -117,3 +117,54 @@ String? extractPlate(String ocrText) {
   }
   return best?.plate;
 }
+
+// --- Yabancı / özel plaka (Türk biçimine uymayan: yabancı ülke, diplomatik CD vb.) ---
+// Görevli giriş formunda "Yabancı / özel plaka" anahtarını açtığında kullanılır. Backend
+// PlateNormalizer.isValidForeign ile aynı kural: boşluk ve tire atıldıktan sonra yalnızca A-Z ve 0-9,
+// 2-12 karakter. TR biçim denetimi ve OCR düzeltmesi (O->0 gibi) YAPILMAZ.
+// Not: format.dart isForeignPlate() başka bir şeydir (TR biçimli MA-MZ yabancı uyruklu plakası).
+
+const foreignPlateExample = 'M AB 1234';
+const foreignPlateMin = 2;
+const foreignPlateMax = 12;
+
+final _foreignPlate = RegExp('^[A-Z0-9]{$foreignPlateMin,$foreignPlateMax}\$');
+
+/// Ham girdi yabancı / özel plaka kuralına uyuyor mu? (Her Türk plakası da uyar.)
+bool isValidForeignPlateInput(String raw) => _foreignPlate.hasMatch(cleanPlate(raw));
+
+/// Yabancı / özel plaka için kısa Türkçe neden; geçerliyse null.
+String? foreignPlateHint(String raw) {
+  final p = cleanPlate(raw);
+  if (p.isEmpty) return 'Plakayı yazın. Örnek: $foreignPlateExample';
+  if (RegExp(r'[^A-Z0-9]').hasMatch(p)) return 'Yalnızca A-Z harfleri ve rakam kullanın';
+  if (p.length < foreignPlateMin) return 'En az $foreignPlateMin karakter';
+  if (p.length > foreignPlateMax) return 'En fazla $foreignPlateMax karakter';
+  return null;
+}
+
+/// Seçili kurala göre plaka geçerli mi: [foreign] = yabancı / özel plaka anahtarı.
+bool isValidPlateFor(String raw, {required bool foreign}) =>
+    foreign ? isValidForeignPlateInput(raw) : isValidTrPlate(raw);
+
+/// Seçili kurala göre görevliye gösterilecek neden; geçerliyse null.
+String? plateHintFor(String raw, {required bool foreign}) => foreign ? foreignPlateHint(raw) : plateHint(raw);
+
+/// Yabancı / özel plaka modunda OCR: hiçbir harf/rakam düzeltmesi yapmadan satırları temizler
+/// (A-Z0-9 dışı her şey atılır) ve plakaya en çok benzeyen satırı döner; görevli onaylar ya da düzeltir.
+/// Tercih: harf ve rakam birlikte olan satır, sonra en uzun satır. 2-12 karakter dışı satırlar atlanır.
+String? extractRawPlate(String ocrText) {
+  String? best;
+  var bestScore = -1;
+  for (final line in ocrText.split(RegExp(r'[\r\n]+'))) {
+    final p = cleanPlate(line).replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    if (p.length < foreignPlateMin || p.length > foreignPlateMax) continue;
+    final mixed = RegExp(r'[A-Z]').hasMatch(p) && RegExp(r'[0-9]').hasMatch(p);
+    final score = (mixed ? 100 : 0) + p.length;
+    if (score > bestScore) {
+      best = p;
+      bestScore = score;
+    }
+  }
+  return best;
+}

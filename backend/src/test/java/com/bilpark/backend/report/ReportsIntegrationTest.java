@@ -263,7 +263,7 @@ class ReportsIntegrationTest {
             assertNotNull(sheet);
             assertTrue(sheet.getRow(0).getCell(0).getStringCellValue().contains("01.05.2093"));
             assertEquals(List.of("Plaka", "Cadde", "Saha", "Giriş tarih-saat", "Çıkış (kaçak işaretleme) tarih-saat",
-                    "Tutar (TL)", "Memur", "Borç durumu"), headers(sheet, 1));
+                    "Tutar (TL)", "Memur", "Borç durumu", "Yabancı plaka"), headers(sheet, 1));
             Row r = sheet.getRow(2);
             assertEquals(a.getLicensePlate(), r.getCell(0).getStringCellValue());
             assertEquals(z.getStreet().getDisplayName(), r.getCell(1).getStringCellValue());
@@ -407,6 +407,8 @@ class ReportsIntegrationTest {
         Zone z = zone();
         User u = newOfficer(z);
         ParkingRecord paid = record(z, u, "2094-02-03T10:00:00", ParkingStatus.PAID, 40, PaymentMethod.CASH);
+        paid.setForeignPlate(true);
+        records.save(paid);
         ParkingRecord canc = cancelled(z, u, "2094-02-04T10:00:00", ParkingStatus.PAID, 20, PaymentMethod.POS,
                 "2094-02-05T10:00:00");
         record(z, u, "2094-03-20T10:00:00", ParkingStatus.PAID, 10, PaymentMethod.CASH);
@@ -415,6 +417,7 @@ class ReportsIntegrationTest {
             XSSFSheet sheet = wb.getSheet("Kayıtlar");
             assertEquals("ID", headers(sheet, 0).get(0));
             assertEquals("İptal gerekçesi", headers(sheet, 0).get(15));
+            assertEquals("Yabancı plaka", headers(sheet, 0).get(16));
             assertEquals(3, sheet.getPhysicalNumberOfRows()); // header + 2
             Row r1 = sheet.getRow(1);
             assertEquals(paid.getId(), (long) r1.getCell(0).getNumericCellValue());
@@ -425,6 +428,8 @@ class ReportsIntegrationTest {
             assertEquals(canc.getId(), (long) r2.getCell(0).getNumericCellValue());
             assertEquals("İptal", r2.getCell(10).getStringCellValue());
             assertEquals("test iptal", r2.getCell(15).getStringCellValue());
+            assertEquals("Evet", r1.getCell(16).getStringCellValue());
+            assertTrue(r2.getCell(16) == null || r2.getCell(16).getStringCellValue().isEmpty());
         }
     }
 

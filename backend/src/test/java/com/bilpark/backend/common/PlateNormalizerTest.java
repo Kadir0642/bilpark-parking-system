@@ -42,6 +42,30 @@ class PlateNormalizerTest {
     }
 
     @Test
+    void foreignRule_acceptsNonTurkishShapes() {
+        assertEquals("MAB1234", PlateNormalizer.normalize("M AB 1234", true)); // Almanya
+        assertEquals("12ABC3", PlateNormalizer.normalize("12-ABC-3", true));   // Hollanda
+        assertEquals("CD1234", PlateNormalizer.normalize("cd 1234", true));    // diplomatik
+        assertEquals("AB", PlateNormalizer.normalize("A-B", true));            // en kısa: 2 karakter
+        assertEquals("ABCDEF123456", PlateNormalizer.normalize("ABCDEF 123456", true)); // en uzun: 12
+        assertEquals("34ABC123", PlateNormalizer.normalize("34 ABC 123", true)); // TR biçimi de geçer
+        assertEquals("MAB1234", PlateNormalizer.normalizeAny("m ab-1234"));
+    }
+
+    @Test
+    void foreignRule_rejectsBadCharactersAndLength() {
+        for (String bad : new String[]{null, "", " ", "A", "ABCDEFG1234567", "M.AB 1234", "AB/12", "ÇAB123", "AB_12"}) {
+            ApiException ex = assertThrows(ApiException.class, () -> PlateNormalizer.normalize(bad, true), String.valueOf(bad));
+            assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+            assertEquals(ErrorCodes.INVALID_PLATE, ex.getCode());
+            assertTrue(ex.getMessage().contains("yabancı"), ex.getMessage());
+        }
+        // bayrak yoksa yabancı plaka TR kuralına takılır
+        assertThrows(ApiException.class, () -> PlateNormalizer.normalize("M AB 1234"));
+        assertThrows(ApiException.class, () -> PlateNormalizer.normalize("M AB 1234", false));
+    }
+
+    @Test
     void cleanDoesNotValidate() {
         assertEquals("", PlateNormalizer.clean(null));
         assertEquals("34AB", PlateNormalizer.clean(" 34-ab "));

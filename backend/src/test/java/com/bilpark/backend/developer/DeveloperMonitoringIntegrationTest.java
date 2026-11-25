@@ -261,10 +261,19 @@ class DeveloperMonitoringIntegrationTest {
     @Test
     void auditSearchRefusesPartialPlateGuessing_andListsActions() throws Exception {
         String dv = dev();
-        // only a full plate or digit-free free text is accepted; anything else is refused
-        for (String bad : List.of("34AB", "ABC123", "123", "34 ABC 1", "abc 12", "ABC", "AB")) {
+        // a digit makes q a plate search: it must be a whole plate shape (A-Z0-9, 2-12), free text needs 4+ letters
+        for (String bad : List.of("ABC", "AB", "a", "34 ABC 123 giriş", "1500.50", "ABCDEFGH123456", "Saha_3")) {
             mvc.perform(get("/api/developer/audit").header("Authorization", dv).param("q", bad))
                     .andExpect(status().isBadRequest());
+        }
+        // pieces of a plate are accepted as exact plate searches, but only ever match a whole plate word
+        String p = plate();
+        checkIn(admin(), p);
+        for (String piece : List.of(p.substring(0, 7), p.substring(0, 4), p.substring(2), p.substring(1, 6))) {
+            mvc.perform(get("/api/developer/audit").header("Authorization", dv).param("q", piece)
+                            .param("action", "VEHICLE_CHECK_IN"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.totalElements").value(0));
         }
         mvc.perform(get("/api/developer/audit").header("Authorization", dv).param("q", plate()))
                 .andExpect(status().isOk());
@@ -274,6 +283,69 @@ class DeveloperMonitoringIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.action=='DEV_AUDIT_VIEWED')].label")
                         .value("Geliştirici: denetim kaydı görüntülendi"));
+    }
+
+    private static String letters(int n) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < n; i++) sb.append("ABCDEFGHJKLMNOPRSTUVYZ".charAt(RND.nextInt(22)));
+        return sb.toString();
+    }
+
+    private void checkInForeign(String adm, String plate) throws Exception {
+        mvc.perform(post("/api/parking/check-in").header("Authorization", adm).param("foreignPlate", "true")
+                .param("plate", plate).param("street", "TEVFIK_BEY").param("zoneId", "1")).andExpect(status().isOk());
+    }
+
+    @Test
+    void foreignPlates_maskedForDeveloper_searchOnlyByWholePlate() throws Exception {
+        String adm = admin();
+        String dv = dev();
+        String mixed = letters(5) + RND.nextInt(10) + RND.nextInt(10);   // e.g. KLMNP47
+        String lettersOnly = "Q" + letters(5);                            // e.g. QWRTZX (CD / special)
+        checkInForeign(adm, mixed);
+        checkInForeign(adm, lettersOnly);
+        mvc.perform(post("/api/parking/check-out").header("Authorization", adm).param("plate", mixed))
+                .andExpect(status().isOk());
+
+        // the list without q: neither plate leaves the server in full
+        String all = mvc.perform(get("/api/developer/audit").header("Authorization", dv).param("size", "200"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertFalse(all.contains(mixed), all);
+        assertFalse(all.contains(lettersOnly), all);
+        assertTrue(all.contains(mixed.substring(0, 2) + "***" + mixed.substring(5)), all);
+
+        // whole plate (any spelling): exact plate word -> check-in and check-out rows, masked
+        String body = mvc.perform(get("/api/developer/audit").header("Authorization", dv)
+                        .param("q", mixed.substring(0, 1) + " " + mixed.substring(1, 3).toLowerCase() + "-" + mixed.substring(3)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andReturn().getResponse().getContentAsString();
+        assertFalse(body.contains(mixed), body);
+        mvc.perform(get("/api/developer/audit").header("Authorization", dv).param("q", lettersOnly))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].action").value("VEHICLE_CHECK_IN"));
+
+        // free text (4+ letters) never matches inside a plate word, pieces with digits are exact searches
+        for (String piece : List.of(mixed.substring(0, 4), mixed.substring(1, 5), lettersOnly.substring(1),
+                lettersOnly.substring(0, 5), mixed.substring(1), mixed.substring(0, 6))) {
+            mvc.perform(get("/api/developer/audit").header("Authorization", dv).param("q", piece))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.totalElements").value(0));
+        }
+        // free text still works on the rest of the summary
+        mvc.perform(get("/api/developer/audit").header("Authorization", dv).param("q", "giriş")
+                        .param("action", "VEHICLE_CHECK_IN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(org.hamcrest.Matchers.greaterThanOrEqualTo(2)));
+
+        // the developer's own view record never stores the full plate either
+        assertTrue(audits.findAll().stream().filter(a -> a.getAction() == AuditAction.DEV_AUDIT_VIEWED)
+                .noneMatch(a -> a.getSummary().contains(mixed) || a.getSummary().contains(lettersOnly)));
+
+        mvc.perform(post("/api/parking/spots/cancel").header("Authorization", adm).param("plate", lettersOnly)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"test temizliği\"}"))
+                .andExpect(status().isOk());
     }
 
     // ---- activity: counts ------------------------------------------------------------------------------

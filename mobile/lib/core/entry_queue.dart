@@ -34,6 +34,9 @@ class PendingEntry {
   final int? zoneId;
   final String? username;
 
+  /// Yabancı / özel plaka (TR biçimine uymayan): sunucuya foreignPlate=true gider (V10).
+  final bool foreign;
+
   /// Memurun girişi yaptığı an (UTC).
   final DateTime createdAt;
 
@@ -45,6 +48,7 @@ class PendingEntry {
     required this.side,
     this.zoneId,
     this.username,
+    this.foreign = false,
     DateTime? createdAt,
   })  : plate = normalizePlate(plate),
         createdAt = (createdAt ?? DateTime.now()).toUtc();
@@ -57,6 +61,7 @@ class PendingEntry {
         'side': side,
         if (zoneId != null) 'zoneId': zoneId,
         if (username != null) 'username': username,
+        if (foreign) 'foreignPlate': true,
         'createdAt': createdAt.toIso8601String(), // UTC, 'Z' ekli
       };
 
@@ -68,6 +73,7 @@ class PendingEntry {
         side: j['side'] as String,
         zoneId: (j['zoneId'] as num?)?.toInt(),
         username: j['username'] as String?,
+        foreign: j['foreignPlate'] == true, // eski sürüm kayıtlarında alan yok: TR plakası
         createdAt: DateTime.tryParse((j['createdAt'] as String?) ?? ''),
       );
 
@@ -80,6 +86,7 @@ class PendingEntry {
         'side': side,
         if (zoneId != null) 'zoneId': zoneId.toString(),
         'checkInRequestId': requestId,
+        if (foreign) 'foreignPlate': 'true',
         if (withEntryTime) 'clientEntryTime': createdAt.toIso8601String(),
       };
 }

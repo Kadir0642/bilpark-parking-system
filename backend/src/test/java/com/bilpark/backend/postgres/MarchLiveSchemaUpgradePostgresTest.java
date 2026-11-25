@@ -81,7 +81,7 @@ class MarchLiveSchemaUpgradePostgresTest {
 
         try (Connection c = conn(url); Statement st = c.createStatement()) {
             // baselined below V1, so the idempotent V1 creates users, zones, subscriptions and fiscal_years
-            assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8", "SQL:9"),
+            assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8", "SQL:9", "SQL:10"),
                     strings(c, "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank"));
             assertEquals(0, count(c, "SELECT count(*) FROM flyway_schema_history WHERE NOT success"));
 
@@ -145,8 +145,8 @@ class MarchLiveSchemaUpgradePostgresTest {
     }
 
     @Test
-    void liveAtV7UpgradesToV9WithExactlyTwoMigrationsAndKeepsEveryRow() throws Exception {
-        // production state: March schema upgraded by the app up to V7 (baseline-version=0), then the V8+V9 deploy
+    void liveAtV7UpgradesToV10WithExactlyThreeMigrationsAndKeepsEveryRow() throws Exception {
+        // production state: March schema upgraded by the app up to V7 (baseline-version=0), then the V8+V9+V10 deploy
         String url = createDatabase("live_at_v7");
         try (Connection c = conn(url); Statement st = c.createStatement()) {
             st.execute(marchSql());
@@ -163,10 +163,10 @@ class MarchLiveSchemaUpgradePostgresTest {
 
         MigrateResult result = migrate(url);
         assertTrue(result.success);
-        assertEquals(2, result.migrationsExecuted, "only V8 and V9 are pending");
+        assertEquals(3, result.migrationsExecuted, "only V8, V9 and V10 are pending");
 
         try (Connection c = conn(url)) {
-            assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8", "SQL:9"),
+            assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8", "SQL:9", "SQL:10"),
                     strings(c, "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank"));
             assertEquals(0, count(c, "SELECT count(*) FROM flyway_schema_history WHERE NOT success"));
             assertEquals(before, strings(c, "SELECT id || ':' || license_plate || ':' || status FROM parking_records ORDER BY id"));
@@ -174,12 +174,57 @@ class MarchLiveSchemaUpgradePostgresTest {
                     + "AND column_name IN ('last_seen_at', 'last_app_version', 'last_device')"));
             assertEquals(2, count(c, "SELECT count(*) FROM information_schema.tables "
                     + "WHERE table_name IN ('admin_notifications', 'admin_notification_reads')"));
+            // V10: every existing row is a Turkish plate
+            assertEquals(0, count(c, "SELECT count(*) FROM parking_records WHERE foreign_plate"));
         }
 
         String freshUrl = createDatabase("fresh_for_compare_v7");
         assertTrue(migrate(freshUrl).success);
         try (Connection upgraded = conn(url); Connection fresh = conn(freshUrl)) {
             assertEquals(AppFlyway.schemaFingerprint(fresh), AppFlyway.schemaFingerprint(upgraded));
+        }
+        assertEquals(0, migrate(url).migrationsExecuted);
+    }
+
+    @Test
+    void liveAtV9UpgradesToV10WithOneMigration_foreignPlateFalseOnEveryRow() throws Exception {
+        // production state after the V8+V9 deploy, with data; the V10 deploy adds only foreign_plate
+        String url = createDatabase("live_at_v9");
+        try (Connection c = conn(url); Statement st = c.createStatement()) {
+            st.execute(marchSql());
+        }
+        assertTrue(AppFlyway.forUrl(url, postgres.getUsername(), postgres.getPassword(), "9").migrate().success);
+
+        List<String> records;
+        List<String> spots;
+        try (Connection c = conn(url); Statement st = c.createStatement()) {
+            assertEquals(0, count(c, "SELECT count(*) FROM information_schema.columns WHERE column_name = 'foreign_plate'"));
+            st.execute("INSERT INTO active_park_spots(current_plate, street, version) VALUES ('11V9DAT1', 'TEVFIK_BEY', 0)");
+            records = strings(c, "SELECT id || ':' || license_plate || ':' || status || ':' || coalesce(fee::text, '-') "
+                    + "FROM parking_records ORDER BY id");
+            spots = strings(c, "SELECT id || ':' || current_plate || ':' || street FROM active_park_spots ORDER BY id");
+            assertFalse(records.isEmpty());
+            assertFalse(spots.isEmpty());
+        }
+
+        MigrateResult result = migrate(url);
+        assertTrue(result.success);
+        assertEquals(1, result.migrationsExecuted, "only V10 is pending");
+
+        try (Connection c = conn(url); Statement st = c.createStatement()) {
+            assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8", "SQL:9", "SQL:10"),
+                    strings(c, "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank"));
+            assertEquals(records, strings(c, "SELECT id || ':' || license_plate || ':' || status || ':' || coalesce(fee::text, '-') "
+                    + "FROM parking_records ORDER BY id"));
+            assertEquals(spots, strings(c, "SELECT id || ':' || current_plate || ':' || street FROM active_park_spots ORDER BY id"));
+            assertEquals(0, count(c, "SELECT count(*) FROM parking_records WHERE foreign_plate"));
+            assertEquals(0, count(c, "SELECT count(*) FROM active_park_spots WHERE foreign_plate"));
+            assertEquals(List.of("active_park_spots:NO:false", "parking_records:NO:false"),
+                    strings(c, "SELECT table_name || ':' || is_nullable || ':' || column_default FROM information_schema.columns "
+                            + "WHERE column_name = 'foreign_plate' ORDER BY table_name"));
+            // a row written without the column (old app version during the deploy) gets false
+            st.execute("INSERT INTO active_park_spots(current_plate, street, version) VALUES ('11V9DAT2', 'TEVFIK_BEY', 0)");
+            assertEquals(0, count(c, "SELECT count(*) FROM active_park_spots WHERE current_plate = '11V9DAT2' AND foreign_plate"));
         }
         assertEquals(0, migrate(url).migrationsExecuted);
     }

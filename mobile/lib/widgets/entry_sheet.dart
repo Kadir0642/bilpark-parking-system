@@ -11,29 +11,33 @@ class EntryResult {
   final String plate;
   final String type; // vehicle_types kodu (SMALL, LARGE, MOTORCYCLE...)
   final String side; // LEFT | RIGHT
-  const EntryResult(this.plate, this.type, this.side);
+  final bool foreign; // yabancı / özel plaka (TR biçim denetimi yok)
+  const EntryResult(this.plate, this.type, this.side, {this.foreign = false});
 }
 
 /// Araç girişi alt sayfası: plaka, araç türü, park yönü. İptal edilirse null döner.
-Future<EntryResult?> showEntrySheet(BuildContext context, String initialPlate) {
+/// [foreign]: "Yabancı / özel plaka" anahtarının açılış değeri (yabancı modda taranan plaka için true).
+Future<EntryResult?> showEntrySheet(BuildContext context, String initialPlate, {bool foreign = false}) {
   return showModalBottomSheet<EntryResult>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => _EntrySheet(initialPlate: initialPlate),
+    builder: (_) => EntrySheet(initialPlate: initialPlate, foreign: foreign),
   );
 }
 
-class _EntrySheet extends StatefulWidget {
+class EntrySheet extends StatefulWidget {
   final String initialPlate;
-  const _EntrySheet({required this.initialPlate});
+  final bool foreign;
+  const EntrySheet({super.key, required this.initialPlate, this.foreign = false});
 
   @override
-  State<_EntrySheet> createState() => _EntrySheetState();
+  State<EntrySheet> createState() => _EntrySheetState();
 }
 
-class _EntrySheetState extends State<_EntrySheet> {
+class _EntrySheetState extends State<EntrySheet> {
   late final TextEditingController _plate = TextEditingController(text: widget.initialPlate);
   late String _type = _firstActive();
+  late bool _foreign = widget.foreign;
 
   static String _firstActive() {
     final l = VehicleTypeStore.active.value;
@@ -46,7 +50,7 @@ class _EntrySheetState extends State<_EntrySheet> {
     super.dispose();
   }
 
-  void _submit(String side) => Navigator.pop(context, EntryResult(_plate.text, _type, side));
+  void _submit(String side) => Navigator.pop(context, EntryResult(_plate.text, _type, side, foreign: _foreign));
 
   @override
   Widget build(BuildContext context) {
@@ -61,12 +65,45 @@ class _EntrySheetState extends State<_EntrySheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Araç girişi', style: TextStyle(fontSize: kb > 0 ? 18 : 22, fontWeight: FontWeight.w700)),
+            // Başlık satırında "Yabancı / özel plaka" anahtarı (Türk biçimine uymayan plaka: yabancı ülke,
+            // diplomatik CD...): açıkken TR denetimi yok. Başlık yüksekliğini aşmaz, küçük ekranda klavye
+            // açıkken "Sola/Sağa park" görünür kalır.
+            Row(
+              children: [
+                Expanded(
+                  child: Text('Araç girişi', style: TextStyle(fontSize: kb > 0 ? 18 : 22, fontWeight: FontWeight.w700)),
+                ),
+                MergeSemantics(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(BpSize.rMd),
+                    onTap: () => setState(() => _foreign = !_foreign),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Yabancı / özel plaka',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.text2)),
+                        SizedBox(
+                          height: 24,
+                          width: 44,
+                          child: FittedBox(
+                            child: Switch(
+                              key: const Key('foreignPlateSwitch'),
+                              value: _foreign,
+                              onChanged: (on) => setState(() => _foreign = on),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
             SizedBox(height: gap),
             ValueListenableBuilder<TextEditingValue>(
               valueListenable: _plate,
               builder: (context, v, _) {
-                final hint = plateHint(v.text);
+                final hint = plateHintFor(v.text, foreign: _foreign);
                 final valid = hint == null;
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -78,8 +115,9 @@ class _EntrySheetState extends State<_EntrySheet> {
                       style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: 2),
                       decoration: InputDecoration(
                         labelText: 'Plaka',
+                        hintText: _foreign ? foreignPlateExample : plateExample,
                         constraints: const BoxConstraints(minHeight: BpSize.tapLg),
-                        suffixIcon: v.text.isEmpty
+                        suffixIcon: v.text.isEmpty || _foreign
                             ? null
                             : Padding(
                                 padding: const EdgeInsets.all(12),
@@ -137,7 +175,7 @@ class _EntrySheetState extends State<_EntrySheet> {
                 valueListenable: _plate,
                 builder: (_, v, _) {
                   // Geçersiz (boş dahil) plakada giriş düğmeleri kapalı: sunucudan "Geçersiz plaka" dönmesin
-                  final blocked = ro || !isValidTrPlate(v.text);
+                  final blocked = ro || !isValidPlateFor(v.text, foreign: _foreign);
                   return Row(
                 children: [
                   Expanded(

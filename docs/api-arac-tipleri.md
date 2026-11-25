@@ -127,6 +127,29 @@ uygulama bunu yalnızca çevrimdışı kuyruktan gönderirken ekler; doğrudan �
   gönderildiyse ham `clientEntryTime` eklenir; geriye dönük saatli girişler bu alanla izlenebilir.
 - Yeni migration yok; mevcut `park_spots.entry_time` sütunu kullanılır.
 
+### Yabancı / özel plaka (`foreignPlate`, Flyway V10)
+Türk biçimine uymayan plakalar (yabancı ülke plakası, diplomatik CD vb.) için. Varsayılan davranış değişmedi: bayrak
+yoksa yalnızca Türk plakası kabul edilir.
+- `POST /api/parking/check-in` isteğe bağlı `foreignPlate=true` alır. Plaka o zaman TR kuralı yerine yabancı / özel
+  kuralla denetlenir: boşluk ve tire atıldıktan sonra yalnızca `A-Z` ve `0-9`, 2-12 karakter (ör. `M AB 1234` →
+  `MAB1234`, `12-ABC-3` → `12ABC3`). Uymazsa 400 `INVALID_PLATE` ("Geçersiz yabancı / özel plaka: …").
+- Bayraksız gelen yabancı plaka eskisi gibi 400 `INVALID_PLATE` alır (görevli anahtarı açmayı unuttuysa).
+- Plaka aynı temiz biçimde saklanır; bu yüzden tekillik (aynı aktif plaka → 409 `ALREADY_PARKED`),
+  `checkInRequestId` tekrarı, çıkış, kaçak, iptal, `fee-preview` ve kaçak borcu uyarısı TR plakalarıyla aynı çalışır.
+- Bayrak saklanır: `active_park_spots.foreign_plate` ve `parking_records.foreign_plate` (`boolean NOT NULL DEFAULT
+  false`). Çıkış, kaçak ve iptalde kayda kopyalanır. JSON alanı: `ParkSpot.foreignPlate`, `ParkingRecord.foreignPlate`;
+  `GET /api/parking/debt` yanıtında da `foreignPlate` var. Mevcut satırlar (V9 ve öncesi) `false` kalır.
+- `GET /api/parking/debt` (vatandaş sayfası / QR) hem TR hem yabancı / özel plakayı sorgular (yabancı kural TR
+  plakalarını da kapsar).
+- Rapor: Excel/CSV "Kayıtlar" ve "Kaçak Araçlar" sayfalarında son sütun "Yabancı plaka" (`Evet` ya da boş). Panel kayıt
+  ve kaçak listelerinde plakanın yanında "Yabancı" işareti.
+- Ülke alanı yok (müşteriye soruluyor). Eklenirse bayrağın yanına ayrı bir sütun olarak gelir; kural ve saklama biçimi
+  değişmez.
+- Mobil: giriş formunun başlık satırında "Yabancı / özel plaka" anahtarı (varsayılan kapalı). Açıkken TR denetimi ve
+  OCR düzeltmesi (O→0 gibi) yapılmaz; kamera ekranındaki aynı adlı seçenekle okunan ham metin forma gelir, görevli
+  onaylar ya da düzeltir. Çevrimdışı kuyruk bayrağı saklar ve gönderir.
+- Geliştirici görünümü: yabancı plakalar da maskelenir, arama yalnızca tam plakayla (bkz. `api-gelistirici-izleme.md`).
+
 ### Ücret
 `FeeEngine` tipin tarife satırındaki fiyatı kullanır. Park hâlindeyken tipi pasifleşen araç: satırda fiyat
 varsa o, yoksa SMALL fiyatı (çıkış engellenmez). Kodu `null` olan eski kayıt SMALL sayılır.
