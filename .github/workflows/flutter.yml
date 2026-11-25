@@ -17,6 +17,9 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          # Sürüm sabit: yeni stable sürümler yeni lint uyarıları getirip CI'ı kod değişmeden kırabiliyor.
+          # Geliştirme makinesindeki sürümle aynı tutulur; yükseltme ayrı bir PR ile yapılır.
+          flutter-version: 3.38.9
           cache: true
       - run: flutter pub get
       - run: flutter analyze
