@@ -24,3 +24,8 @@
 *.log
 # Local demo secrets (docker-compose.yml)
 .env.demo
+
+# Android release imza anahtarı (asla commit edilmez)
+mobile/android/key.properties
+*.jks
+*.keystore
