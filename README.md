@@ -171,7 +171,7 @@ GitHub Actions runs the Maven build with all tests and `flutter analyze` on ever
 
 ```
 backend/        Spring Boot API: controllers, services, fee engine, sync (SSE), audit, license, reports, retention
-  src/main/resources/db/migration/   Flyway migrations V1–V7
+  src/main/resources/db/migration/   Flyway migrations V1–V9
 mobile/         Flutter field app
   lib/core/     API client, offline queue, live sync, plate parsing, tariff and vehicle type stores
   lib/screens/  login, home, street view, plate scanner, vehicle detail, history, settings

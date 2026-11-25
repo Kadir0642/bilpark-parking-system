@@ -171,7 +171,7 @@ GitHub Actions her pull request'te tüm testlerle Maven derlemesini ve `flutter 
 
 ```
 backend/        Spring Boot API: controller, servis, ücret motoru, senkron (SSE), denetim, lisans, rapor, saklama
-  src/main/resources/db/migration/   Flyway migration'ları V1–V7
+  src/main/resources/db/migration/   Flyway migration'ları V1–V9
 mobile/         Flutter saha uygulaması
   lib/core/     API istemcisi, çevrimdışı kuyruk, canlı senkron, plaka ayrıştırma, tarife ve araç tipi depoları
   lib/screens/  giriş, ana sayfa, cadde görünümü, plaka tarayıcı, araç ayrıntısı, geçmiş, ayarlar
