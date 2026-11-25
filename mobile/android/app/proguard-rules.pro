@@ -19,3 +19,17 @@
 # Korece tanıyıcı (kullanılmıyor)
 -dontwarn com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions$Builder
 -dontwarn com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
+
+# --- ML Kit bileşen kayıtçıları (R8 tam mod) ---
+# Manifest'teki MlKitComponentDiscoveryService, meta-data'da adı yazan
+# ComponentRegistrar sınıflarını (TextRegistrar, VisionCommonRegistrar,
+# CommonComponentRegistrar) yansıma ile örnekler:
+# Class.forName(..).getDeclaredConstructor().newInstance().
+# firebase-components'in kendi kuralı yalnızca sınıfı korur
+# ("-keep class * implements ComponentRegistrar"); R8 tam modda (AGP 8+ varsayılanı)
+# kullanılmayan varsayılan yapıcı yine silinir. Sonuç: kayıtçılar örneklenemez, ML Kit
+# bileşenleri kaydolmaz ve TextRecognizer hiçbir şey okuyamaz (yalnızca release'te;
+# debug'da R8 yok). Yapıcıyı açıkça koruyoruz.
+-keep class * implements com.google.firebase.components.ComponentRegistrar {
+    <init>();
+}
