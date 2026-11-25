@@ -6,8 +6,8 @@ Saha telefonlarına MDM ile dağıtılan APK, debug anahtarıyla değil gerçek 
 
 Anahtar repoda **yoktur** (repo herkese açık). Geliştirici makinesinde şu klasördedir:
 
-- `C:\Users\LENOVO\.bilpark-imza\bilpark-release.jks` (keystore, alias `bilpark`, RSA 4096, 10000 gün)
-- `C:\Users\LENOVO\.bilpark-imza\key.properties` (parolalar ve keystore yolu)
+- `%USERPROFILE%\.bilpark-imza\bilpark-release.jks` (keystore, alias `bilpark`, RSA 4096, 10000 gün)
+- `%USERPROFILE%\.bilpark-imza\key.properties` (parolalar ve keystore yolu; `storeFile` göreli yazılırsa bu dosyanın klasörüne göre çözülür)
 
 Parola bu belgede ve repoda yer almaz; yalnızca `key.properties` içindedir.
 
@@ -23,11 +23,13 @@ Parola bu belgede ve repoda yer almaz; yalnızca `key.properties` içindedir.
 
 ```
 cd mobile
-set BILPARK_KEY_PROPERTIES=C:\Users\LENOVO\.bilpark-imza\key.properties
+set BILPARK_KEY_PROPERTIES=%USERPROFILE%\.bilpark-imza\key.properties
 flutter build apk --release --split-per-abi
 ```
 
-PowerShell'de: `$env:BILPARK_KEY_PROPERTIES = "C:\Users\LENOVO\.bilpark-imza\key.properties"`.
+PowerShell'de: `$env:BILPARK_KEY_PROPERTIES = "$env:USERPROFILE\.bilpark-imza\key.properties"`.
+
+Ortam değişkeni verilip dosya bulunamazsa derleme hata ile durur (sessizce debug imzaya düşmez). Ortam değişkeni hiç verilmez ve `mobile/android/key.properties` da yoksa debug anahtarına düşülür.
 
 Alternatif olarak `mobile/android/key.properties.example` dosyasını `mobile/android/key.properties` olarak kopyalayıp doldurabilirsin (bu dosya `.gitignore`'dadır).
 

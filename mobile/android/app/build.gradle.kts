@@ -8,15 +8,17 @@ plugins {
 }
 
 // Release imzası: önce BILPARK_KEY_PROPERTIES ortam değişkeni, yoksa mobile/android/key.properties.
-// Dosya yoksa debug anahtarına düşer (CI ve anahtarsız makineler derleyebilsin diye).
-val keyPropertiesFile: File? = System.getenv("BILPARK_KEY_PROPERTIES")
-    ?.takeIf { it.isNotBlank() }
-    ?.let { File(it) }
-    ?: rootProject.file("key.properties")
+// Ortam değişkeni verilmemişse ve dosya yoksa debug anahtarına düşer (CI ve anahtarsız makineler derleyebilsin diye).
+// Ortam değişkeni verilmiş ama dosya yoksa derleme hata ile durur (yanlış yol sessizce debug imzaya dönmesin).
+val keyPropertiesEnv: String? = System.getenv("BILPARK_KEY_PROPERTIES")?.takeIf { it.isNotBlank() }
+val keyPropertiesFile: File = keyPropertiesEnv?.let { File(it) } ?: rootProject.file("key.properties")
+if (keyPropertiesEnv != null && !keyPropertiesFile.exists()) {
+    throw GradleException("BILPARK_KEY_PROPERTIES bulunamadı: $keyPropertiesEnv")
+}
 val keyProperties = Properties()
-val hasReleaseKey = keyPropertiesFile != null && keyPropertiesFile.exists()
+val hasReleaseKey = keyPropertiesFile.exists()
 if (hasReleaseKey) {
-    keyPropertiesFile!!.inputStream().use { keyProperties.load(it) }
+    keyPropertiesFile.inputStream().use { keyProperties.load(it) }
 }
 
 android {
@@ -50,7 +52,9 @@ android {
     signingConfigs {
         if (hasReleaseKey) {
             create("release") {
-                storeFile = file(keyProperties.getProperty("storeFile"))
+                // Göreli yol, properties dosyasının klasörüne göre çözülür; mutlak yol aynen kullanılır.
+                val storePath = File(keyProperties.getProperty("storeFile"))
+                storeFile = if (storePath.isAbsolute) storePath else File(keyPropertiesFile.parentFile, storePath.path)
                 storePassword = keyProperties.getProperty("storePassword")
                 keyAlias = keyProperties.getProperty("keyAlias")
                 keyPassword = keyProperties.getProperty("keyPassword")
