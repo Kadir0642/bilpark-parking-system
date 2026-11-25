@@ -181,11 +181,19 @@ public class ParkingService
     public ParkSpot checkInVehicle(String licensePlate,String vehicleType,StreetLocation street,String side, Long zoneId, User actor,
                                    String checkInRequestId, String clientEntryTime)
     {
+        return checkInVehicle(licensePlate, vehicleType, street, side, zoneId, actor, checkInRequestId, clientEntryTime, false);
+    }
+
+    // foreignPlate = true: yabancı / özel plaka; TR kuralı yerine yabancı kural (A-Z0-9, 2-12) uygulanır ve bayrak saklanır
+    @Transactional
+    public ParkSpot checkInVehicle(String licensePlate,String vehicleType,StreetLocation street,String side, Long zoneId, User actor,
+                                   String checkInRequestId, String clientEntryTime, boolean foreignPlate)
+    {
         if (checkInRequestId != null && !REQUEST_ID.matcher(checkInRequestId).matches()) {
             throw ApiException.badRequest(ErrorCodes.INVALID_REQUEST_ID,
                     "Geçersiz istek kimliği (8-64 karakter, harf/rakam/tire).");
         }
-        String plate = PlateNormalizer.normalize(licensePlate);
+        String plate = PlateNormalizer.normalize(licensePlate, foreignPlate);
 
         if (isOfficer(actor)) {
             Zone assigned = requireAssignedZone(actor);
@@ -228,6 +236,7 @@ public class ParkingService
         Zone zone = zoneId != null ? zoneRepository.findById(zoneId).orElse(null) : null;
 
         ParkSpot newSpot = new ParkSpot(plate, street, type, "Merkez", "Bilecik", side, zone);
+        newSpot.setForeignPlate(foreignPlate);
         EntryTime entry = resolveEntryTime(clientEntryTime, LocalDateTime.now(clock));
         newSpot.setEntryTime(entry.time());
 
@@ -271,6 +280,7 @@ public class ParkingService
         after.put("entryTime", entry.time().toString());
         after.put("entryTimeSource", entry.source());
         if (clientEntryTime != null) after.put("clientEntryTime", clientEntryTime);
+        if (foreignPlate) after.put("foreignPlate", true);
         auditService.log(AuditAction.VEHICLE_CHECK_IN, "ParkSpot", result.getId(),
                 plate + " giriş: " + (zone != null ? zone.getZoneName() : (street != null ? street.getDisplayName() : "-")),
                 null, after);
@@ -287,6 +297,7 @@ public class ParkingService
         p.put("side", spot.getSide());
         p.put("entryTime", spot.getEntryTime() != null ? spot.getEntryTime().toString() : null);
         p.put("hasSubscription", Boolean.TRUE.equals(spot.getHasSubscription()));
+        p.put("foreignPlate", spot.isForeignPlate());
         p.put("spotId", spot.getId());
         changePublisher.zoneEvent(SyncEventType.VEHICLE_ENTERED, zoneIdOf(spot), spot.getStreet(), p);
     }
@@ -352,6 +363,7 @@ public class ParkingService
         aud.put("fee", fee);
         aud.put("paymentMethod", effective.name());
         aud.put("zoneId", zoneIdOf(spot));
+        if (record.isForeignPlate()) aud.put("foreignPlate", true);
         auditService.log(AuditAction.VEHICLE_CHECK_OUT, "ParkingRecord", record.getId(),
                 record.getLicensePlate() + " çıkış: " + money(fee) + " TL (" + effective.name() + ")", null, aud);
 
@@ -411,6 +423,7 @@ public class ParkingService
         Map<String, Object> aud = new LinkedHashMap<>();
         aud.put("plate", record.getLicensePlate());
         aud.put("debt", debt);
+        if (record.isForeignPlate()) aud.put("foreignPlate", true);
         auditService.log(AuditAction.VEHICLE_RUNAWAY, "ParkingRecord", record.getId(),
                 record.getLicensePlate() + " kaçak: " + money(debt) + " TL borç", null, aud);
 
@@ -435,6 +448,7 @@ public class ParkingService
         );
         record.setExitTime(now);
         record.setVehicleType(spot.getCurrentType());
+        record.setForeignPlate(spot.isForeignPlate());
         return record;
     }
 
@@ -508,6 +522,7 @@ public class ParkingService
         Map<String, Object> before = new LinkedHashMap<>();
         before.put("status", previous.name());
         before.put("fee", r.getFee());
+        before.put("plate", r.getLicensePlate()); // geliştirici görünümünde özetteki plakanın maskelenmesi için
 
         r.setCancelledFromStatus(previous);
         r.setStatus(ParkingStatus.CANCELLED);
@@ -602,6 +617,7 @@ public class ParkingService
         m.put("cancelledBy", r.getCancelledByUsername());
         m.put("cancelReason", r.getCancelReason());
         m.put("collectedBy", r.getCollectedByUsername());
+        m.put("foreignPlate", r.isForeignPlate());
         return m;
     }
 
@@ -680,7 +696,8 @@ public class ParkingService
 
     // --- BORÇ SORGULAMA ---
     public Map<String, Object> getDebtByPlate(String plate){
-        String p = PlateNormalizer.normalize(plate);
+        // Vatandaş sayfası / QR: TR ve yabancı / özel plakalar (yabancı kural TR plakalarını da kapsar)
+        String p = PlateNormalizer.normalizeAny(plate);
         ParkSpot spot= parkSpotRepository.findByCurrentPlate(p)
                 .orElseThrow(()->ApiException.notFound(ErrorCodes.VEHICLE_NOT_FOUND,
                         p + " plakalı araç aktif otoparkta bulunamadı."));
@@ -710,6 +727,7 @@ public class ParkingService
         Map<String, Object> response = new HashMap<>();
         response.put("streetName",spot.getStreet().getDisplayName());
         response.put("plate",spot.getCurrentPlate());
+        response.put("foreignPlate", spot.isForeignPlate());
         response.put("entryTime",spot.getEntryTime());
         response.put("durationMinutes",b.totalMinutes());
         response.put("fee",fee);
