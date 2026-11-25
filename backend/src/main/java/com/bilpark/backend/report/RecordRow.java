@@ -11,7 +11,13 @@ public record RecordRow(Long id, String plate, StreetLocation street, Long zoneI
                         LocalDateTime entryTime, LocalDateTime exitTime, String vehicleType, Double fee,
                         ParkingStatus status, boolean debtPaid, PaymentMethod paymentMethod,
                         String collectedBy, String deviceId, Long tariffId, Integer paidMinutes,
-                        ParkingStatus cancelledFrom, LocalDateTime cancelledAt, String cancelReason) {
+                        ParkingStatus cancelledFrom, LocalDateTime cancelledAt, String cancelReason,
+                        boolean foreignPlate) {
+
+    /** "Evet" for a foreign / special plate, empty otherwise (export column "Yabancı plaka"). */
+    public String foreignLabel() {
+        return foreignPlate ? "Evet" : null;
+    }
 
     public double feeOrZero() {
         return fee == null ? 0.0 : fee;

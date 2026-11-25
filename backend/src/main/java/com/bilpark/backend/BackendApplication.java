@@ -2,7 +2,6 @@ package com.bilpark.backend;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import jakarta.annotation.PostConstruct;
 import java.util.Locale;
 import java.util.TimeZone;
 import org.slf4j.LoggerFactory;
@@ -15,6 +14,7 @@ public class BackendApplication {
 
 	public static void main(String[] args) {
 		useRootLocale();
+		useTurkeyTimeZone();
 		SpringApplication.run(BackendApplication.class, args);
 	}
 
@@ -24,9 +24,8 @@ public class BackendApplication {
 		Locale.setDefault(Locale.ROOT);
 	}
 
-	// Sunucu başlar başlamaz saat dilimini Türkiye yapar.
-	@PostConstruct
-	public void init(){
+	// Sunucu başlamadan önce saat dilimini Türkiye yapar (Spring/Hibernate ve JDBC sürücüsü açılmadan önce).
+	static void useTurkeyTimeZone() {
 		TimeZone.setDefault(TimeZone.getTimeZone("Europe/Istanbul"));
 		LoggerFactory.getLogger(BackendApplication.class).info("Sistem saati Türkiye (UTC+3) olarak ayarlandı.");
 	}

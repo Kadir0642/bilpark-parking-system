@@ -227,6 +227,8 @@ Kablo çıkarılınca veya telefon yeniden başlayınca yönlendirme silinir; ka
 
 Kısa demo akışı: telefonda `tevfik` ile gir → yeni plaka ekle (ör. `11 ABC 45`) → panelde aktif araçlarda görün → telefondan nakit/POS ile çıkış yap → paneldeki ciro ve son kayıtlar güncellenir. Abone plakası `11CC1923` çıkışta ücretsiz kapanır.
 
+Yabancı / özel plaka (ör. Alman `M AB 1234`, diplomatik `CD 1234`): giriş formunun başlığındaki "Yabancı / özel plaka" anahtarını aç, plakayı yaz (yalnızca harf ve rakam, 2-12 karakter). Kamerayla okutacaksan tarama ekranındaki aynı seçeneği aç; okunan metin düzeltilmeden forma gelir, kontrol edip onayla. Panel kayıt listesinde bu plakanın yanında "Yabancı" yazar; vatandaş sayfasında da sorgulanabilir.
+
 ---
 
 ## 6. Sık karşılaşılan hatalar

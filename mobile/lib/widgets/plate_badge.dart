@@ -1,15 +1,18 @@
 import 'package:material_ui/material_ui.dart';
 import '../core/format.dart';
+import '../core/plate.dart';
 import '../core/theme.dart';
 
 enum PlateSize { small, large }
 
 /// Türk plakası görünümü: solda mavi şerit, beyaz zeminde koyu plaka metni.
+/// [foreign]: yabancı / özel plaka (V10); "TR" yazısı yok, metin gruplanmadan olduğu gibi gösterilir.
 class PlateBadge extends StatelessWidget {
   final String plate;
   final PlateSize size;
+  final bool foreign;
 
-  const PlateBadge(this.plate, {super.key, this.size = PlateSize.small});
+  const PlateBadge(this.plate, {super.key, this.size = PlateSize.small, this.foreign = false});
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +22,8 @@ class PlateBadge extends StatelessWidget {
     final border = large ? 3.0 : 2.0;
     final stripWidth = large ? 28.0 : 12.0;
     final fontSize = large ? 26.0 : 15.0;
-    final label = isForeignPlate(plate) ? '' : 'TR';
+    // "TR" yalnızca Türk biçimli ve yabancı uyruklu (MA-MZ) olmayan plakada
+    final label = foreign || isForeignPlate(plate) || !isValidTrPlate(plate) ? '' : 'TR';
     return Semantics(
       label: 'Plaka $plate',
       child: ExcludeSemantics(
@@ -48,7 +52,7 @@ class PlateBadge extends StatelessWidget {
                 padding: EdgeInsets.symmetric(horizontal: large ? 10 : 6),
                 child: Center(
                   child: Text(
-                    formatPlate(plate),
+                    foreign ? plate : formatPlate(plate),
                     maxLines: 1,
                     style: TextStyle(
                       color: c.plateText,

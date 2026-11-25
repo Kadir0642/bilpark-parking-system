@@ -11,13 +11,24 @@ Bu belge, 1 yıllık bakım döneminde sistem aksaklıklarını uzaktan fark etm
 
 ## Plaka maskeleme
 
-`maskPlate("34 ABC 123") → "34 *** *23"`. Kural: boşlukları atmadan, ilk 2 karakter ve son 2 karakter açık; aradaki harf ve rakamlar `*`. 4 karakterden kısa değerlerin tamamı `*`. Denetim kaydının `summary`, `before`, `after`, `entityId` alanlarında geçen plakalar da maskelenir (plaka biçimine uyan her parça: TR plaka düzenli ifadesi, `core/plate.dart` ile aynı kural).
+`maskPlate("34 ABC 123") → "34 *** *23"`. Kural: boşlukları atmadan, ilk 2 karakter ve son 2 karakter açık; aradaki harf ve rakamlar `*`. Kısa değerler (yabancı / özel plakalar 2-12 karakter olabilir): 4-6 karakterde yalnızca ilk ve son karakter açık (`CD12` → `C**2`), 4 karakterden kısa değerlerin tamamı `*`. Türk plakası her zaman 7-9 karakter olduğu için maskesi değişmedi. Denetim kaydının `summary`, `before`, `after`, `entityId` alanlarında geçen plakalar da maskelenir:
+- TR plaka biçimine uyan her parça (TR plaka düzenli ifadesi, `core/plate.dart` ile aynı kural);
+- yabancı / özel plaka olabilecek her sözcük: büyük harf `A-Z` ve `0-9`, 2-12 karakter, en az bir harf ve bir rakam, boşluk ya da noktalama arasında (`MAB1234 giriş` → `MA***34 giriş`; saat ve kimlikler gibi tire/iki nokta ile yapışık parçalar etkilenmez);
+- araç ve abonelik eylemlerinde (`VEHICLE_*`, `RECORD_CANCELLED`, `SPOT_CANCELLED`, `SUBSCRIPTION_*`) özetin ilk sözcüğü her zaman plakadır ve biçimi ne olursa olsun maskelenir (yalnız harften oluşan yabancı plaka da);
+- JSON'da `plate`, `licensePlate`, `currentPlate` anahtarlarının değeri her zaman maskelenir.
+
+Bilinen sınır: serbest metnin (ör. iptal gerekçesi) içine elle yazılmış, yalnızca harften oluşan ya da küçük harfli yabancı plaka bir sözcükten ayırt edilemediği için maskelenmez.
 
 ## 1. `GET /api/developer/audit?from&to&action&actor&actorRole&entityType&q&page&size`
 
 Yöneticinin `GET /api/admin/audit` uç noktasıyla aynı filtreler ve aynı sayfalı yanıt biçimi (`AuditQueryService` yeniden kullanılır), iki farkla:
 
-- Plakalar maskelenir. `q` yalnızca iki biçimde kabul edilir: tam bir TR plakası (sunucuda tam eşleşir, yanıt yine maskelidir) ya da rakam içermeyen, en az 4 karakterlik serbest metin (eylem/özet sözcüğü). Diğer her girdi (`ABC123`, `34AB`, `123`, ayrıca `ABC` gibi kısa harf grupları) `400` döner; böylece plaka parça parça tahmin edilemez.
+- Plakalar maskelenir. `q` yalnızca iki biçimde kabul edilir (V10 ile güncellendi):
+  - **Tam plaka** (TR ya da yabancı / özel; yazım serbest, boşluk ve tire atılır): rakam içeren her `q` böyle okunur ve temiz hâli `A-Z0-9`, 2-12 karakter olmalıdır. Yalnızca özetteki **bütün bir sözcük** tam olarak o plakaysa eşleşir; plakanın bir parçası (`34ABC12`, `MAB1`, `34`) daha uzun bir plakayı asla bulmaz (sonuç 0). Yanıt yine maskelidir.
+  - **Serbest metin**: rakamsız, en az 4 karakter. Özetin geliştiricinin gördüğü (plakaları maskelenmiş) hâlinde aranır; bu yüzden bir plaka sözcüğünün içinde asla eşleşmez (`MXYZ1234` için `MXYZ` 0 sonuç). Boşluksuz ve plaka biçimine de uyan bir sözcük (`TAXI`) ayrıca tam plaka olarak denenir.
+  - Diğer her girdi (`ABC`, `AB` gibi kısa harf grupları, `34 ABC 123 giriş`, `1500.50`, 12 karakterden uzun değerler) `400` döner.
+  - Arama, tarih penceresinin en yeni 5000 satırını süzer; sınıra ulaşılırsa yanıtta `searchLimited: true` olur (tarih aralığını daraltın). `q` yokken liste eskisi gibi doğrudan veritabanından sayfalanır.
+  - `DEV_AUDIT_VIEWED` kaydındaki `q` da maskelenerek yazılır.
 - `entityId` filtresi yoktur.
 
 `GET /api/developer/audit/actions`: yöneticideki gibi eylem listesi.
