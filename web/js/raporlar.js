@@ -35,12 +35,21 @@
     }
 
     // İndirme: düğme pasif + "Hazırlanıyor…", bitince geri al.
+    // Çalışırken düğme pasif; sunucu 503/429 + Retry-After verirse geri sayım bitene dek pasif kalır.
     async function runDownload(btn, path, fallback) {
+        if (btn.disabled) return;
         const old = btn.innerHTML;
         btn.disabled = true;
         btn.textContent = 'Hazırlanıyor…';
-        try { await downloadFile(path, fallback); }
-        finally { btn.innerHTML = old; btn.disabled = false; }
+        let wait = 0;
+        try { await downloadFile(path, fallback, sec => { wait = sec; }); }
+        finally {
+            for (; wait > 0; wait--) {
+                btn.textContent = `${wait} sn sonra tekrar`;
+                await new Promise(r => setTimeout(r, 1000));
+            }
+            btn.innerHTML = old; btn.disabled = false;
+        }
     }
 
     // ---- İskelet ----
