@@ -191,10 +191,19 @@ void main() {
   });
 
   testWidgets('atlanan yenileme kaybolmaz: uçuştaki çekme varken gelen giriş olayı için bir kez daha zamanlanır', (tester) async {
+    // Sahte saat: pump ile birlikte ilerler, gerçek bekleme yok (CI'da kararlı)
+    var fakeNow = DateTime(2026, 11, 26, 12);
+    ParkingMapScreenState.clockNow = () => fakeNow;
+    addTearDown(() => ParkingMapScreenState.clockNow = DateTime.now);
+    Future<void> pumpFake(Duration d) async {
+      fakeNow = fakeNow.add(d);
+      await tester.pump(d);
+    }
+
     await boot(tester, () async {
       await tester.tap(find.text('Cadde'));
-      await tester.pump(const Duration(seconds: 1));
-      await tester.pump(const Duration(seconds: 3));
+      await pumpFake(const Duration(seconds: 1));
+      await pumpFake(const Duration(seconds: 3));
       final map = tester.state<ParkingMapScreenState>(find.byType(ParkingMapScreen, skipOffstage: false));
       paths.clear();
 
@@ -213,9 +222,7 @@ void main() {
       // Uçuştaki çekme (olaydan ÖNCEki görüntü) döner; olayın yenilemesi kaybolmamış olmalı
       gate.complete(http.Response('[]', 200, headers: {'content-type': 'application/json; charset=utf-8'}));
       await inflight;
-      // minAge gerçek saatle ölçülür (DateTime.now sahte saatle ilerlemez): 2 sn gerçek süre geçsin
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 2100)));
-      await tester.pump(const Duration(seconds: 6));
+      await pumpFake(const Duration(seconds: 6)); // sahte saat de ilerler: minAge (2 sn) dolar
       expect(count('/parking/filter'), 2);
     });
   });

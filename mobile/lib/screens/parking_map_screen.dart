@@ -89,6 +89,9 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
   late final RefreshCoalescer _refresher = RefreshCoalescer(
       action: fetchActiveVehicles, lead: const Duration(milliseconds: 300), window: const Duration(milliseconds: 1500));
   final SpotFetchGuard _guard = SpotFetchGuard();
+  /// Testlerde sahte saat için (üretimde DateTime.now).
+  @visibleForTesting
+  static DateTime Function() clockNow = DateTime.now;
   DateTime? _lastFetch; // son GET /parking/filter başlangıcı (aynı anda gelen yinelenen yenilemeyi atlamak için)
   StreamSubscription<EntrySendResult>? _queueSub;
   final GlobalKey _actionsKey = GlobalKey(); // alttaki düğme sütunu: bildirimler bunun üstünde kalır
@@ -171,8 +174,8 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
   /// Dönüş: istek gerçekten yapıldı mı (false: [minAge] yüzünden atlandı; çağıran isterse yeniden zamanlar).
   Future<bool> fetchActiveVehicles({bool userTriggered = false, Duration? minAge}) async {
     final last = _lastFetch;
-    if (minAge != null && last != null && DateTime.now().difference(last) < minAge) return false;
-    _lastFetch = DateTime.now();
+    if (minAge != null && last != null && clockNow().difference(last) < minAge) return false;
+    _lastFetch = clockNow();
     final id = _guard.begin();
     try {
       final data = await ApiClient.get('/parking/filter', query: {'street': _backendStreetEnum});
