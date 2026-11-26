@@ -44,6 +44,7 @@
 **Vatandaş sayfası (mobil web)**
 - Sürücü tabeladaki ya da görevlinin telefonundaki QR'ı okutur, plakayı girer ve güncel tutarı görür.
 - Gün gün döküm hangi saatlerin ücretli, hangilerinin ücretsiz olduğunu gösterir (gece aralığı ücretsizdir).
+- Deneysel, bayrak arkasında: plakayı telefon kamerasıyla, tamamen cihazda okuma.
 
 **Backend (Spring Boot)**
 - JWT kimlik doğrulamalı REST API ve üç rol (görevli, yönetici, geliştirici); vatandaş sayfası için az sayıda salt okunur, herkese açık uç nokta.
@@ -69,12 +70,14 @@
 
 **Vatandaş sayfası**
 
-| | | |
-|---|---|---|
-| ![Vatandaş QR akışı](docs/images/citizen-qr.gif) | ![Plaka girişi](docs/images/citizen/plate-entry.png) | ![Gün gün dökümlü tutar](docs/images/citizen/fee-breakdown.png) |
-| QR akışı | Plaka girişi | Tutar ve gün gün döküm |
+| | | | |
+|---|---|---|---|
+| ![Plaka girişi](docs/images/citizen/plate-entry-light.png) | ![Güncel tutar, gün gün döküm ve tarife](docs/images/citizen/fee-result-light.png) | ![Tutar ekranı, koyu tema](docs/images/citizen/fee-result-dark.png) | ![Açılmış aylık abonelik kartı](docs/images/citizen/subscription-card.png) |
+| Plaka girişi | Tutar, döküm ve tarife | Koyu tema | Aylık abonelik bilgisi |
 
-Panel ve vatandaş sayfası görüntülerinin hepsi örnek veriyle çalışan yerel Docker demosundan alınmıştır.
+![Vatandaş sayfası tutar ekranı, masaüstü](docs/images/citizen/fee-result-desktop.png)
+
+Panel görüntüleri örnek veriyle çalışan yerel Docker demosundan alınmıştır. Vatandaş sayfası görüntüleri uydurma veriyle çalışan sahte bir API'ye karşı çekilmiştir.
 
 ## Mimari
 
@@ -196,6 +199,10 @@ web-admin/      İlk React denemesi, kullanılmıyor
 | ![Şubat 2026 mimari şeması](docs/images/evolution/2026-02-architecture.png) | ![Çalışma sahası: üç cadde, T = Tevfik Bey, A = Ali Rıza Özkay, C = Cumhuriyet](docs/images/field-map.jpg) | ![Şubat 2026 sabit ızgara ekranı, plakalar bulanık](docs/images/evolution/2026-02-mobile-street.png) | ![Ekim 2026 panel genel bakışı](docs/images/evolution/2026-10-panel-overview.png) |
 
 Çalışma sahası: sistemin kapsadığı üç cadde (T = Tevfik Bey, A = Ali Rıza Özkay, C = Cumhuriyet). Uydu görüntüsü: Google Maps.
+
+| Eski vatandaş sayfası (Kasım 2026) |
+|---|
+| ![Eski vatandaş sayfası (Kasım 2026): yeniden tasarımdan önce plaka girişi, tutar ve döküm](docs/images/citizen-qr.gif) |
 
 ## Yol haritası
 

@@ -1,0 +1,17 @@
+{
+  "name": "bilpark-vatandas-sayfa-test",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Vatandaş sayfası testleri: plaka kuralları (node --test) ve sahte API'ye karşı tarayıcı testi (sistemdeki Chrome).",
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-concurrency=1 kurallar.test.mjs sayfa.test.mjs",
+    "test:kurallar": "node --test kurallar.test.mjs",
+    "serve": "node sunucu.mjs"
+  },
+  "devDependencies": {
+    "onnxruntime-web": "1.31.1",
+    "paddle-ocr-onnx-models": "0.2.0",
+    "puppeteer-core": "24.10.0"
+  }
+}
