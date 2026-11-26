@@ -664,7 +664,8 @@
         // 503 geçicidir (sunucu yoğun/uyanıyor): yalnızca okuma isteklerinde üstel beklemeyle en çok 2 kez yeniden dene, oturuma dokunma
         const idempotent = !options.method || options.method.toUpperCase() === 'GET';
         for (let i = 0; i < 2 && idempotent && response.status === 503; i++) {
-            await sleep(Math.min(retryAfterSec(response) || 1.5 * Math.pow(2, i), 10) * 1000);
+            // Sunucunun Retry-After değeri en çok 30 sn beklenir: uyanma/aşırı yük süreleri 10 sn'yi aşabilir, daha uzunu kullanıcıyı bekletir
+            await sleep(Math.min(retryAfterSec(response) || 1.5 * Math.pow(2, i), 30) * 1000);
             response = await fetch(url, options);
         }
         if (response.status === 401) {
