@@ -1,0 +1,29 @@
+ calls | total_ms | mean_ms | max_ms |  rows  |                                                                              query                                                                               
+-------+----------+---------+--------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   324 |    47566 |  146.81 |    710 |  32400 | select pr1_0.id,pr1_0.cancel_reason,pr1_0.cancelled_at,pr1_0.cancelled_by_username,pr1_0.cancelled_from_status,pr1_0.collected_by_id,pr1_0.collected_by_username
+  1082 |    37368 |   34.54 |    563 |  54100 | select pr1_0.id,pr1_0.cancel_reason,pr1_0.cancelled_at,pr1_0.cancelled_by_username,pr1_0.cancelled_from_status,pr1_0.collected_by_id,pr1_0.collected_by_username
+  1280 |    20910 |   16.34 |    293 |   1280 | select coalesce(sum(pr1_0.fee),0) from parking_records pr1_0 where pr1_0.status='PAID' and pr1_0.exit_time>=$1 and pr1_0.exit_time<$2
+   320 |    14614 |   45.67 |    360 |    640 | select pr1_0.vehicle_type,coalesce(sum(pr1_0.fee),0),count(pr1_0.id) from parking_records pr1_0 where pr1_0.status='PAID' group by pr1_0.vehicle_type
+ 19689 |      506 |    0.03 |    100 |  19689 | select z1_0.id,z1_0.left_landmark,z1_0.right_landmark,z1_0.street,z1_0.zone_name,z1_0.zone_number from zones z1_0 where z1_0.id=$1
+  2269 |      487 |    0.21 |     24 | 327292 | select ps1_0.id,ps1_0.current_plate,ps1_0.current_type,ps1_0.entry_time,ps1_0.foreign_country_code,ps1_0.foreign_plate,ps1_0.neighborhood,ps1_0.region,ps1_0.sid
+  7887 |      472 |    0.06 |     76 |   7887 | select u1_0.id,u1_0.active,u1_0.zone_id,u1_0.created_at,u1_0.full_name,u1_0.last_app_version,u1_0.last_device,u1_0.last_login_time,u1_0.last_seen_at,u1_0.passwo
+ 10824 |      341 |    0.03 |     32 |  10824 | select coalesce(sum(pr1_0.fee),0) from parking_records pr1_0 where pr1_0.status='PAID' and pr1_0.collected_by_id=$1 and pr1_0.device_id=$2 and pr1_0.exit_time>=
+    62 |      151 |    2.43 |     76 |      0 | select pr1_0.license_plate,coalesce(sum(pr1_0.fee),$227) from parking_records pr1_0 where pr1_0.license_plate in ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
+     9 |      146 |   16.17 |     52 |     54 | SELECT zone_id, MAX(t) FROM (SELECT zone_id, entry_time AS t FROM parking_records WHERE entry_time >= $1 UNION ALL SELECT zone_id, exit_time FROM parking_record
+     9 |      140 |   15.60 |     60 |    162 | SELECT r.zone_id, a.action, COUNT(*) FROM audit_logs a JOIN parking_records r ON CAST(r.id AS VARCHAR(100)) = a.entity_id WHERE a.entity_type = $2 AND a.action 
+    87 |      110 |    1.26 |     64 |     87 | SELECT count(*) || $1 || count(*) FILTER (WHERE state = $2) FROM pg_stat_activity WHERE usename = $3 AND pid <> pg_backend_pid()
+   319 |      101 |    0.32 |      1 | 103243 | select ps1_0.id,ps1_0.current_plate,ps1_0.current_type,ps1_0.entry_time,ps1_0.foreign_country_code,ps1_0.foreign_plate,ps1_0.neighborhood,ps1_0.region,ps1_0.sid
+     2 |       84 |   42.01 |     82 |  18107 | select pr1_0.id,pr1_0.license_plate,pr1_0.street,z1_0.id,z1_0.zone_name,pr1_0.entry_time,pr1_0.exit_time,pr1_0.vehicle_type,pr1_0.fee,pr1_0.status,pr1_0.debt_pa
+     4 |       79 |   19.75 |     77 |      0 | select pr1_0.license_plate,coalesce(sum(pr1_0.fee),$282) from parking_records pr1_0 where pr1_0.license_plate in ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
+     2 |       77 |   38.72 |     77 |      0 | select pr1_0.license_plate,coalesce(sum(pr1_0.fee),$257) from parking_records pr1_0 where pr1_0.license_plate in ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
+    40 |       67 |    1.67 |     44 |      0 | select pr1_0.license_plate,coalesce(sum(pr1_0.fee),$167) from parking_records pr1_0 where pr1_0.license_plate in ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
+     2 |       58 |   28.75 |     57 |      0 | select pr1_0.license_plate,coalesce(sum(pr1_0.fee),$302) from parking_records pr1_0 where pr1_0.license_plate in ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
+     2 |       57 |   28.66 |     57 |      0 | select pr1_0.license_plate,coalesce(sum(pr1_0.fee),$277) from parking_records pr1_0 where pr1_0.license_plate in ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
+     2 |       57 |   28.31 |     56 |      0 | select pr1_0.license_plate,coalesce(sum(pr1_0.fee),$331) from parking_records pr1_0 where pr1_0.license_plate in ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
+     2 |       54 |   26.78 |     53 |      0 | select pr1_0.license_plate,coalesce(sum(pr1_0.fee),$267) from parking_records pr1_0 where pr1_0.license_plate in ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
+     2 |       53 |   26.41 |     52 |      0 | select pr1_0.license_plate,coalesce(sum(pr1_0.fee),$283) from parking_records pr1_0 where pr1_0.license_plate in ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
+    63 |       52 |    0.82 |     21 |      0 | select pr1_0.license_plate,coalesce(sum(pr1_0.fee),$209) from parking_records pr1_0 where pr1_0.license_plate in ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
+     5 |       51 |   10.12 |     48 |      0 | select pr1_0.license_plate,coalesce(sum(pr1_0.fee),$274) from parking_records pr1_0 where pr1_0.license_plate in ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
+    20 |       47 |    2.34 |     37 |      0 | select pr1_0.license_plate,coalesce(sum(pr1_0.fee),$174) from parking_records pr1_0 where pr1_0.license_plate in ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
+(25 rows)
+
