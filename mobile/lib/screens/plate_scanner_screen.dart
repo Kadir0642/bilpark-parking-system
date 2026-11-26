@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' show Point;
 import 'package:camera/camera.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
@@ -83,8 +84,16 @@ List<OcrBox> ocrBoxesFrom(RecognizedText recognized) => [
           top: e.boundingBox.top,
           right: e.boundingBox.right,
           bottom: e.boundingBox.bottom,
+          charHeight: cornerHeight(e.cornerPoints),
         ),
 ];
+
+/// Döndürülmüş köşe noktalarından (sol-üstten saat yönünde) yazı yüksekliği; 4 nokta yoksa null.
+double? cornerHeight(List<Point<int>> p) {
+  if (p.length != 4) return null;
+  final h = (p[0].distanceTo(p[3]) + p[1].distanceTo(p[2])) / 2;
+  return h > 0 ? h : null;
+}
 
 /// ML Kit kutuları dik (döndürülmüş) görüntü koordinatındadır: 90/270 derecede en ve boy yer değiştirir.
 Size uprightFrameSize(Size image, InputImageRotation rotation) =>
@@ -244,10 +253,14 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
         plate = extractPlate(text.text);
       }
       final confirmed = _reads.add(_foreign ? foreignConfirmKey(plate) : plate);
-      if (mounted && (plate != _candidate || _error != null)) {
+      // Yabancı modda yeni bir harf+rakam adayı kare biriktirmeye başlayınca ipucu gizlenir, süre yeniden başlar
+      final newForeignCandidate = _foreign && plate != _candidate && foreignConfirmKey(plate) != null;
+      if (newForeignCandidate) _restartHintTimer();
+      if (mounted && (plate != _candidate || _error != null || newForeignCandidate)) {
         setState(() {
           _candidate = plate;
           _error = null; // okuma çalışıyor
+          if (newForeignCandidate) _showHint = false;
         });
       }
       if (confirmed != null) _finish(confirmed);
@@ -284,11 +297,15 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
       _countryCode = null;
     });
     _reads = ConsecutiveReads(needed: readsNeeded(foreign: on)); // önceki moddaki okuma sayılmaz
-    if (on) {
-      _hintTimer = Timer(foreignHintDelay, () {
-        if (mounted && _foreign && !_done) setState(() => _showHint = true);
-      });
-    }
+    if (on) _restartHintTimer();
+  }
+
+  /// Yabancı modda [foreignHintDelay] içinde onay çıkmazsa ipucunu gösterir.
+  void _restartHintTimer() {
+    _hintTimer?.cancel();
+    _hintTimer = Timer(foreignHintDelay, () {
+      if (mounted && _foreign && !_done) setState(() => _showHint = true);
+    });
   }
 
   Future<void> _toggleTorch() async {
