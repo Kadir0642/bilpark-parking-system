@@ -1,5 +1,6 @@
 package com.bilpark.backend.audit;
 
+import com.bilpark.backend.common.ClientIp;
 import com.bilpark.backend.common.DeviceIds;
 import com.bilpark.backend.model.AuditAction;
 import com.bilpark.backend.model.AuditLog;
@@ -40,8 +41,11 @@ public class AuditService {
     private final UserRepository userRepository;
     private final JsonMapper mapper;
     private final Clock clock;
+    private final ClientIp clientIp;
 
-    public AuditService(AuditLogRepository repository, UserRepository userRepository, JsonMapper mapper, Clock clock) {
+    public AuditService(AuditLogRepository repository, UserRepository userRepository, JsonMapper mapper, Clock clock,
+                        ClientIp clientIp) {
+        this.clientIp = clientIp;
         this.repository = repository;
         this.userRepository = userRepository;
         this.mapper = mapper;
@@ -100,7 +104,7 @@ public class AuditService {
         if (req != null) {
             String device = req.getHeader("X-Device-Id");
             row.setDeviceId(device != null ? DeviceIds.sanitize(device) : null);
-            row.setIpAddress(truncate(com.bilpark.backend.common.ClientIp.of(req), 64));
+            row.setIpAddress(truncate(clientIp.of(req), 64));
         }
         row.setAction(action);
         row.setEntityType(truncate(entityType, 50));

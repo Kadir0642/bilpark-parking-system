@@ -6,10 +6,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * In-memory limit for plate lookups (citizen debt query, developer plate search), per client IP and per
@@ -17,9 +17,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * limit is generous. What is strict is the trying-plates-one-by-one pattern: the number of DIFFERENT short
  * plates looked up from one IP, plus a ceiling of different short plates shared by all clients. Asking for
  * the same plate again (refresh, QR re-scan) never counts against the short limits.
- * One app instance (Render Free), so memory is enough; a restart resets it.
- * Settings: {@code bilpark.rate-limit.plate-lookup.*} (application.properties). Officer / admin endpoints
- * are not limited here.
+ * <p>
+ * At most {@code max-tracked-clients} client IPs are tracked. When full, clients whose windows have all
+ * expired are dropped; if it is still full, new clients share one overflow bucket (tracked clients keep
+ * their own counters, nobody's counters are reset).
+ * <p>
+ * One app instance (Render Free), so memory is enough; a restart resets it. The work per call is a few map
+ * operations, so one lock keeps the counters consistent. Settings: {@code bilpark.rate-limit.plate-lookup.*}
+ * (application.properties). Officer / admin endpoints are not limited here.
  */
 @Component
 public class PlateLookupRateLimiter {
@@ -37,17 +42,25 @@ public class PlateLookupRateLimiter {
     private final int shortMaxLength;
     private final int shortDistinctGlobal;
     private final int maxTrackedClients;
+    private final ClientIp clientIp;
     private final Clock clock;
 
-    private final Map<String, Window> perClient = new ConcurrentHashMap<>();
-    private final Map<String, Window> global = new ConcurrentHashMap<>(); // kept apart: never evicted
+    private final Map<String, Client> clients = new HashMap<>();   // guarded by this
+    private final Client overflow = new Client();                  // new clients once the map is full
+    private final Map<String, Window> global = new HashMap<>();    // scope -> different short plates of all clients
 
     private static final class Window {
         final long start;
         int count;
-        Set<String> plates; // distinct plates of this window (short-plate keys only), at most the limit
+        final Set<String> plates = new HashSet<>(); // distinct short plates of this window, at most the limit
 
         Window(long start) { this.start = start; }
+    }
+
+    /** Windows of one client IP, by scope and kind. */
+    private static final class Client {
+        final Map<String, Window> windows = new HashMap<>();
+        long lastStart;
     }
 
     @Autowired
@@ -59,6 +72,7 @@ public class PlateLookupRateLimiter {
             @Value("${bilpark.rate-limit.plate-lookup.short-max-length:5}") int shortMaxLength,
             @Value("${bilpark.rate-limit.plate-lookup.short-distinct-global:100}") int shortDistinctGlobal,
             @Value("${bilpark.rate-limit.plate-lookup.max-tracked-clients:10000}") int maxTrackedClients,
+            ClientIp clientIp,
             Clock clock) {
         this.enabled = enabled;
         this.windowMillis = Math.max(1, windowSeconds) * 1000L;
@@ -66,67 +80,71 @@ public class PlateLookupRateLimiter {
         this.shortDistinctPerIp = Math.max(1, shortDistinctPerIp);
         this.shortMaxLength = Math.max(0, shortMaxLength);
         this.shortDistinctGlobal = Math.max(1, shortDistinctGlobal);
-        this.maxTrackedClients = Math.max(100, maxTrackedClients);
+        this.maxTrackedClients = Math.max(1, maxTrackedClients);
+        this.clientIp = clientIp;
         this.clock = clock;
     }
 
     /** Counts one lookup of {@code rawPlate}; throws 429 {@link RateLimitedException} when over a limit. */
     public void check(String scope, HttpServletRequest request, String rawPlate) {
         if (!enabled) return;
-        String ip = ClientIp.of(request);
+        String ip = clientIp.of(request); // validated, at most 64 characters
         if (ip == null || ip.isBlank()) ip = "unknown";
-        long now = clock.millis();
-        evictIfFull(now);
-
         String plate = PlateNormalizer.clean(rawPlate);
-        // stricter limits first, so a refused short lookup does not use up the general per-IP allowance
-        if (plate.length() <= shortMaxLength) {
-            acquireDistinct(perClient, scope + "|short|" + ip, plate, shortDistinctPerIp, now);
-            acquireDistinct(global, scope + "|short", plate, shortDistinctGlobal, now);
-        }
-        acquire(perClient, scope + "|ip|" + ip, perIp, now);
-    }
+        boolean isShort = plate.length() <= shortMaxLength;
+        long now = clock.millis();
 
-    private void acquire(Map<String, Window> map, String key, int limit, long now) {
-        long[] retryAfter = {0};
-        map.compute(key, (k, w) -> {
-            if (w == null || now - w.start >= windowMillis) w = new Window(now);
-            if (w.count < limit) {
-                w.count++;
-            } else {
-                retryAfter[0] = retryAfter(w, now);
-            }
-            return w;
-        });
-        if (retryAfter[0] > 0) throw new RateLimitedException(MESSAGE, retryAfter[0]);
-    }
+        synchronized (this) {
+            Client client = clientFor(ip, now);
+            client.lastStart = Math.max(client.lastStart, now);
+            Window all = window(client.windows, scope + "|all", now);
+            Window mine = isShort ? window(client.windows, scope + "|short", now) : null;
+            Window everyone = isShort ? window(global, scope, now) : null;
 
-    /** A plate already seen in this window passes; a new one passes while fewer than {@code limit} were seen. */
-    private void acquireDistinct(Map<String, Window> map, String key, String plate, int limit, long now) {
-        long[] retryAfter = {0};
-        map.compute(key, (k, w) -> {
-            if (w == null || now - w.start >= windowMillis) w = new Window(now);
-            if (w.plates == null) w.plates = new HashSet<>();
-            if (!w.plates.contains(plate)) {
-                if (w.plates.size() < limit) {
-                    w.plates.add(plate);
-                } else {
-                    retryAfter[0] = retryAfter(w, now);
+            // every check first, then count: a refused lookup changes no counter (sets stay consistent)
+            if (isShort) {
+                if (!mine.plates.contains(plate) && mine.plates.size() >= shortDistinctPerIp) throw limited(mine, now);
+                if (!everyone.plates.contains(plate) && everyone.plates.size() >= shortDistinctGlobal) {
+                    throw limited(everyone, now);
                 }
             }
-            return w;
-        });
-        if (retryAfter[0] > 0) throw new RateLimitedException(MESSAGE, retryAfter[0]);
+            if (all.count >= perIp) throw limited(all, now);
+
+            all.count++;
+            if (isShort) {
+                mine.plates.add(plate);
+                everyone.plates.add(plate);
+            }
+        }
     }
 
-    private long retryAfter(Window w, long now) {
-        return Math.max(1, (w.start + windowMillis - now + 999) / 1000);
+    /** Number of client IPs currently tracked (the overflow bucket not included). */
+    synchronized int trackedClients() {
+        return clients.size();
     }
 
-    /** Keeps memory bounded: drops expired windows, and everything per client if still too many. */
-    private void evictIfFull(long now) {
-        if (perClient.size() < maxTrackedClients) return;
-        perClient.entrySet().removeIf(e -> now - e.getValue().start >= windowMillis);
-        if (perClient.size() >= maxTrackedClients) perClient.clear(); // the shared short ceiling still holds
+    private Client clientFor(String ip, long now) {
+        Client c = clients.get(ip);
+        if (c != null) return c;
+        if (clients.size() >= maxTrackedClients) {
+            clients.values().removeIf(x -> now - x.lastStart >= windowMillis);
+            if (clients.size() >= maxTrackedClients) return overflow;
+        }
+        c = new Client();
+        clients.put(ip, c);
+        return c;
+    }
+
+    private Window window(Map<String, Window> map, String key, long now) {
+        Window w = map.get(key);
+        if (w == null || now - w.start >= windowMillis) {
+            w = new Window(now);
+            map.put(key, w);
+        }
+        return w;
+    }
+
+    private RateLimitedException limited(Window w, long now) {
+        return new RateLimitedException(MESSAGE, Math.max(1, (w.start + windowMillis - now + 999) / 1000));
     }
 }
