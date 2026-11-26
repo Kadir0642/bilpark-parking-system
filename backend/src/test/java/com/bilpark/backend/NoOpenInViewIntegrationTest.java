@@ -91,7 +91,11 @@ class NoOpenInViewIntegrationTest {
                 .andExpect(status().isOk());
         mvc.perform(get("/api/tariff/current")).andExpect(status().isOk());
         mvc.perform(get("/api/admin/users").header("Authorization", adm)).andExpect(status().isOk());
-        mvc.perform(get("/api/admin/reports/period/summary").header("Authorization", adm)).andExpect(status().isOk());
-        mvc.perform(get("/api/admin/reports/records").header("Authorization", adm)).andExpect(status().isOk());
+        mvc.perform(get("/api/admin/reports/period/summary").header("Authorization", adm)
+                .param("from", today).param("to", today)).andExpect(status().isOk());
+        mvc.perform(get("/api/admin/reports/records").header("Authorization", adm)
+                .param("from", today).param("to", today)).andExpect(status().isOk());
+        mvc.perform(get("/api/admin/reports/personnel/summary").header("Authorization", adm)
+                .param("month", today.substring(0, 7))).andExpect(status().isOk());
     }
 }
