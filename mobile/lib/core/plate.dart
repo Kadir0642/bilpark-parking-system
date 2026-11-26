@@ -6,11 +6,27 @@ const plateExample = '34 ABC 123';
 // İl kodu 01-81, ardından: 1 harf + 4-5 rakam | 2 harf + 3-4 rakam | 3 harf + 2-3 rakam
 final _trPlate = RegExp(r'^(0[1-9]|[1-7][0-9]|8[01])([A-Z][0-9]{4,5}|[A-Z]{2}[0-9]{3,4}|[A-Z]{3}[0-9]{2,3})$');
 
-/// Boşluk ve tireleri atar, Türkçe i/ı/İ harflerini I yapar, büyütür. Doğrulamaz.
+/// Rus plakalarında kullanılan 12 Kiril harfi Latin eşine iner (А В Е К М Н О Р С Т У Х).
+/// Görevli Kiril klavyeyle yazsa ya da OCR Kiril döndürse de plaka A-Z kuralına uyar.
+const _cyrillicToLatin = {
+  'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', //
+  'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T', 'У': 'Y', 'Х': 'X',
+};
+
+/// Rus plakası Kiril harflerini (büyük / küçük) Latin büyük eşine çevirir; gerisine dokunmaz.
+String latinizeCyrillic(String raw) {
+  if (!RegExp('[\u0400-\u04FF]').hasMatch(raw)) return raw;
+  return raw.split('').map((c) => _cyrillicToLatin[c.toUpperCase()] ?? c).join();
+}
+
+/// Boşluk ve tireleri atar, Türkçe i/ı/İ harflerini I yapar, büyütür. Doğrulamaz. (TR yolu: Kiril dönüşümü yok)
 String cleanPlate(String raw) {
   final s = raw.replaceAll(RegExp(r'[\s-]+'), '').replaceAll('İ', 'I').replaceAll('ı', 'I').replaceAll('i', 'I');
   return s.toUpperCase();
 }
+
+/// Yabancı plaka yolu: [cleanPlate] + Rus plakası Kiril harfleri Latin eşine. TR yolunda kullanılmaz.
+String cleanForeignPlate(String raw) => latinizeCyrillic(cleanPlate(raw));
 
 /// Ham girdi (boşluklu/küçük harfli olabilir) geçerli bir Türk plakası mı?
 bool isValidTrPlate(String raw) => _trPlate.hasMatch(cleanPlate(raw));
@@ -131,11 +147,11 @@ const foreignPlateMax = 12;
 final _foreignPlate = RegExp('^[A-Z0-9]{$foreignPlateMin,$foreignPlateMax}\$');
 
 /// Ham girdi yabancı / özel plaka kuralına uyuyor mu? (Her Türk plakası da uyar.)
-bool isValidForeignPlateInput(String raw) => _foreignPlate.hasMatch(cleanPlate(raw));
+bool isValidForeignPlateInput(String raw) => _foreignPlate.hasMatch(cleanForeignPlate(raw));
 
 /// Yabancı / özel plaka için kısa Türkçe neden; geçerliyse null.
 String? foreignPlateHint(String raw) {
-  final p = cleanPlate(raw);
+  final p = cleanForeignPlate(raw);
   if (p.isEmpty) return 'Plakayı yazın. Örnek: $foreignPlateExample';
   if (RegExp(r'[^A-Z0-9]').hasMatch(p)) return 'Yalnızca A-Z harfleri ve rakam kullanın';
   if (p.length < foreignPlateMin) return 'En az $foreignPlateMin karakter';
@@ -157,7 +173,7 @@ String? extractRawPlate(String ocrText) {
   String? best;
   var bestScore = -1;
   for (final line in ocrText.split(RegExp(r'[\r\n]+'))) {
-    final p = cleanPlate(line).replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    final p = cleanForeignPlate(line).replaceAll(RegExp(r'[^A-Z0-9]'), '');
     if (p.length < foreignPlateMin || p.length > foreignPlateMax) continue;
     final mixed = RegExp(r'[A-Z]').hasMatch(p) && RegExp(r'[0-9]').hasMatch(p);
     final score = (mixed ? 100 : 0) + p.length;

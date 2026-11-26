@@ -62,7 +62,8 @@ class PlateScan {
 /// OCR metninden plaka: TR modunda TR biçimine göre düzeltilmiş aday, yabancı / özel modda ham temiz metin.
 String? plateFromOcr(String text, {required bool foreign}) => foreign ? extractRawPlate(text) : extractPlate(text);
 
-/// Kaç ardışık aynı okuma onaylar: yabancı / özel modda düzeltme kuralı olmadığından 3, TR'de 2.
+/// Kaç aynı okuma onaylar: yabancı / özel modda düzeltme kuralı olmadığından 3 (son 6 karede,
+/// bkz. [ForeignVotes]), TR'de üst üste 2.
 int readsNeeded({required bool foreign}) => foreign ? 3 : 2;
 
 /// Yabancı modda onay sayacına giden değer: yalnızca harf+rakam karışık adaylar sayılır,
@@ -73,7 +74,8 @@ String? foreignConfirmKey(String? plate) => plate != null && isMixedPlate(plate)
 const foreignHintDelay = Duration(seconds: 3);
 const foreignHintText = 'Plakayı çerçevenin ortasına alın ve biraz yaklaşın';
 
-/// ML Kit sonucunu saf [OcrBox] listesine çevirir (kelime düzeyi: blok > satır > kelime).
+/// ML Kit sonucunu saf [OcrBox] listesine çevirir (kelime düzeyi: blok > satır > kelime). Karakter
+/// kutuları da taşınır: ızgarada yan yana iki plakanın tek kelimeye birleştiği yer bunlardan bulunur.
 List<OcrBox> ocrBoxesFrom(RecognizedText recognized) => [
   for (final block in recognized.blocks)
     for (final line in block.lines)
@@ -85,8 +87,27 @@ List<OcrBox> ocrBoxesFrom(RecognizedText recognized) => [
           right: e.boundingBox.right,
           bottom: e.boundingBox.bottom,
           charHeight: cornerHeight(e.cornerPoints),
+          symbols: [
+            for (final c in e.symbols)
+              OcrBox(
+                c.text,
+                left: c.boundingBox.left,
+                top: c.boundingBox.top,
+                right: c.boundingBox.right,
+                bottom: c.boundingBox.bottom,
+              ),
+          ],
         ),
 ];
+
+/// Yabancı modda çerçevenin altındaki küçük tanı satırı: kameranın o an gördüğü en iyi aday, ülke kodu
+/// ve onay ilerlemesi. Görevli "ne okuyor" sorusuna ekrandan cevap verebilsin diye; sunucuya gitmez.
+String foreignDebugLine(ForeignPlateRead? read, {required int votes, required int needed}) {
+  if (read == null) return 'aday yok';
+  final cc = read.countryCode == null ? '' : ' · ${read.countryCode}';
+  final progress = read.mixed ? '$votes/$needed' : 'harf+rakam yok, onaylanmaz';
+  return 'aday: ${read.plate}$cc · $progress';
+}
 
 /// Döndürülmüş köşe noktalarından (sol-üstten saat yönünde) yazı yüksekliği; 4 nokta yoksa null.
 double? cornerHeight(List<Point<int>> p) {
@@ -123,7 +144,10 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
 
   CameraController? _cam;
   TextRecognizer? _recognizer;
-  var _reads = ConsecutiveReads(needed: readsNeeded(foreign: false));
+  var _reads = ConsecutiveReads(needed: readsNeeded(foreign: false)); // TR modu (değişmedi)
+  var _votes = ForeignVotes(needed: readsNeeded(foreign: true)); // yabancı mod: son karelerde çoğunluk
+  ForeignPlateRead? _foreignRead; // yabancı modda son karenin en iyi adayı (tanı satırı)
+  int _foreignVotesNow = 0;
   bool _busy = false;
   bool _done = false;
   bool _torch = false;
@@ -245,14 +269,23 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
       if (input == null) return;
       final text = await _recognizer!.processImage(input);
       String? plate;
+      String? confirmed;
       if (_foreign) {
         final r = foreignReadFromRecognized(text, frame: _frame);
         plate = r?.plate;
         _countryCode = r?.countryCode;
+        confirmed = _votes.add(foreignConfirmKey(plate));
+        final votes = _votes.votesFor(foreignConfirmKey(plate));
+        if (mounted && (r?.plate != _foreignRead?.plate || r?.countryCode != _foreignRead?.countryCode || votes != _foreignVotesNow)) {
+          setState(() {
+            _foreignRead = r;
+            _foreignVotesNow = votes;
+          });
+        }
       } else {
         plate = extractPlate(text.text);
+        confirmed = _reads.add(plate);
       }
-      final confirmed = _reads.add(_foreign ? foreignConfirmKey(plate) : plate);
       // Yabancı modda yeni bir harf+rakam adayı kare biriktirmeye başlayınca ipucu gizlenir, süre yeniden başlar
       final newForeignCandidate = _foreign && plate != _candidate && foreignConfirmKey(plate) != null;
       if (newForeignCandidate) _restartHintTimer();
@@ -295,8 +328,12 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
       _candidate = null;
       _showHint = false;
       _countryCode = null;
+      _foreignRead = null;
+      _foreignVotesNow = 0;
     });
-    _reads = ConsecutiveReads(needed: readsNeeded(foreign: on)); // önceki moddaki okuma sayılmaz
+    // önceki moddaki okuma sayılmaz
+    _reads = ConsecutiveReads(needed: readsNeeded(foreign: false));
+    _votes = ForeignVotes(needed: readsNeeded(foreign: true));
     if (on) _restartHintTimer();
   }
 
@@ -367,6 +404,26 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
               ),
             ),
           ),
+          // Yabancı modda çerçevenin hemen altında küçük tanı satırı (kamera ne görüyor)
+          if (_foreign)
+            Align(
+              alignment: Alignment.center,
+              child: Padding(
+                // Align dolgu + metni birlikte ortalar: üst dolgu = çerçeve boyu (en x 0.9 / 4.5) + 40 olunca
+                // metin çerçevenin alt kenarının ~12 px altına düşer
+                padding: EdgeInsets.only(top: MediaQuery.sizeOf(context).width * 0.9 / 4.5 + 40),
+                child: Text(
+                  foreignDebugLine(_foreignRead, votes: _foreignVotesNow, needed: readsNeeded(foreign: true)),
+                  key: const Key('scanForeignDebug'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    shadows: [Shadow(blurRadius: 3, color: Colors.black)],
+                  ),
+                ),
+              ),
+            ),
           SafeArea(
             child: Column(
               children: [
@@ -420,6 +477,19 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
                       style: TextStyle(color: Colors.amber, fontSize: 14, fontWeight: FontWeight.w700),
                     ),
                   ),
+                // Onay gelmiyorsa (ör. yalnız rakamlı Suriye plakası, mühür harfi oynuyor) görülen adayı tek
+                // dokunuşla forma taşı; görevli formda düzeltir. Aday yoksa "Elle yaz" yabancı modda açılır.
+                if (_showHint && _foreign && _error == null && _candidate != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: TextButton.icon(
+                      key: const Key('scanUseCandidate'),
+                      style: TextButton.styleFrom(foregroundColor: Colors.white, backgroundColor: Colors.black54),
+                      onPressed: () => _finish(_candidate),
+                      icon: const Icon(Icons.check),
+                      label: Text('Bunu kullan: $_candidate'),
+                    ),
+                  ),
                 const SizedBox(height: 12),
                 FilterChip(
                   key: const Key('scanForeignChip'),
@@ -435,7 +505,8 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
                     child: FilledButton.icon(
                       onPressed: () => _finish(''),
                       icon: const Icon(Icons.keyboard),
-                      label: const Text('Elle yaz'),
+                      // Yabancı modda form yabancı plaka anahtarı açık gelir (Arapça / Farsça rakamlı plaka için hızlı yol)
+                      label: Text(_foreign ? 'Elle yaz (yabancı)' : 'Elle yaz'),
                     ),
                   ),
                 ),
