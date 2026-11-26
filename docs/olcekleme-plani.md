@@ -33,7 +33,7 @@ fiyat ve limit sayfası kontrol edilmeli. Burada yalnızca adım türleri ve ç�
 | Ücretli tek örnek, daha çok CPU | Uygulama CPU'su; açılış (0,5 CPU'da 260 sn → 36 sn, §3.7) | — | Tek başına yetmez: 0,5 CPU'da 30 görevlide p95 değişmedi, kırılma yine 30-50 arası (§3.8) |
 | Daha çok RAM | Yığın boyutu, tam GC duraklamaları | `JDK_JAVA_OPTIONS` içinde `MaxRAMPercentage` (bugün 45) | Yığın dışı bellek (CDS, metaspace, kod önbelleği) kabaca sabit; ek RAM yığına verilebilir. Yüzdeyi artırınca RSS izlenmeli |
 | Daha yüksek DB işlem gücü | DB CPU'su (30 görevlide sınıra dayandı, §3.9) ve bağlantı sınırı | `DB_POOL_SIZE` (varsayılan 10) | Havuz, DB'nin izin verdiği bağlantı sınırına göre büyütülür; sınır sağlayıcıda boyuta bağlı |
-| Tomcat iş parçacığı | Yalnızca çok yüksek eşzamanlılıkta | `TOMCAT_MAX_THREADS` (varsayılan 200) | Ölçümde iş parçacığı yığınları ~2 MB tuttu; çoğu zaman değiştirmek gerekmez |
+| Tomcat iş parçacığı | Yalnızca çok yüksek eşzamanlılıkta | `TOMCAT_MAX_THREADS` (varsayılan 200) | Çoğu zaman değiştirmek gerekmez (bellek etkisi yük testinde ölçülmedi) |
 | Uygulama ile DB aynı bölgede | Her sorgudaki ~20 ms gidiş-dönüş (§1) | — | Bağlantının tutulma süresini kısaltır |
 
 Sıra: önce ücretsiz ayarlar (havuz, yığın yüzdesi); sonra DB işlem gücü ve CPU birlikte, çünkü §3.8'e göre biri
@@ -60,7 +60,7 @@ davranış sessizce bozulur. Liste kod taramasından çıkarıldı; yeni bileşe
 | Flyway göçleri | Açılışta | Flyway DB kilidiyle çakışmayı engeller | Göçlü deploy'u örnekleri tek tek yenileyerek yapın |
 
 **DB bağlantı bütçesi:** `örnek sayısı × DB_POOL_SIZE + yönetim/göç payı ≤ DB'nin bağlantı sınırı`. Ücretsiz katman
-için ~100 doğrudan bağlantı notu var (canlı hesapta doğrulanmadı, `yuk-testi.md` §1). Sınıra yaklaşılırsa: örnek
+için (0,25 CU) ~104 doğrudan bağlantı alındı (canlı hesapta doğrulanmadı, `yuk-testi.md` §1). Sınıra yaklaşılırsa: örnek
 başına havuzu küçültmek, DB önünde bağlantı havuzlayıcı (pooler) kullanmak (oturum durumu ve hazırlanmış ifade
 uyumu önce denenmeli), ya da daha büyük DB. `minimum-idle=0` ücretsiz katmanda DB'nin uyuyabilmesi içindir;
 ücretli katmanda sıcak bağlantı tutmak değerlendirilebilir.
