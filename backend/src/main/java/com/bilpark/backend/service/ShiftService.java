@@ -115,17 +115,13 @@ public class ShiftService {
                 s.getUsername() + ": " + summary, before, after);
     }
 
-    /** Closes this user's open shift on this device only (capped by {@link #closingTimeFor}); no-op when none. */
+    /** Closes this user's open shift on this device only (capped by {@link #closingTimeFor}, see {@link #closeAt}); no-op when none. */
     @Transactional
     public void closeShift(User user, String deviceId) {
         if (user == null) return;
         LocalDateTime now = LocalDateTime.now(clock);
         shiftRepository.findFirstByUserAndDeviceIdAndEndTimeIsNullOrderByStartTimeDesc(user, deviceId)
-                .ifPresent(s -> {
-                    // Ertesi gün çıkış yapılırsa süre şişmesin: aynı sınır (aynı gün sınırdan önce = şimdi)
-                    s.setEndTime(closingTimeFor(s, now));
-                    shiftRepository.save(s);
-                });
+                .ifPresent(s -> closeAt(s, now, "Vardiya otomatik kapandı (çıkış gün sınırından sonra)"));
     }
 
     /** Closes every open shift of the user (all devices, capped by {@link #closingTimeFor}), e.g. when the account is deactivated. */
@@ -134,9 +130,23 @@ public class ShiftService {
         if (user == null) return;
         LocalDateTime now = LocalDateTime.now(clock);
         for (Shift s : shiftRepository.findByUserAndEndTimeIsNull(user)) {
-            s.setEndTime(closingTimeFor(s, now));
-            shiftRepository.save(s);
+            closeAt(s, now, "Vardiya otomatik kapandı (hesap değişikliği, gün sınırında)");
         }
+    }
+
+    /**
+     * Closes a shift for a user action (logout, account change). Before the day's boundary it ends now, as a
+     * normal close. When {@link #closingTimeFor} caps the end time (end before now), the system decided the
+     * end, so the shift is marked autoClosed and a SHIFT_AUTO_CLOSED audit row is written, like the nightly job.
+     */
+    private void closeAt(Shift s, LocalDateTime now, String cappedSummary) {
+        LocalDateTime end = closingTimeFor(s, now);
+        if (end.isBefore(now)) {
+            autoClose(s, end, cappedSummary, null);
+            return;
+        }
+        s.setEndTime(end);
+        shiftRepository.save(s);
     }
 
     @Transactional(readOnly = true)

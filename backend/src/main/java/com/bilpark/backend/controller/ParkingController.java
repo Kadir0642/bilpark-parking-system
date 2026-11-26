@@ -6,6 +6,7 @@ import com.bilpark.backend.model.StreetLocation;
 import com.bilpark.backend.common.ApiException;
 import com.bilpark.backend.common.DeviceIds;
 import com.bilpark.backend.common.ErrorCodes;
+import com.bilpark.backend.common.PlateLookupRateLimiter;
 import com.bilpark.backend.model.PaymentMethod;
 import com.bilpark.backend.service.ParkingService;
 import com.bilpark.backend.service.ShiftService;
@@ -32,12 +33,15 @@ public class ParkingController {
     private final com.bilpark.backend.repository.UserRepository userRepository;
     private final com.bilpark.backend.repository.ParkingRecordRepository parkingRecordRepository;
     private final ShiftService shiftService;
+    private final PlateLookupRateLimiter plateLookupLimiter;
 
     public ParkingController(ParkingService parkingService,
                              com.bilpark.backend.repository.UserRepository userRepository,
                              com.bilpark.backend.repository.ParkingRecordRepository parkingRecordRepository,
-                             ShiftService shiftService) {
+                             ShiftService shiftService,
+                             PlateLookupRateLimiter plateLookupLimiter) {
         this.shiftService = shiftService;
+        this.plateLookupLimiter = plateLookupLimiter;
         this.parkingService = parkingService;
         this.userRepository = userRepository;
         this.parkingRecordRepository = parkingRecordRepository;
@@ -203,8 +207,11 @@ public class ParkingController {
     }
 
     // GET /api/parking/debt?plate=34ABC123 — Query outstanding debt for citizen portal
+    // Herkese açık: istemci IP'si başına hız sınırı (kısa plakalarda daha sıkı), aşılırsa 429 RATE_LIMITED
     @GetMapping("/debt")
-    public ResponseEntity<Map<String, Object>> getDebt(@RequestParam String plate) {
+    public ResponseEntity<Map<String, Object>> getDebt(@RequestParam String plate,
+                                                       jakarta.servlet.http.HttpServletRequest request) {
+        plateLookupLimiter.check(PlateLookupRateLimiter.DEBT, request, plate);
         return ResponseEntity.ok(parkingService.getDebtByPlate(plate));
     }
 
