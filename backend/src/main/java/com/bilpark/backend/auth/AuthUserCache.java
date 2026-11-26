@@ -8,6 +8,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 /**
@@ -27,6 +28,10 @@ public class AuthUserCache {
     private record Entry(UserDetails user, long expiresAtNanos) {}
 
     private final ConcurrentHashMap<String, Entry> entries = new ConcurrentHashMap<>();
+    // Bumped by every eviction BEFORE the entry is removed. A load stores its result only if no eviction
+    // happened since the load started: otherwise a read that saw the old row (before the commit) could put it
+    // back after the eviction and keep a reset / deactivated user cached for the TTL.
+    private final AtomicLong generation = new AtomicLong();
     private final long ttlNanos;
     private final int maxEntries;
 
@@ -47,9 +52,13 @@ public class AuthUserCache {
         long now = System.nanoTime();
         Entry e = entries.get(k);
         if (e != null && now - e.expiresAtNanos() < 0) return e.user();
+        long gen = generation.get();
         UserDetails loaded = loader.apply(username);
         if (entries.size() >= maxEntries) prune(now);
-        entries.put(k, new Entry(loaded, now + ttlNanos));
+        Entry fresh = new Entry(loaded, now + ttlNanos);
+        // Atomic per key with evict's remove; the generation check inside rejects a load that overlapped an
+        // eviction (evict bumps the generation first, so either the check fails or the remove comes after the put).
+        entries.compute(k, (key, old) -> generation.get() == gen ? fresh : old);
         return loaded;
     }
 
@@ -62,18 +71,24 @@ public class AuthUserCache {
      *  have cached the old row). */
     public void evict(String username) {
         String k = key(username);
-        entries.remove(k);
+        drop(k);
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCompletion(int status) {
-                    entries.remove(k);
+                    drop(k);
                 }
             });
         }
     }
 
+    private void drop(String k) {
+        generation.incrementAndGet();
+        entries.remove(k);
+    }
+
     public void clear() {
+        generation.incrementAndGet();
         entries.clear();
     }
 

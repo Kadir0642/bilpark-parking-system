@@ -47,19 +47,22 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         this.ticketService = ticketService;
     }
 
-    /** Thrown when the user lookup failed for a reason other than "no such user". */
+    /** Thrown when the user lookup failed because the database could not be reached in time. */
     private static final class LookupFailed extends Exception {
         LookupFailed(Throwable cause) { super(cause); }
     }
 
-    /** null = no such user. */
+    /** null = no such user (or an unexpected non-database error, logged). */
     private UserDetails lookup(String username) throws LookupFailed {
         try {
             return userDetailsService.loadForToken(username);
         } catch (UsernameNotFoundException e) {
             return null;
         } catch (RuntimeException e) {
-            throw new LookupFailed(e);
+            if (Overload.isDatabaseUnavailable(e)) throw new LookupFailed(e);
+            // Not a database outage (a bug): stays anonymous (401) as before, but is logged
+            log.error("Kullanıcı doğrulamada beklenmeyen hata", e);
+            return null;
         }
     }
 

@@ -61,6 +61,20 @@ class JwtAuthFilterTest {
     }
 
     @Test
+    void nonDatabaseFailureStaysAnonymousNot503() throws Exception {
+        validToken();
+        when(users.loadForToken("tevfik")).thenThrow(new NullPointerException("bug"));
+        MockHttpServletResponse res = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request(), res, chain);
+
+        assertNotNull(chain.getRequest(), "continues anonymously; Spring Security answers 401 as before");
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        assertNotEquals(503, res.getStatus());
+    }
+
+    @Test
     void validTokenAuthenticates() throws Exception {
         validToken();
         when(users.loadForToken("tevfik")).thenReturn(new BilparkUserDetails("tevfik", "", true,

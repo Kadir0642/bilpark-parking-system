@@ -12,6 +12,8 @@ Genel kurallar (değişmedi):
 
 Yeni hata kodları: `INVALID_TARIFF` (400), `TARIFF_STATE` (409), `PASSWORD_MISMATCH` (403).
 
+Aşırı yük: veritabanı bağlantısı zamanında alınamazsa her uç `503 SERVICE_UNAVAILABLE` + `Retry-After` döner (ayrıntı: `api-asama5.md` hata kodları). Bu 401 değildir; istemci oturumu korur.
+
 ---
 
 ## 1. Sağlık kontrolü
@@ -173,7 +175,7 @@ Eski alanlar aynen duruyor: `streetName`, `plate`, `entryTime`, `durationMinutes
 
 Abonelerde `fee` 0 olur. Döküm yine dolu gelir.
 
-**Hız sınırı:** sorgular istemci IP'si başına sayılır. IP, denetim kaydındaki ile aynı biçimde alınır: `X-Forwarded-For` sağdan sayılır, `bilpark.client-ip.trusted-proxy-hops` (varsayılan 1, ortam değişkeni `CLIENT_IP_TRUSTED_PROXY_HOPS`) barındırma vekilinin eklediği değeri seçer; başlık yoksa ya da değer IP biçiminde değilse bağlantı adresi kullanılır. Mobil operatörler çok sayıda telefonu aynı genel IP'nin arkasına koyduğu için genel sınır geniştir: 60 saniyede IP başına 120 sorgu. Sıkı olan, plakaları tek tek deneme biçimidir: boşluk ve tire atıldıktan sonra en çok 5 karakterlik **farklı** plaka sayısı IP başına 10, bütün istemciler için toplam 100. Aynı plakayı yeniden sorgulamak (yenile, QR'ı tekrar okutmak) bu sayaçları artırmaz. Memur ve yönetici uçları (giriş/çıkış, panel, SSE) sınırlanmaz. Aşılırsa `429` döner, `Retry-After` başlığı saniye cinsindendir:
+**Hız sınırı:** sorgular istemci IP'si başına sayılır. IP, denetim kaydındaki ile aynı biçimde alınır: `X-Forwarded-For` sağdan sayılır, `bilpark.client-ip.trusted-proxy-hops` (varsayılan 1, ortam değişkeni `CLIENT_IP_TRUSTED_PROXY_HOPS`) barındırma vekilinin eklediği değeri seçer; başlık yoksa ya da değer IP biçiminde değilse bağlantı adresi kullanılır. Mobil operatörler çok sayıda telefonu aynı genel IP'nin arkasına koyduğu için genel sınır geniştir: 60 saniyede IP başına 120 sorgu. Sıkı olan, plakaları tek tek deneme biçimidir: boşluk ve tire atıldıktan sonra en çok 5 karakterlik **farklı** plaka sayısı IP başına 10, bütün istemciler için toplam 100. Aynı plakayı yeniden sorgulamak (yenile, QR'ı tekrar okutmak) bu sayaçları artırmaz. Memur ve yönetici uçları (giriş/çıkış, panel, SSE) sınırlanmaz. Aşılırsa `429` döner, `Retry-After` başlığı saniye cinsindendir (CORS ile tarayıcıya açıktır):
 
 ```json
 { "error": "Çok fazla plaka sorgusu yapıldı. Lütfen biraz bekleyip tekrar deneyin.", "code": "RATE_LIMITED" }

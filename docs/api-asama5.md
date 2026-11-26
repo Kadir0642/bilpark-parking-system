@@ -28,6 +28,8 @@ Yeni hata kodları:
 | `PROTECTED_ACCOUNT` | 400/403 | Bu hesap bu uç noktayla değiştirilemez (ör. geliştirici hesabı) |
 | `ALREADY_CANCELLED` | 409 | Kayıt zaten iptal edilmiş |
 | `INVALID_SETTINGS` | 400 | Ayar değeri geçersiz (ör. ağırlık toplamı 100 değil) |
+| `SERVICE_UNAVAILABLE` | 503 | Sunucu yoğun: veritabanı bağlantısı 5 sn içinde alınamadı. `Retry-After` başlığı (saniye) gelir. Oturum geçerlidir; istemci oturumu kapatmaz, verilen süre sonra tekrar dener. Her uçta, giriş doğrulaması dahil, dönebilir |
+| `REPORT_BUSY` | 503 | Başka bir rapor hazırlanıyor (raporlar tek tek üretilir). `Retry-After` gelir; "Rapor hazırlanıyor, birkaç saniye sonra tekrar deneyin" gösterilir |
 
 ---
 
@@ -257,7 +259,7 @@ Kira yıllık tek bir toplam tutar olarak girilir ve yıl bazında saklanır. B�
 
 ## 8. Raporlar (ADMIN, Excel/CSV)
 
-Tüm raporlar okunur modda da çalışır. Her indirme `REPORT_EXPORTED` olarak denetim kaydına düşer (`entityType: "Report"`). `format` yalnızca `xlsx` veya `csv` olabilir; geçersiz `format` veya `sheet` değeri `400 VALIDATION_ERROR` döner.
+Tüm raporlar okunur modda da çalışır. Raporlar (indirme ve `.../summary` uçları) sunucuda aynı anda tek tek üretilir: sıra 5 sn içinde gelmezse `503 REPORT_BUSY` + `Retry-After` döner. Her indirme `REPORT_EXPORTED` olarak denetim kaydına düşer (`entityType: "Report"`). `format` yalnızca `xlsx` veya `csv` olabilir; geçersiz `format` veya `sheet` değeri `400 VALIDATION_ERROR` döner.
 
 Dosya adları: `personel-raporu-2026-10.xlsx`, `kacak-raporu-<from>_<to>`, `donem-raporu-<from>_<to>`, `kayitlar-<from>_<to>`.
 
