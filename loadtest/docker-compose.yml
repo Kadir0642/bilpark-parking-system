@@ -73,8 +73,9 @@ services:
       DEVELOPER_PASSWORD: test-secret-developer
       # Üretimdeki Dockerfile ENTRYPOINT'i aynen kalır; yalnızca saat dilimi (demo ile aynı) ve GC günlüğü eklenir.
       JAVA_TOOL_OPTIONS: -Duser.timezone=Europe/Istanbul -Xlog:gc:stdout:uptime
-      # Hikari havuz istatistikleri her 30 sn'de günlüğe (aktif / boşta / bekleyen)
-      LOGGING_LEVEL_COM_ZAXXER_HIKARI_POOL_HIKARIPOOL: DEBUG
+      # Hikari havuz istatistikleri her 30 sn'de günlüğe (aktif / boşta / bekleyen). Ortam değişkeni küçük harfe
+      # çevrildiği için sınıf adı (HikariPool) değil paket adı verilir.
+      LOGGING_LEVEL_COM_ZAXXER_HIKARI: DEBUG
     depends_on:
       - dbproxy
     ports:
