@@ -372,6 +372,7 @@
     // --- Kamerayla okuma (yalnızca ?kamera=1) ---
     function hideCamConfirm() {
         $('camConfirm').hidden = true;
+        $('btnQuery').hidden = false; // onay sorulurken ana düğme gizlenir (iki "sorgula" düğmesi olmasın)
         $('camNotice').hidden = true;
         $('plateField').classList.remove('highlight');
     }
@@ -402,6 +403,7 @@
             input.value = fmtPlate(result.plate, result.foreign);
             $('camConfirmPlate').textContent = fmtPlate(result.plate, result.foreign);
             $('camConfirm').hidden = false;
+            $('btnQuery').hidden = true;
             $('plateField').classList.add('highlight');
             $('btnCamYes').focus();
         } else if (result.kind === 'edit') {
