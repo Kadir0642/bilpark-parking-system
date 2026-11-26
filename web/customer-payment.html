@@ -27,6 +27,8 @@
     <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
     <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </svg>
 
 <a class="skip-link" href="#plateInput">Plaka alanına geç</a>
@@ -197,8 +199,12 @@
 
     <footer class="site-footer">
         <div class="footer-inner">
-            <div>
-                <button type="button" class="footer-toggle" id="subToggle" aria-expanded="false" aria-controls="subText">Aylık abonelik</button>
+            <div class="card sub-card">
+                <button type="button" class="sub-toggle" id="subToggle" aria-expanded="false" aria-controls="subText">
+                    <span class="sub-icon" aria-hidden="true"><svg class="ico"><use href="#i-calendar"/></svg></span>
+                    <span class="sub-label"><b>Aylık abonelik</b><span class="sub-line">Abonelik nasıl alınır?</span></span>
+                    <svg class="ico sub-chevron" aria-hidden="true"><use href="#i-chevron"/></svg>
+                </button>
                 <p class="footer-text" id="subText" hidden>Aylık abonelik için saha görevlisine veya işletmeye başvurun.</p>
             </div>
             <div>[FİRMA ADI] · [TELEFON]</div>

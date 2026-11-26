@@ -42,7 +42,9 @@ async function page(query, { w = 375, h = 812, dark = false } = {}) {
   await p.goto(base + '/customer-payment.html?api=' + encodeURIComponent(base) + (query ? '&' + query : ''), { waitUntil: 'networkidle0' });
   return p;
 }
-const shot = (p, name, full = true) => p.screenshot({ path: join(OUT, name + '.png'), fullPage: full });
+// SONEK ortam değişkeni dosya adlarına eklenir (ör. SONEK=-v2), eski görüntülerin üzerine yazılmaz
+const SONEK = process.env.SONEK || '';
+const shot = (p, name, full = true) => p.screenshot({ path: join(OUT, name + SONEK + '.png'), fullPage: full });
 const settle = (p) => p.evaluate(() => new Promise((r) => setTimeout(r, 350)));
 
 for (const dark of [false, true]) {
@@ -109,6 +111,14 @@ if (Y4M) {
     } catch (e) { console.log('kamera adımı atlandı:', e.message); }
     await p.close();
   }
+}
+
+// Aylık abonelik kartı açık hali
+for (const dark of [false, true]) {
+  p = await page('', { dark });
+  await p.click('#subToggle'); await settle(p);
+  await shot(p, `mobil-${dark ? 'koyu' : 'acik'}-11-abonelik-acik`);
+  await p.close();
 }
 
 await browser.close();

@@ -136,8 +136,18 @@ body.has-result .hero-lead { display: none; }
 /* --- Alt bilgi --- */
 .site-footer { padding: var(--s-4) var(--s-4) calc(var(--s-8) + env(safe-area-inset-bottom, 0px)); font-size: 14px; color: var(--text-2); }
 .footer-inner { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--s-3); }
-.footer-toggle { background: none; border: 0; padding: 0 var(--s-2); margin-left: calc(-1 * var(--s-2)); min-height: var(--tap); color: var(--primary); font: 600 15px var(--font); text-decoration: underline; cursor: pointer; text-align: left; }
-.footer-text { margin: 0; }
+/* Aylık abonelik: açılır bilgi kartı (davranış aynı: düğme metni gösterir/gizler) */
+.sub-card { color: var(--text); }
+.sub-toggle { width: 100%; display: flex; align-items: center; gap: var(--s-3); min-height: 64px; padding: var(--s-3) var(--s-4); background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.sub-toggle:hover { background: var(--surface-2); }
+.sub-toggle:focus-visible { outline-offset: -3px; }
+.sub-icon { width: 40px; height: 40px; flex: none; border-radius: 12px; background: var(--sub-soft); color: var(--on-sub-soft); display: flex; align-items: center; justify-content: center; }
+.sub-label { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sub-label b { font-size: 15px; font-weight: 700; }
+.sub-line { font-size: 13px; color: var(--text-2); }
+.sub-chevron { color: var(--text-2); transition: transform .2s ease; }
+.sub-toggle[aria-expanded="true"] .sub-chevron { transform: rotate(180deg); }
+.footer-text { margin: 0; padding: var(--s-3) var(--s-4) var(--s-4); border-top: 1px solid var(--border); font-size: 15px; color: var(--text); }
 
 @media (min-width: 720px) {
     .hero { padding-top: var(--s-8); padding-bottom: 88px; }

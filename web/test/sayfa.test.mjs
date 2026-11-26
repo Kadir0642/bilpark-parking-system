@@ -143,6 +143,19 @@ test('429 RATE_LIMITED: sunucu mesajı, Retry-After geri sayımı, düğme bekle
   await page.close();
 });
 
+test('aylık abonelik kartı: metni açar/kapatır, aria-expanded güncellenir', async () => {
+  const { page } = await openPage('');
+  assert.equal(await visible(page, '#subText'), false);
+  await page.click('#subToggle');
+  assert.equal(await visible(page, '#subText'), true);
+  assert.equal(await page.$eval('#subToggle', (b) => b.getAttribute('aria-expanded')), 'true');
+  assert.equal(await text(page, '#subText'), 'Aylık abonelik için saha görevlisine veya işletmeye başvurun.');
+  await page.click('#subToggle');
+  assert.equal(await visible(page, '#subText'), false);
+  assert.equal(await page.$eval('#subToggle', (b) => b.getAttribute('aria-expanded')), 'false');
+  await page.close();
+});
+
 test('geçersiz giriş ve bağlantı hatası', async () => {
   const { page } = await openPage('');
   await page.type('#plateInput', 'A');
