@@ -52,6 +52,9 @@ public class AuthController {
                     new UsernamePasswordAuthenticationToken(request.username(), request.password())
             );
         } catch (AuthenticationException e) {
+            // The user could not be read (pool timeout, database down): not a wrong password. 503 + Retry-After,
+            // no LOGIN_FAILED audit row (that write would wait for a connection too).
+            if (com.bilpark.backend.common.Overload.isDatabaseUnavailable(e)) throw e;
             auditService.logAsName(request.username(), AuditAction.LOGIN_FAILED, "User", null,
                     "Başarısız giriş denemesi", null, null);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

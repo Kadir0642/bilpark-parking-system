@@ -36,13 +36,15 @@ RUN DB_URL=jdbc:postgresql://127.0.0.1:1/cds DB_USERNAME=cds DB_PASSWORD=cds    
 
 # JVM ayarları: Render Free 512 MB / ~0.1 CPU için (yük testi: docs/yuk-testi.md). Ortam değişkeniyle değiştirilebilir.
 # - SerialGC: tek çekirdekte en az ek yük; G1'in arka plan iş parçacıkları 0.1 CPU'yu yer.
-# - MaxRAMPercentage=50: 512 MB'ta ~256 MB yığın (varsayılan %25 = 128 MB yük altında tam GC'ye giriyordu);
-#   kalan ~256 MB metaspace, kod önbelleği, iş parçacıkları ve yerel bellek içindir.
-# - MaxMetaspaceSize / ReservedCodeCacheSize / Xss512k: yığın dışı belleği sınırlar (RSS 512 MB'ı geçmesin).
+# - MaxRAMPercentage=45: 512 MB'ta ~230 MB yığın (varsayılan %25 = 128 MB yük altında tam GC'ye giriyordu);
+#   kalan ~280 MB CDS paylaşımlı sınıf alanı (~110 MB), metaspace, kod önbelleği ve yerel bellek içindir.
+# - Ölçüm (NMT, 30 görevli): metaspace ~30 MB, kod önbelleği ~25 MB, iş parçacığı yığınları ~2 MB.
+#   MaxMetaspaceSize=192m bilerek geniş: CDS arşivi yüklenmezse bütün sınıflar metaspace'e düşer (~140 MB).
+# - ReservedCodeCacheSize=48m (yalnızca C1, ~25 MB kullanılıyor) / Xss512k: yığın dışı belleği sınırlar.
 # - TieredStopAtLevel=1: yalnızca C1 derleyici. 0.1 CPU'da C2 derlemesi açılıştan sonraki dakikalarda CPU'yu tüketiyordu.
 # - SharedArchiveFile: yukarıdaki CDS arşivi.
 # Saat dilimi değişmedi: BackendApplication.main Europe/Istanbul yapar.
-ENV JDK_JAVA_OPTIONS="-XX:+UseSerialGC -XX:MaxRAMPercentage=50 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=64m -Xss512k -XX:TieredStopAtLevel=1 -XX:SharedArchiveFile=/app/application/app.jsa"
+ENV JDK_JAVA_OPTIONS="-XX:+UseSerialGC -XX:MaxRAMPercentage=45 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -Xss512k -XX:TieredStopAtLevel=1 -XX:SharedArchiveFile=/app/application/app.jsa"
 
 EXPOSE 8080
 # 8080 portunda çalışacak.
