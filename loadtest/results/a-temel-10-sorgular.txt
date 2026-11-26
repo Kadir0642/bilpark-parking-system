@@ -1,0 +1,29 @@
+ calls | total_ms | mean_ms | max_ms | rows  |                                                                              query                                                                               
+-------+----------+---------+--------+-------+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   223 |    54767 |  245.59 |    879 | 22300 | select pr1_0.id,pr1_0.cancel_reason,pr1_0.cancelled_at,pr1_0.cancelled_by_username,pr1_0.cancelled_from_status,pr1_0.collected_by_id,pr1_0.collected_by_username
+   896 |    18812 |   20.99 |    424 |   896 | select coalesce(sum(pr1_0.fee),$3) from parking_records pr1_0 where pr1_0.status=$4 and pr1_0.exit_time>=$1 and pr1_0.exit_time<$2
+   235 |    16496 |   70.19 |    523 | 11750 | select pr1_0.id,pr1_0.cancel_reason,pr1_0.cancelled_at,pr1_0.cancelled_by_username,pr1_0.cancelled_from_status,pr1_0.collected_by_id,pr1_0.collected_by_username
+   224 |    14642 |   65.37 |    580 |   448 | select pr1_0.vehicle_type,coalesce(sum(pr1_0.fee),$1),count(pr1_0.id) from parking_records pr1_0 where pr1_0.status=$2 group by pr1_0.vehicle_type
+     4 |      495 |  123.70 |    325 | 36013 | select pr1_0.id,pr1_0.license_plate,pr1_0.street,z1_0.id,z1_0.zone_name,pr1_0.entry_time,pr1_0.exit_time,pr1_0.vehicle_type,pr1_0.fee,pr1_0.status,pr1_0.debt_pa
+    12 |      399 |   33.24 |    122 |    72 | SELECT zone_id, MAX(t) FROM (SELECT zone_id, entry_time AS t FROM parking_records WHERE entry_time >= $1 UNION ALL SELECT zone_id, exit_time FROM parking_record
+  3074 |      324 |    0.11 |    100 |  3074 | select u1_0.id,u1_0.active,u1_0.zone_id,u1_0.created_at,u1_0.full_name,u1_0.last_app_version,u1_0.last_device,u1_0.last_login_time,u1_0.last_seen_at,u1_0.passwo
+  7513 |      222 |    0.03 |     24 |  7513 | select z1_0.id,z1_0.left_landmark,z1_0.right_landmark,z1_0.street,z1_0.zone_name,z1_0.zone_number from zones z1_0 where z1_0.id=$1
+    12 |      174 |   14.53 |     76 |    76 | SELECT r.zone_id, a.action, COUNT(*) FROM audit_logs a JOIN parking_records r ON CAST(r.id AS VARCHAR(100)) = a.entity_id WHERE a.entity_type = $2 AND a.action 
+  2215 |      128 |    0.06 |     20 |  2215 | select coalesce(sum(pr1_0.fee),$5) from parking_records pr1_0 where pr1_0.status=$6 and pr1_0.collected_by_id=$1 and pr1_0.device_id=$2 and pr1_0.exit_time>=$3 
+     3 |      108 |   36.08 |     81 |     3 | select count(*) from parking_records pr1_0
+   235 |       59 |    0.25 |     20 |  2335 | select s1_0.id,s1_0.auto_closed,s1_0.device_id,s1_0.end_time,s1_0.start_time,s1_0.user_id,s1_0.username,s1_0.zone_id from shifts s1_0 where s1_0.end_time is nul
+   125 |       52 |    0.42 |     43 |   125 | insert into sync_events (created_at,payload,scope,street,target_user_id,type,zone_id) values ($1,$2,$3,$4,$5,$6,$7) RETURNING *
+   267 |       40 |    0.15 |     24 |   267 | select se1_0.id,se1_0.created_at,se1_0.payload,se1_0.scope,se1_0.street,se1_0.target_user_id,se1_0.type,se1_0.zone_id from sync_events se1_0 order by se1_0.id f
+    35 |       27 |    0.79 |      3 |    35 | insert into parking_records (cancel_reason,cancelled_at,cancelled_by_username,cancelled_from_status,collected_by_id,collected_by_username,debt_paid,device_id,en
+    90 |       26 |    0.29 |      2 |    90 | insert into active_park_spots (current_plate,current_type,entry_time,foreign_country_code,foreign_plate,neighborhood,region,side,status,street,version,zone_id) 
+    22 |       25 |    1.15 |     20 |     0 | select pr1_0.license_plate,coalesce(sum(pr1_0.fee),$37) from parking_records pr1_0 where pr1_0.license_plate in ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,
+    19 |       25 |    1.33 |     21 |     0 | select pr1_0.license_plate,coalesce(sum(pr1_0.fee),$54) from parking_records pr1_0 where pr1_0.license_plate in ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,
+   476 |       25 |    0.05 |      0 |  9159 | select ps1_0.id,ps1_0.current_plate,ps1_0.current_type,ps1_0.entry_time,ps1_0.foreign_country_code,ps1_0.foreign_plate,ps1_0.neighborhood,ps1_0.region,ps1_0.sid
+   292 |       23 |    0.08 |      0 |   292 | select coalesce(max(se1_0.id),$1) from sync_events se1_0
+    10 |       23 |    2.27 |     20 |     0 | select pr1_0.license_plate,coalesce(sum(pr1_0.fee),$41) from parking_records pr1_0 where pr1_0.license_plate in ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,
+   156 |       21 |    0.14 |      1 |   156 | insert into audit_logs (action,actor_id,actor_role,actor_username,after_data,before_data,created_at,device_id,entity_id,entity_type,ip_address,summary) values (
+    27 |       21 |    0.79 |     20 |     0 | select pr1_0.license_plate,coalesce(sum(pr1_0.fee),$6) from parking_records pr1_0 where pr1_0.license_plate in ($1,$2,$3,$4,$5) and pr1_0.status=$7 and pr1_0.de
+    32 |       21 |    0.64 |     20 |     0 | select distinct s1_0.license_plate from subscriptions s1_0 where s1_0.license_plate in ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$
+   266 |       16 |    0.06 |      0 |   809 | select se1_0.id,se1_0.created_at,se1_0.payload,se1_0.scope,se1_0.street,se1_0.target_user_id,se1_0.type,se1_0.zone_id from sync_events se1_0 where se1_0.id>$1 o
+(25 rows)
+

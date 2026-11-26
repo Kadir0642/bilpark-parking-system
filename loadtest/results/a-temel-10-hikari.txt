@@ -1,0 +1,142 @@
+2026-11-26T12:46:05.551+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=1/5, idle=0/0, active=1, waiting=0)
+2026-11-26T12:46:05.551+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=1/5, idle=0/0, active=1, waiting=0)
+2026-11-26T12:46:35.836+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=0)
+2026-11-26T12:46:35.836+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=0)
+2026-11-26T12:47:05.837+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=19)
+2026-11-26T12:47:05.838+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=19)
+2026-11-26T12:47:33.338+03:00 DEBUG 1 --- [bilpark-backend] [0.0-8080-exec-4] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=24)
+2026-11-26T12:47:33.937+03:00  WARN 1 --- [bilpark-backend] [0.0-8080-exec-4] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T12:47:34.036+03:00  WARN 1 --- [bilpark-backend] [0.0-8080-exec-4] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20002ms (total=5, active=5, idle=0, waiting=24)
+2026-11-26T12:47:34.736+03:00 ERROR 1 --- [bilpark-backend] [0.0-8080-exec-4] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20002ms (total=5, active=5, idle=0, waiting=24)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20002ms (total=5, active=5, idle=0, waiting=24)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20002ms (total=5, active=5, idle=0, waiting=24)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T12:47:35.838+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=1/0, active=4, waiting=29)
+2026-11-26T12:47:35.839+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=1/0, active=4, waiting=29)
+2026-11-26T12:47:37.037+03:00  WARN 1 --- [bilpark-backend] [0.0-8080-exec-4] .m.m.a.ExceptionHandlerExceptionResolver : Failure in @ExceptionHandler com.bilpark.backend.controller.GlobalExceptionHandler#handleDataAccess(Exception)
+org.springframework.web.HttpMediaTypeNotAcceptableException: No acceptable representation
+	at org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver.doResolveHandlerMethodException(ExceptionHandlerExceptionResolver.java:460) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodExceptionResolver.doResolveException(AbstractHandlerMethodExceptionResolver.java:72) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerExceptionResolver.resolveException(AbstractHandlerExceptionResolver.java:176) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.HandlerExceptionResolverComposite.resolveException(HandlerExceptionResolverComposite.java:78) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.DispatcherServlet.processHandlerException(DispatcherServlet.java:1227) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+2026-11-26T12:47:37.139+03:00 ERROR 1 --- [bilpark-backend] [0.0-8080-exec-4] o.a.c.c.C.[.[.[/].[dispatcherServlet]    : Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20002ms (total=5, active=5, idle=0, waiting=24)] [n/a]] with root cause
+java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20002ms (total=5, active=5, idle=0, waiting=24)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+2026-11-26T12:47:47.836+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-26] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=45)
+2026-11-26T12:47:47.836+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-26] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T12:47:47.837+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-26] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20098ms (total=5, active=5, idle=0, waiting=45)
+2026-11-26T12:48:05.537+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-24] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=31)
+2026-11-26T12:48:05.538+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-24] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T12:48:05.538+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-24] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20001ms (total=5, active=5, idle=0, waiting=31)
+2026-11-26T12:48:06.136+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=29)
+2026-11-26T12:48:06.137+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=29)
+2026-11-26T12:48:07.236+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-51] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=35)
+2026-11-26T12:48:07.236+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-51] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T12:48:07.236+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-51] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20199ms (total=5, active=5, idle=0, waiting=35)
+2026-11-26T12:48:16.240+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-55] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=44)
+2026-11-26T12:48:16.241+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-55] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T12:48:16.241+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-55] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=44)
+2026-11-26T12:48:16.436+03:00 ERROR 1 --- [bilpark-backend] [.0-8080-exec-55] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=44)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=44)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=44)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T12:48:34.438+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-53] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=33)
+2026-11-26T12:48:34.439+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-53] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T12:48:34.439+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-53] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=33)
+2026-11-26T12:48:36.137+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=45)
+2026-11-26T12:48:36.138+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=45)
+2026-11-26T12:48:41.338+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-46] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=1/0, active=4, waiting=27)
+2026-11-26T12:48:41.339+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-46] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T12:48:41.339+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-46] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=4, idle=1, waiting=27)
+2026-11-26T12:48:41.636+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-40] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=26)
+2026-11-26T12:48:41.637+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-40] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T12:48:41.637+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-40] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20198ms (total=5, active=5, idle=0, waiting=26)
+2026-11-26T12:48:48.636+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-21] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=9)
+2026-11-26T12:48:48.836+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-21] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T12:48:48.837+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-21] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20097ms (total=5, active=5, idle=0, waiting=9)
+2026-11-26T12:49:06.236+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=5)
+2026-11-26T12:49:06.236+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=5)
+2026-11-26T12:49:36.639+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=8)
+2026-11-26T12:49:36.639+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=7)
+2026-11-26T12:50:06.640+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=5)
+2026-11-26T12:50:06.640+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=5)
+2026-11-26T12:50:36.640+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T12:50:36.641+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T12:51:06.641+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=3)
+2026-11-26T12:51:06.641+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=3)
+2026-11-26T12:51:36.645+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T12:51:36.645+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T12:52:06.646+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=6)
+2026-11-26T12:52:06.646+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=6)
+2026-11-26T12:52:36.646+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=1)
+2026-11-26T12:52:36.646+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=1)
+2026-11-26T12:53:06.737+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=9)
+2026-11-26T12:53:06.738+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=9)
+2026-11-26T12:53:36.738+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T12:53:36.738+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T12:54:06.739+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T12:54:06.739+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T12:54:36.739+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=4)
+2026-11-26T12:54:36.740+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=4)
+2026-11-26T12:55:06.740+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T12:55:06.740+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T12:55:36.740+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T12:55:36.741+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T12:56:06.741+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T12:56:06.742+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T12:56:36.742+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=3)
+2026-11-26T12:56:36.742+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=3)
+2026-11-26T12:57:06.743+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T12:57:06.743+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T12:57:36.743+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T12:57:36.744+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T12:58:06.936+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=0)
+2026-11-26T12:58:06.936+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=0)
+2026-11-26T12:58:36.936+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T12:58:36.936+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T12:59:06.937+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=8)
+2026-11-26T12:59:06.937+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=8)
+2026-11-26T12:59:36.938+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=10)
+2026-11-26T12:59:36.938+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=10)
+2026-11-26T13:00:06.938+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:00:06.939+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:00:37.036+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=3)
+2026-11-26T13:00:37.036+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=3)
+2026-11-26T13:01:07.036+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:01:07.037+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)

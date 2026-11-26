@@ -1,0 +1,994 @@
+{
+ "label": "k05-kirilma-cpu05",
+ "config": {
+  "base": "http://app:8080",
+  "label": "k05-kirilma-cpu05",
+  "scenario": "normal",
+  "officers": 100,
+  "steps": [
+   30,
+   50,
+   75,
+   100
+  ],
+  "stepSec": 150,
+  "duration": 600,
+  "ramp": 60,
+  "admins": 3,
+  "citizenMin": 1,
+  "citizenMax": 10,
+  "burstRpm": 30,
+  "burstEvery": 300,
+  "actionMin": 30,
+  "actionMax": 90,
+  "dev": true,
+  "adminReload": 240,
+  "reportEvery": 600,
+  "spikeAt": 180,
+  "outage": 120,
+  "queue": 20,
+  "runId": 23,
+  "out": "/results/k05-kirilma-cpu05.json"
+ },
+ "startedAt": "2026-11-26T12:22:34.124Z",
+ "seconds": 603.007,
+ "total": {
+  "n": 9090,
+  "bad": 5838,
+  "errPct": 64.22,
+  "rps": 15.15,
+  "p50": 15000.127630000003,
+  "p95": 60000.35355599999,
+  "p99": 60001.30920000002
+ },
+ "sse": {
+  "deliveries": 1735,
+  "p50": 69,
+  "p95": 208,
+  "p99": 2830,
+  "max": 64217,
+  "events": 197,
+  "eventMaxP95": 5346,
+  "eventMaxMax": 64217,
+  "eventsReachedAllExpected": 197,
+  "connects": 37,
+  "drops": 55,
+  "resets": 0,
+  "helloP95": 74189.52785399999
+ },
+ "correctness": {
+  "dupSame": 0,
+  "dupConflict": 0,
+  "dupWrong": 0,
+  "raceSame": 0,
+  "raceWrong": 0,
+  "queued": 274,
+  "flushed": 0,
+  "flushFail": 270
+ },
+ "endpoints": [
+  {
+   "name": "GET /api/parking/filter",
+   "n": 2509,
+   "bad": 1772,
+   "errPct": 70.63,
+   "p50": 15000,
+   "p95": 15001,
+   "p99": 15003,
+   "max": 15008,
+   "codes": {
+    "200": 737,
+    "timeout": 1697,
+    "UND_ERR_CONNECT_TIMEOUT": 75
+   }
+  },
+  {
+   "name": "GET /api/vehicle-types",
+   "n": 1193,
+   "bad": 641,
+   "errPct": 53.73,
+   "p50": 15000,
+   "p95": 15002,
+   "p99": 15004,
+   "max": 15008,
+   "codes": {
+    "200": 552,
+    "timeout": 641
+   }
+  },
+  {
+   "name": "GET /api/parking/history",
+   "n": 1102,
+   "bad": 735,
+   "errPct": 66.7,
+   "p50": 15000,
+   "p95": 15002,
+   "p99": 15004,
+   "max": 15008,
+   "codes": {
+    "200": 367,
+    "timeout": 735
+   }
+  },
+  {
+   "name": "POST /api/auth/login",
+   "n": 698,
+   "bad": 648,
+   "errPct": 92.84,
+   "p50": 10417,
+   "p95": 15001,
+   "p99": 15002,
+   "max": 15005,
+   "codes": {
+    "200": 50,
+    "timeout": 308,
+    "UND_ERR_CONNECT_TIMEOUT": 340
+   }
+  },
+  {
+   "name": "GET /api/sync?since",
+   "n": 619,
+   "bad": 492,
+   "errPct": 79.48,
+   "p50": 14999,
+   "p95": 15002,
+   "p99": 15005,
+   "max": 15005,
+   "codes": {
+    "200": 127,
+    "timeout": 311,
+    "UND_ERR_CONNECT_TIMEOUT": 181
+   }
+  },
+  {
+   "name": "POST /api/parking/check-in",
+   "n": 607,
+   "bad": 544,
+   "errPct": 89.62,
+   "p50": 15000,
+   "p95": 15001,
+   "p99": 15002,
+   "max": 15003,
+   "codes": {
+    "200": 63,
+    "timeout": 401,
+    "UND_ERR_CONNECT_TIMEOUT": 143
+   }
+  },
+  {
+   "name": "GET /api/parking/bi/income-by-type/details",
+   "n": 334,
+   "bad": 139,
+   "errPct": 41.62,
+   "p50": 38897,
+   "p95": 60001,
+   "p99": 60002,
+   "max": 60004,
+   "codes": {
+    "200": 195,
+    "400": 8,
+    "401": 2,
+    "timeout": 129
+   }
+  },
+  {
+   "name": "GET /api/parking/bi/income-summary",
+   "n": 334,
+   "bad": 136,
+   "errPct": 40.72,
+   "p50": 42799,
+   "p95": 60001,
+   "p99": 60002,
+   "max": 60004,
+   "codes": {
+    "200": 198,
+    "500": 6,
+    "timeout": 130
+   }
+  },
+  {
+   "name": "GET /api/parking/spots",
+   "n": 334,
+   "bad": 138,
+   "errPct": 41.32,
+   "p50": 40654,
+   "p95": 60001,
+   "p99": 60002,
+   "max": 60004,
+   "codes": {
+    "200": 196,
+    "400": 7,
+    "401": 2,
+    "timeout": 129
+   }
+  },
+  {
+   "name": "GET /api/parking/bi/last-records",
+   "n": 334,
+   "bad": 142,
+   "errPct": 42.51,
+   "p50": 43722,
+   "p95": 60001,
+   "p99": 60003,
+   "max": 60005,
+   "codes": {
+    "200": 192,
+    "401": 1,
+    "500": 10,
+    "timeout": 131
+   }
+  },
+  {
+   "name": "GET /api/parking/bi/shifts",
+   "n": 334,
+   "bad": 142,
+   "errPct": 42.51,
+   "p50": 41417,
+   "p95": 60001,
+   "p99": 60003,
+   "max": 60005,
+   "codes": {
+    "200": 192,
+    "400": 4,
+    "401": 2,
+    "timeout": 136
+   }
+  },
+  {
+   "name": "GET /api/tariff/current",
+   "n": 190,
+   "bad": 61,
+   "errPct": 32.11,
+   "p50": 8,
+   "p95": 30001,
+   "p99": 58890,
+   "max": 60000,
+   "codes": {
+    "200": 129,
+    "timeout": 35,
+    "UND_ERR_CONNECT_TIMEOUT": 26
+   }
+  },
+  {
+   "name": "GET /api/sync",
+   "n": 161,
+   "bad": 115,
+   "errPct": 71.43,
+   "p50": 15000,
+   "p95": 15001,
+   "p99": 50302,
+   "max": 60000,
+   "codes": {
+    "200": 46,
+    "timeout": 92,
+    "UND_ERR_CONNECT_TIMEOUT": 23
+   }
+  },
+  {
+   "name": "GET /api/license/status",
+   "n": 97,
+   "bad": 20,
+   "errPct": 20.62,
+   "p50": 122,
+   "p95": 15001,
+   "p99": 60001,
+   "max": 60001,
+   "codes": {
+    "200": 77,
+    "timeout": 20
+   }
+  },
+  {
+   "name": "GET /api/parking/debt",
+   "n": 85,
+   "bad": 64,
+   "errPct": 75.29,
+   "p50": 30000,
+   "p95": 30001,
+   "p99": 30002,
+   "max": 30002,
+   "codes": {
+    "200": 6,
+    "404": 15,
+    "timeout": 46,
+    "UND_ERR_CONNECT_TIMEOUT": 18
+   }
+  },
+  {
+   "name": "GET /api/me",
+   "n": 50,
+   "bad": 10,
+   "errPct": 20,
+   "p50": 124,
+   "p95": 15001,
+   "p99": 15001,
+   "max": 15001,
+   "codes": {
+    "200": 40,
+    "timeout": 10
+   }
+  },
+  {
+   "name": "GET /api/events (bağlantı)",
+   "n": 44,
+   "bad": 4,
+   "errPct": 9.09,
+   "p50": 152,
+   "p95": 74189,
+   "p99": 82242,
+   "max": 82242,
+   "codes": {
+    "200": 40,
+    "401": 4
+   }
+  },
+  {
+   "name": "POST /api/events/ticket",
+   "n": 18,
+   "bad": 15,
+   "errPct": 83.33,
+   "p50": 10462,
+   "p95": 10478,
+   "p99": 10478,
+   "max": 10478,
+   "codes": {
+    "200": 3,
+    "UND_ERR_CONNECT_TIMEOUT": 15
+   }
+  },
+  {
+   "name": "GET /api/admin/vehicle-types",
+   "n": 6,
+   "bad": 1,
+   "errPct": 16.67,
+   "p50": 23,
+   "p95": 60001,
+   "p99": 60001,
+   "max": 60001,
+   "codes": {
+    "200": 5,
+    "timeout": 1
+   }
+  },
+  {
+   "name": "GET /api/admin/fiscal-years",
+   "n": 6,
+   "bad": 3,
+   "errPct": 50,
+   "p50": 468,
+   "p95": 60001,
+   "p99": 60001,
+   "max": 60001,
+   "codes": {
+    "200": 3,
+    "timeout": 3
+   }
+  },
+  {
+   "name": "GET /api/admin/tariffs",
+   "n": 6,
+   "bad": 3,
+   "errPct": 50,
+   "p50": 215,
+   "p95": 60001,
+   "p99": 60001,
+   "max": 60001,
+   "codes": {
+    "200": 3,
+    "timeout": 3
+   }
+  },
+  {
+   "name": "GET /api/admin/notifications",
+   "n": 6,
+   "bad": 3,
+   "errPct": 50,
+   "p50": 400,
+   "p95": 60001,
+   "p99": 60001,
+   "max": 60001,
+   "codes": {
+    "200": 3,
+    "timeout": 3
+   }
+  },
+  {
+   "name": "GET /api/admin/records/cancelled",
+   "n": 6,
+   "bad": 3,
+   "errPct": 50,
+   "p50": 473,
+   "p95": 60001,
+   "p99": 60001,
+   "max": 60001,
+   "codes": {
+    "200": 3,
+    "timeout": 3
+   }
+  },
+  {
+   "name": "GET /api/developer/activity",
+   "n": 5,
+   "bad": 4,
+   "errPct": 80,
+   "p50": 60000,
+   "p95": 60002,
+   "p99": 60002,
+   "max": 60002,
+   "codes": {
+    "200": 1,
+    "timeout": 3,
+    "UND_ERR_CONNECT_TIMEOUT": 1
+   }
+  },
+  {
+   "name": "POST /api/auth/login (admin)",
+   "n": 3,
+   "bad": 0,
+   "errPct": 0,
+   "p50": 358,
+   "p95": 538,
+   "p99": 538,
+   "max": 538,
+   "codes": {
+    "200": 3
+   }
+  },
+  {
+   "name": "GET /api/streets",
+   "n": 3,
+   "bad": 0,
+   "errPct": 0,
+   "p50": 68,
+   "p95": 69,
+   "p99": 69,
+   "max": 69,
+   "codes": {
+    "200": 3
+   }
+  },
+  {
+   "name": "GET /api/developer/health",
+   "n": 2,
+   "bad": 1,
+   "errPct": 50,
+   "p50": 7049,
+   "p95": 10402,
+   "p99": 10402,
+   "max": 10402,
+   "codes": {
+    "200": 1,
+    "UND_ERR_CONNECT_TIMEOUT": 1
+   }
+  },
+  {
+   "name": "GET /api/admin/reports/period (xlsx)",
+   "n": 2,
+   "bad": 2,
+   "errPct": 100,
+   "p50": 60000,
+   "p95": 60001,
+   "p99": 60001,
+   "max": 60001,
+   "codes": {
+    "timeout": 2
+   }
+  },
+  {
+   "name": "POST /api/auth/login (gelistirici)",
+   "n": 1,
+   "bad": 0,
+   "errPct": 0,
+   "p50": 1826,
+   "p95": 1826,
+   "p99": 1826,
+   "max": 1826,
+   "codes": {
+    "200": 1
+   }
+  },
+  {
+   "name": "GET /api/developer/errors",
+   "n": 1,
+   "bad": 0,
+   "errPct": 0,
+   "p50": 4915,
+   "p95": 4915,
+   "p99": 4915,
+   "max": 4915,
+   "codes": {
+    "200": 1
+   }
+  }
+ ],
+ "series": [
+  {
+   "t": 0,
+   "officers": 10,
+   "sse": 0,
+   "rps": 21,
+   "errPct": 0,
+   "p95": 473
+  },
+  {
+   "t": 10,
+   "officers": 20,
+   "sse": 12,
+   "rps": 19.9,
+   "errPct": 0,
+   "p95": 447
+  },
+  {
+   "t": 20,
+   "officers": 30,
+   "sse": 23,
+   "rps": 18.2,
+   "errPct": 0,
+   "p95": 406
+  },
+  {
+   "t": 30,
+   "officers": 30,
+   "sse": 33,
+   "rps": 0.8,
+   "errPct": 0,
+   "p95": 144
+  },
+  {
+   "t": 40,
+   "officers": 30,
+   "sse": 33,
+   "rps": 15.2,
+   "errPct": 0,
+   "p95": 2653
+  },
+  {
+   "t": 50,
+   "officers": 30,
+   "sse": 33,
+   "rps": 14.1,
+   "errPct": 0,
+   "p95": 3572
+  },
+  {
+   "t": 60,
+   "officers": 30,
+   "sse": 33,
+   "rps": 15.5,
+   "errPct": 0,
+   "p95": 5624
+  },
+  {
+   "t": 70,
+   "officers": 30,
+   "sse": 33,
+   "rps": 17.1,
+   "errPct": 0,
+   "p95": 7858
+  },
+  {
+   "t": 80,
+   "officers": 30,
+   "sse": 33,
+   "rps": 13.1,
+   "errPct": 0,
+   "p95": 7458
+  },
+  {
+   "t": 90,
+   "officers": 30,
+   "sse": 33,
+   "rps": 14.7,
+   "errPct": 0,
+   "p95": 7150
+  },
+  {
+   "t": 100,
+   "officers": 30,
+   "sse": 33,
+   "rps": 15.7,
+   "errPct": 0,
+   "p95": 7555
+  },
+  {
+   "t": 110,
+   "officers": 30,
+   "sse": 33,
+   "rps": 20.4,
+   "errPct": 0,
+   "p95": 7370
+  },
+  {
+   "t": 120,
+   "officers": 30,
+   "sse": 33,
+   "rps": 6.9,
+   "errPct": 0,
+   "p95": 2534
+  },
+  {
+   "t": 130,
+   "officers": 30,
+   "sse": 33,
+   "rps": 11.1,
+   "errPct": 0,
+   "p95": 3396
+  },
+  {
+   "t": 140,
+   "officers": 30,
+   "sse": 33,
+   "rps": 12.2,
+   "errPct": 0,
+   "p95": 2760
+  },
+  {
+   "t": 150,
+   "officers": 37,
+   "sse": 33,
+   "rps": 19.3,
+   "errPct": 0,
+   "p95": 5286
+  },
+  {
+   "t": 160,
+   "officers": 44,
+   "sse": 33,
+   "rps": 21.4,
+   "errPct": 0,
+   "p95": 7326
+  },
+  {
+   "t": 170,
+   "officers": 50,
+   "sse": 34,
+   "rps": 13,
+   "errPct": 5.4,
+   "p95": 15000
+  },
+  {
+   "t": 180,
+   "officers": 50,
+   "sse": 35,
+   "rps": 18.8,
+   "errPct": 49.5,
+   "p95": 17992
+  },
+  {
+   "t": 190,
+   "officers": 50,
+   "sse": 36,
+   "rps": 8.8,
+   "errPct": 65.9,
+   "p95": 23147
+  },
+  {
+   "t": 200,
+   "officers": 50,
+   "sse": 36,
+   "rps": 11.9,
+   "errPct": 77.3,
+   "p95": 22498
+  },
+  {
+   "t": 210,
+   "officers": 50,
+   "sse": 37,
+   "rps": 10.9,
+   "errPct": 85.3,
+   "p95": 26428
+  },
+  {
+   "t": 220,
+   "officers": 50,
+   "sse": 38,
+   "rps": 4.7,
+   "errPct": 97.9,
+   "p95": 36272
+  },
+  {
+   "t": 230,
+   "officers": 50,
+   "sse": 38,
+   "rps": 9,
+   "errPct": 94.4,
+   "p95": 40687
+  },
+  {
+   "t": 240,
+   "officers": 50,
+   "sse": 38,
+   "rps": 7.5,
+   "errPct": 77.3,
+   "p95": 48090
+  },
+  {
+   "t": 250,
+   "officers": 50,
+   "sse": 38,
+   "rps": 12,
+   "errPct": 92.5,
+   "p95": 47666
+  },
+  {
+   "t": 260,
+   "officers": 50,
+   "sse": 39,
+   "rps": 11.7,
+   "errPct": 65.8,
+   "p95": 48914
+  },
+  {
+   "t": 270,
+   "officers": 50,
+   "sse": 40,
+   "rps": 21.4,
+   "errPct": 74.3,
+   "p95": 35550
+  },
+  {
+   "t": 280,
+   "officers": 50,
+   "sse": 40,
+   "rps": 47.5,
+   "errPct": 89.5,
+   "p95": 27673
+  },
+  {
+   "t": 290,
+   "officers": 50,
+   "sse": 40,
+   "rps": 37.4,
+   "errPct": 89.6,
+   "p95": 30156
+  },
+  {
+   "t": 300,
+   "officers": 59,
+   "sse": 40,
+   "rps": 22.5,
+   "errPct": 83.6,
+   "p95": 38970
+  },
+  {
+   "t": 310,
+   "officers": 67,
+   "sse": 40,
+   "rps": 13.2,
+   "errPct": 73.5,
+   "p95": 46401
+  },
+  {
+   "t": 320,
+   "officers": 75,
+   "sse": 40,
+   "rps": 13.6,
+   "errPct": 67.6,
+   "p95": 51231
+  },
+  {
+   "t": 330,
+   "officers": 75,
+   "sse": 40,
+   "rps": 12.7,
+   "errPct": 77.2,
+   "p95": 59982
+  },
+  {
+   "t": 340,
+   "officers": 75,
+   "sse": 40,
+   "rps": 11.3,
+   "errPct": 98.2,
+   "p95": 60001
+  },
+  {
+   "t": 350,
+   "officers": 75,
+   "sse": 40,
+   "rps": 18.1,
+   "errPct": 99.4,
+   "p95": 60001
+  },
+  {
+   "t": 360,
+   "officers": 75,
+   "sse": 40,
+   "rps": 10.1,
+   "errPct": 100,
+   "p95": 60000
+  },
+  {
+   "t": 370,
+   "officers": 75,
+   "sse": 40,
+   "rps": 15.4,
+   "errPct": 100,
+   "p95": 60001
+  },
+  {
+   "t": 380,
+   "officers": 75,
+   "sse": 40,
+   "rps": 16.6,
+   "errPct": 98.8,
+   "p95": 60001
+  },
+  {
+   "t": 390,
+   "officers": 75,
+   "sse": 40,
+   "rps": 21,
+   "errPct": 100,
+   "p95": 60000
+  },
+  {
+   "t": 400,
+   "officers": 75,
+   "sse": 40,
+   "rps": 25.9,
+   "errPct": 100,
+   "p95": 60001
+  },
+  {
+   "t": 410,
+   "officers": 75,
+   "sse": 40,
+   "rps": 21,
+   "errPct": 99,
+   "p95": 60001
+  },
+  {
+   "t": 420,
+   "officers": 75,
+   "sse": 40,
+   "rps": 31.9,
+   "errPct": 95,
+   "p95": 49907
+  },
+  {
+   "t": 430,
+   "officers": 75,
+   "sse": 40,
+   "rps": 23.8,
+   "errPct": 95.8,
+   "p95": 60001
+  },
+  {
+   "t": 440,
+   "officers": 75,
+   "sse": 40,
+   "rps": 29.2,
+   "errPct": 99.7,
+   "p95": 60001
+  },
+  {
+   "t": 450,
+   "officers": 84,
+   "sse": 40,
+   "rps": 22.2,
+   "errPct": 100,
+   "p95": 60003
+  },
+  {
+   "t": 460,
+   "officers": 92,
+   "sse": 40,
+   "rps": 12.4,
+   "errPct": 100,
+   "p95": 60001
+  },
+  {
+   "t": 470,
+   "officers": 100,
+   "sse": 40,
+   "rps": 8.2,
+   "errPct": 100,
+   "p95": 60001
+  },
+  {
+   "t": 480,
+   "officers": 100,
+   "sse": 40,
+   "rps": 11.5,
+   "errPct": 100,
+   "p95": 60001
+  },
+  {
+   "t": 490,
+   "officers": 100,
+   "sse": 40,
+   "rps": 11.2,
+   "errPct": 100,
+   "p95": 60002
+  },
+  {
+   "t": 500,
+   "officers": 100,
+   "sse": 38,
+   "rps": 8.3,
+   "errPct": 100,
+   "p95": 60001
+  },
+  {
+   "t": 510,
+   "officers": 100,
+   "sse": 0,
+   "rps": 10.5,
+   "errPct": 100,
+   "p95": 15001
+  },
+  {
+   "t": 520,
+   "officers": 100,
+   "sse": 0,
+   "rps": 9.1,
+   "errPct": 100,
+   "p95": 10485
+  },
+  {
+   "t": 530,
+   "officers": 100,
+   "sse": 0,
+   "rps": 7.6,
+   "errPct": 100,
+   "p95": 10482
+  },
+  {
+   "t": 540,
+   "officers": 100,
+   "sse": 0,
+   "rps": 8.4,
+   "errPct": 100,
+   "p95": 10484
+  },
+  {
+   "t": 550,
+   "officers": 100,
+   "sse": 0,
+   "rps": 8.1,
+   "errPct": 100,
+   "p95": 10488
+  },
+  {
+   "t": 560,
+   "officers": 100,
+   "sse": 0,
+   "rps": 8.6,
+   "errPct": 100,
+   "p95": 10483
+  },
+  {
+   "t": 570,
+   "officers": 100,
+   "sse": 0,
+   "rps": 7,
+   "errPct": 100,
+   "p95": 10485
+  },
+  {
+   "t": 580,
+   "officers": 100,
+   "sse": 0,
+   "rps": 9.2,
+   "errPct": 100,
+   "p95": 10487
+  },
+  {
+   "t": 590,
+   "officers": 100,
+   "sse": 0,
+   "rps": 7.4,
+   "errPct": 100,
+   "p95": 10491
+  },
+  {
+   "t": 600,
+   "officers": 100,
+   "sse": 0,
+   "rps": 1.8,
+   "errPct": 100,
+   "p95": 10492
+  }
+ ]
+}

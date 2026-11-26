@@ -1,0 +1,895 @@
+2026-11-26T13:35:19.736+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-95] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=194)
+2026-11-26T13:35:19.737+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-95] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:19.737+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-95] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+2026-11-26T13:35:19.776+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-148] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:19.776+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-148] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:19.776+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-148] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:20.279+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-217] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=194)
+2026-11-26T13:35:20.279+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-217] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:20.279+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-217] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+2026-11-26T13:35:20.303+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-67] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=194)
+2026-11-26T13:35:20.303+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-67] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:20.303+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-67] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+2026-11-26T13:35:20.303+03:00 ERROR 1 --- [bilpark-backend] [.0-8080-exec-67] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:22.436+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-92] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=194)
+2026-11-26T13:35:22.437+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-92] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:22.437+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-92] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20900ms (total=5, active=5, idle=0, waiting=194)
+2026-11-26T13:35:22.536+03:00 ERROR 1 --- [bilpark-backend] [.0-8080-exec-92] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20900ms (total=5, active=5, idle=0, waiting=194)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20900ms (total=5, active=5, idle=0, waiting=194)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20900ms (total=5, active=5, idle=0, waiting=194)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:22.737+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-74] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:22.737+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-74] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:22.737+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-74] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:22.844+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-166] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:22.844+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-166] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:22.844+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-166] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:23.536+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-41] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=194)
+2026-11-26T13:35:23.537+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-41] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:23.537+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-41] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+2026-11-26T13:35:23.537+03:00 ERROR 1 --- [bilpark-backend] [.0-8080-exec-41] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:23.736+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-42] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:23.736+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-42] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:23.736+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-42] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20080ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:23.992+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-203] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:23.992+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-203] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:23.993+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-203] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:24.478+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-145] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=194)
+2026-11-26T13:35:24.479+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-145] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:24.479+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-145] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+2026-11-26T13:35:24.479+03:00 ERROR 1 --- [bilpark-backend] [0-8080-exec-145] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:25.279+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-79] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=194)
+2026-11-26T13:35:25.279+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-79] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:25.279+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-79] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+2026-11-26T13:35:25.280+03:00 ERROR 1 --- [bilpark-backend] [.0-8080-exec-79] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:25.836+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-109] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=1/0, active=4, waiting=195)
+2026-11-26T13:35:25.836+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-109] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:25.836+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-109] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20098ms (total=5, active=5, idle=0, waiting=194)
+2026-11-26T13:35:26.556+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-73] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:26.556+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-73] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:26.557+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-73] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:28.537+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-57] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=194)
+2026-11-26T13:35:28.538+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-57] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:28.538+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-57] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20801ms (total=5, active=5, idle=0, waiting=194)
+2026-11-26T13:35:29.636+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-93] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:29.636+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-93] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:29.636+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-93] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20098ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:30.256+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-244] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=194)
+2026-11-26T13:35:30.256+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-244] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:30.256+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-244] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+2026-11-26T13:35:30.256+03:00 ERROR 1 --- [bilpark-backend] [0-8080-exec-244] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:30.536+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-63] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:30.536+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-63] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:30.536+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-63] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20157ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:30.699+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-124] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:30.699+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-124] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:30.699+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-124] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:30.700+03:00 ERROR 1 --- [bilpark-backend] [0-8080-exec-124] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:30.936+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-101] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:30.936+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-101] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:30.936+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-101] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20199ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:30.936+03:00 ERROR 1 --- [bilpark-backend] [0-8080-exec-101] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20199ms (total=5, active=5, idle=0, waiting=195)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20199ms (total=5, active=5, idle=0, waiting=195)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20199ms (total=5, active=5, idle=0, waiting=195)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:31.336+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-239] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=194)
+2026-11-26T13:35:31.336+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-239] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:31.336+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-239] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+2026-11-26T13:35:31.336+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-239] c.bilpark.backend.audit.ErrorLogService  : Error log could not be stored: CannotCreateTransactionException
+2026-11-26T13:35:31.498+03:00 DEBUG 1 --- [bilpark-backend] [0.0-8080-exec-2] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:31.498+03:00  WARN 1 --- [bilpark-backend] [0.0-8080-exec-2] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:31.498+03:00  WARN 1 --- [bilpark-backend] [0.0-8080-exec-2] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:31.499+03:00 ERROR 1 --- [bilpark-backend] [0.0-8080-exec-2] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:31.636+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-158] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:31.636+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-158] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:31.636+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-158] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:31.736+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-193] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:31.736+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-193] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:31.736+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-193] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=4, idle=1, waiting=195)
+2026-11-26T13:35:31.760+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-98] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:31.761+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-98] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:31.761+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-98] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:31.761+03:00 ERROR 1 --- [bilpark-backend] [.0-8080-exec-98] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:32.037+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-153] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:32.037+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-153] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:32.037+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-153] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:32.059+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-119] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:32.060+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-119] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:32.060+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-119] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:32.060+03:00 ERROR 1 --- [bilpark-backend] [0-8080-exec-119] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:32.086+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-19] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:32.087+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-19] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:32.087+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-19] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:32.100+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-78] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:32.101+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-78] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:32.101+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-78] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:32.337+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-80] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=1/0, active=4, waiting=195)
+2026-11-26T13:35:32.337+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-80] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:32.337+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-80] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+2026-11-26T13:35:32.337+03:00 ERROR 1 --- [bilpark-backend] [.0-8080-exec-80] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:32.439+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-68] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:32.439+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-68] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:32.439+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-68] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:32.837+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-45] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:32.837+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-45] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:32.837+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-45] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:32.837+03:00 ERROR 1 --- [bilpark-backend] [.0-8080-exec-45] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:35.040+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-128] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=1/0, active=4, waiting=195)
+2026-11-26T13:35:35.041+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-128] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:35.041+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-128] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20197ms (total=5, active=4, idle=1, waiting=195)
+2026-11-26T13:35:35.041+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-17] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=193)
+2026-11-26T13:35:35.041+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-17] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:35.041+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-17] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20198ms (total=5, active=5, idle=0, waiting=193)
+2026-11-26T13:35:35.041+03:00 ERROR 1 --- [bilpark-backend] [.0-8080-exec-17] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20198ms (total=5, active=5, idle=0, waiting=193)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20198ms (total=5, active=5, idle=0, waiting=193)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20198ms (total=5, active=5, idle=0, waiting=193)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:35.137+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-123] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=194)
+2026-11-26T13:35:35.137+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-123] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:35.137+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-123] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+2026-11-26T13:35:35.157+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-191] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=194)
+2026-11-26T13:35:35.157+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-191] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:35.157+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-191] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+2026-11-26T13:35:35.158+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-77] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=193)
+2026-11-26T13:35:35.158+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-77] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:35.158+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-77] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=193)
+2026-11-26T13:35:35.336+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-11] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:35.337+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-11] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:35.337+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-11] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:35.337+03:00 ERROR 1 --- [bilpark-backend] [.0-8080-exec-11] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:36.360+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-231] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:36.360+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-231] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:36.360+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-231] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:36.361+03:00 ERROR 1 --- [bilpark-backend] [0-8080-exec-231] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:36.536+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-100] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:36.537+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-100] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:36.537+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-100] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20092ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:36.537+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-208] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=194)
+2026-11-26T13:35:36.537+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-100] c.bilpark.backend.audit.ErrorLogService  : Error log could not be stored: CannotCreateTransactionException
+2026-11-26T13:35:36.537+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-208] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:36.537+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-208] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20080ms (total=5, active=5, idle=0, waiting=194)
+2026-11-26T13:35:36.537+03:00 ERROR 1 --- [bilpark-backend] [0-8080-exec-208] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20080ms (total=5, active=5, idle=0, waiting=194)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20080ms (total=5, active=5, idle=0, waiting=194)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20080ms (total=5, active=5, idle=0, waiting=194)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:36.637+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-116] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=194)
+2026-11-26T13:35:36.637+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-116] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:36.637+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-116] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+2026-11-26T13:35:36.637+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-116] c.bilpark.backend.audit.ErrorLogService  : Error log could not be stored: CannotCreateTransactionException
+2026-11-26T13:35:37.475+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-150] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:37.475+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-150] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:37.475+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-150] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:37.784+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-176] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:37.784+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-176] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:37.784+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-176] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:39.537+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=196)
+2026-11-26T13:35:39.537+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=196)
+2026-11-26T13:35:40.457+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-122] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:40.458+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-122] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:40.458+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-122] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:40.458+03:00 ERROR 1 --- [bilpark-backend] [0-8080-exec-122] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:43.260+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-138] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:43.261+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-138] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:43.261+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-138] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=195)
+2026-11-26T13:35:44.836+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-41] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=194)
+2026-11-26T13:35:44.836+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-10] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=191)
+2026-11-26T13:35:44.836+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-165] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=195)
+2026-11-26T13:35:44.836+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-42] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=193)
+2026-11-26T13:35:44.836+03:00 DEBUG 1 --- [bilpark-backend] [0.0-8080-exec-9] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=192)
+2026-11-26T13:35:44.836+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-41] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:44.836+03:00  WARN 1 --- [bilpark-backend] [0.0-8080-exec-9] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:44.836+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-165] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:44.836+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-41] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 21198ms (total=5, active=5, idle=0, waiting=191)
+2026-11-26T13:35:44.836+03:00  WARN 1 --- [bilpark-backend] [0.0-8080-exec-9] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20300ms (total=5, active=5, idle=0, waiting=191)
+2026-11-26T13:35:44.836+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-10] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:44.836+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-10] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20178ms (total=5, active=5, idle=0, waiting=191)
+2026-11-26T13:35:44.836+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-165] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 21491ms (total=5, active=5, idle=0, waiting=191)
+2026-11-26T13:35:44.836+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-42] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:44.836+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-42] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 21098ms (total=5, active=5, idle=0, waiting=191)
+2026-11-26T13:35:44.836+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-41] c.bilpark.backend.audit.ErrorLogService  : Error log could not be stored: CannotCreateTransactionException
+2026-11-26T13:35:44.837+03:00 ERROR 1 --- [bilpark-backend] [0-8080-exec-165] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 21491ms (total=5, active=5, idle=0, waiting=191)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 21491ms (total=5, active=5, idle=0, waiting=191)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 21491ms (total=5, active=5, idle=0, waiting=191)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:44.837+03:00 ERROR 1 --- [bilpark-backend] [.0-8080-exec-10] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20178ms (total=5, active=5, idle=0, waiting=191)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20178ms (total=5, active=5, idle=0, waiting=191)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20178ms (total=5, active=5, idle=0, waiting=191)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:45.337+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-188] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=194)
+2026-11-26T13:35:45.337+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-188] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:45.337+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-188] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=194)
+2026-11-26T13:35:46.325+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-161] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=189)
+2026-11-26T13:35:46.326+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-161] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:46.326+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-161] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=189)
+2026-11-26T13:35:46.326+03:00 ERROR 1 --- [bilpark-backend] [0-8080-exec-161] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=189)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=189)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=189)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:46.337+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-194] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=189)
+2026-11-26T13:35:46.337+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-194] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:46.337+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-194] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=189)
+2026-11-26T13:35:46.536+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-140] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=187)
+2026-11-26T13:35:46.536+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-140] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:46.536+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-140] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20014ms (total=5, active=5, idle=0, waiting=187)
+2026-11-26T13:35:46.713+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-240] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=182)
+2026-11-26T13:35:46.713+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-240] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:46.713+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-240] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=182)
+2026-11-26T13:35:46.713+03:00 ERROR 1 --- [bilpark-backend] [0-8080-exec-240] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=182)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=182)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=182)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:46.875+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-219] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=183)
+2026-11-26T13:35:46.875+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-219] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:46.875+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-219] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=183)
+2026-11-26T13:35:46.876+03:00 ERROR 1 --- [bilpark-backend] [0-8080-exec-219] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=183)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=183)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=183)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:50.336+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-244] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=163)
+2026-11-26T13:35:50.336+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-244] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:50.336+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-244] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=163)
+2026-11-26T13:35:50.336+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-244] c.bilpark.backend.audit.ErrorLogService  : Error log could not be stored: CannotCreateTransactionException
+2026-11-26T13:35:50.636+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-223] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=159)
+2026-11-26T13:35:50.636+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-223] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:50.636+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-223] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20021ms (total=5, active=5, idle=0, waiting=159)
+2026-11-26T13:35:50.737+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-247] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=158)
+2026-11-26T13:35:50.737+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-247] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:50.737+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-247] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=158)
+2026-11-26T13:35:50.738+03:00 ERROR 1 --- [bilpark-backend] [0-8080-exec-247] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=158)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=158)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=158)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:50.637+03:00 ERROR 1 --- [bilpark-backend] [0-8080-exec-223] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20021ms (total=5, active=5, idle=0, waiting=159)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20021ms (total=5, active=5, idle=0, waiting=159)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20021ms (total=5, active=5, idle=0, waiting=159)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:50.937+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-101] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=160)
+2026-11-26T13:35:50.938+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-101] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:50.938+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-101] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=160)
+2026-11-26T13:35:50.938+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-101] c.bilpark.backend.audit.ErrorLogService  : Error log could not be stored: CannotCreateTransactionException
+2026-11-26T13:35:51.036+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-183] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=159)
+2026-11-26T13:35:51.036+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-183] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:51.036+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-183] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=159)
+2026-11-26T13:35:51.337+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-239] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=153)
+2026-11-26T13:35:51.338+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-239] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:51.338+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-239] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=153)
+2026-11-26T13:35:51.358+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-106] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=152)
+2026-11-26T13:35:51.358+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-106] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:51.358+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-106] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=152)
+2026-11-26T13:35:51.359+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-197] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=151)
+2026-11-26T13:35:51.359+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-197] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:51.359+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-197] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=151)
+2026-11-26T13:35:51.359+03:00 ERROR 1 --- [bilpark-backend] [0-8080-exec-197] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=151)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=151)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=151)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:51.568+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-217] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=151)
+2026-11-26T13:35:51.568+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-217] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:51.569+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-217] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=151)
+2026-11-26T13:35:51.636+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-155] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=150)
+2026-11-26T13:35:51.736+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-195] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=149)
+2026-11-26T13:35:51.736+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-155] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:51.736+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-155] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20125ms (total=5, active=5, idle=0, waiting=150)
+2026-11-26T13:35:51.736+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-195] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:51.736+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-195] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20095ms (total=5, active=5, idle=0, waiting=149)
+2026-11-26T13:35:51.569+03:00 ERROR 1 --- [bilpark-backend] [0-8080-exec-217] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=151)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=151)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=151)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:51.836+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-33] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=148)
+2026-11-26T13:35:51.836+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-33] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:51.836+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-33] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20180ms (total=5, active=5, idle=0, waiting=148)
+2026-11-26T13:35:51.936+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-94] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=148)
+2026-11-26T13:35:51.936+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-94] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:51.936+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-94] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20158ms (total=5, active=5, idle=0, waiting=148)
+2026-11-26T13:35:51.936+03:00 ERROR 1 --- [bilpark-backend] [.0-8080-exec-94] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20158ms (total=5, active=5, idle=0, waiting=148)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20158ms (total=5, active=5, idle=0, waiting=148)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20158ms (total=5, active=5, idle=0, waiting=148)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:51.836+03:00 ERROR 1 --- [bilpark-backend] [.0-8080-exec-33] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20180ms (total=5, active=5, idle=0, waiting=148)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20180ms (total=5, active=5, idle=0, waiting=148)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20180ms (total=5, active=5, idle=0, waiting=148)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:52.036+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-81] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=147)
+2026-11-26T13:35:52.036+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-81] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:52.036+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-81] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20100ms (total=5, active=5, idle=0, waiting=147)
+2026-11-26T13:35:52.088+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-19] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=1/0, active=4, waiting=147)
+2026-11-26T13:35:52.088+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-19] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:52.089+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-19] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=4, idle=1, waiting=147)
+2026-11-26T13:35:52.137+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-119] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=145)
+2026-11-26T13:35:52.138+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-119] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:52.138+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-119] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20076ms (total=5, active=5, idle=0, waiting=145)
+2026-11-26T13:35:52.138+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-119] c.bilpark.backend.audit.ErrorLogService  : Error log could not be stored: CannotCreateTransactionException
+2026-11-26T13:35:52.036+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-130] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=148)
+2026-11-26T13:35:52.336+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-130] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:52.336+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-130] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20493ms (total=5, active=5, idle=0, waiting=145)
+2026-11-26T13:35:52.336+03:00 ERROR 1 --- [bilpark-backend] [0-8080-exec-130] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20493ms (total=5, active=5, idle=0, waiting=145)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20493ms (total=5, active=5, idle=0, waiting=145)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20493ms (total=5, active=5, idle=0, waiting=145)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:35:53.537+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-201] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=141)
+2026-11-26T13:35:53.537+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-201] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:53.537+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-201] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=141)
+2026-11-26T13:35:56.538+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-100] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=99)
+2026-11-26T13:35:56.538+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-100] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:56.538+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-100] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=99)
+2026-11-26T13:35:57.136+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-200] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=91)
+2026-11-26T13:35:57.136+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-200] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:57.136+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-200] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=91)
+2026-11-26T13:35:57.937+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-121] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=88)
+2026-11-26T13:35:57.938+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-121] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:57.938+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-121] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=88)
+2026-11-26T13:35:58.336+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-44] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=88)
+2026-11-26T13:35:58.337+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-44] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:35:58.337+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-44] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=88)
+2026-11-26T13:36:01.437+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-238] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=75)
+2026-11-26T13:36:01.437+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-238] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:36:01.437+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-238] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=75)
+2026-11-26T13:36:05.737+03:00 DEBUG 1 --- [bilpark-backend] [.0-8080-exec-74] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=5/5, idle=0/0, active=5, waiting=35)
+2026-11-26T13:36:05.737+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-74] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-26T13:36:05.737+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-74] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=35)
+2026-11-26T13:36:05.737+03:00 ERROR 1 --- [bilpark-backend] [.0-8080-exec-74] c.b.b.controller.GlobalExceptionHandler  : Database error
+org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=35)] [n/a]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:153) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.convertHibernateAccessException(HibernateExceptionTranslator.java:131) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.hibernate.HibernateExceptionTranslator.translateExceptionIfPossible(HibernateExceptionTranslator.java:105) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:199) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:556) ~[spring-orm-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:157) ~[spring-tx-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+Caused by: org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=35)] [n/a]
+	at org.hibernate.exception.internal.SQLExceptionTypeDelegate.convert(SQLExceptionTypeDelegate.java:49) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:34) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:115) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:101) ~[hibernate-core-7.2.1.Final.jar!/:7.2.1.Final]
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135) ~[spring-tx-7.0.3.jar!/:7.0.3]
+Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available, request timed out after 20000ms (total=5, active=5, idle=0, waiting=35)
+	at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:714) ~[HikariCP-7.0.2.jar!/:na]
+2026-11-26T13:36:09.538+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=29)
+2026-11-26T13:36:09.538+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=29)
+2026-11-26T13:36:39.538+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:36:39.538+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:37:09.539+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:37:09.539+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:37:39.539+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T13:37:39.539+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T13:38:09.539+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:38:09.540+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:38:39.540+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:38:39.540+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:39:09.540+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:39:09.540+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:39:39.541+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:39:39.541+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:40:09.541+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T13:40:09.541+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T13:40:39.542+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T13:40:39.542+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T13:41:09.542+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:41:09.542+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:41:39.543+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:41:39.543+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:42:09.543+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:42:09.543+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:42:39.544+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T13:42:39.544+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T13:43:09.544+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:43:09.544+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:43:39.544+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T13:43:39.544+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T13:44:09.545+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:44:09.545+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:44:39.545+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T13:44:39.545+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T13:45:09.546+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:45:09.546+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:45:39.546+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:45:39.547+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:46:09.547+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T13:46:09.547+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T13:46:39.547+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T13:46:39.548+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T13:47:09.636+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:47:09.636+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:47:39.637+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:47:39.637+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:48:09.638+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=2)
+2026-11-26T13:48:09.638+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=2)
+2026-11-26T13:48:39.638+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:48:39.638+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:49:09.639+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T13:49:09.639+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
