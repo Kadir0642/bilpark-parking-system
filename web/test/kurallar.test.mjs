@@ -53,6 +53,9 @@ test('decide: eşik 0,8 — üstünde onay, altında klavye tahminle açılır',
   assert.deepEqual(decide({ text: '99ABC123', minConf: 0.99 }, false), { kind: 'edit', plate: null, guess: '99ABC123' });
   assert.deepEqual(decide({ text: '', minConf: 0 }, false), { kind: 'none', plate: null, guess: '' });
   assert.deepEqual(decide(null, false).kind, 'none');
+  // Tek karakterlik gürültü tahmin olarak alana yazılmaz
+  assert.deepEqual(decide({ text: 'X', minConf: 0.3 }, false).kind, 'none');
+  assert.deepEqual(decide({ text: 'X', minConf: 0.99 }, true).kind, 'none');
 });
 
 test('decide: yabancı modda TR düzeltmesi yapılmaz', () => {

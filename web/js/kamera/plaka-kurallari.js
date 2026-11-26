@@ -135,13 +135,14 @@ export function decide(r, foreign) {
   const conf = r && typeof r.minConf === 'number' ? r.minConf : 0;
   if (foreign) {
     const p = extractRawPlate(text) || foreignAlnum(text).slice(0, foreignPlateMax);
-    if (!p) return { kind: 'none', plate: null, guess: '' };
+    if (p.length < foreignPlateMin) return { kind: 'none', plate: null, guess: '' };
     if (isValidForeignPlate(p) && conf >= CONFIDENCE_THRESHOLD) return { kind: 'confirm', plate: p, guess: p };
     return { kind: 'edit', plate: null, guess: p };
   }
   const m = extractPlateWithFixes(text);
   if (m && conf >= CONFIDENCE_THRESHOLD) return { kind: 'confirm', plate: m.plate, guess: m.plate };
   const guess = m ? m.plate : foreignAlnum(text).slice(0, foreignPlateMax);
-  if (!guess) return { kind: 'none', plate: null, guess: '' };
+  // Tek karakterlik gürültü tahmin sayılmaz
+  if (guess.length < foreignPlateMin) return { kind: 'none', plate: null, guess: '' };
   return { kind: 'edit', plate: null, guess };
 }

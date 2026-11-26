@@ -153,7 +153,9 @@ export function openCamera() {
         ui.video.srcObject = s;
         try { await ui.video.play(); } catch (e) { /* sessiz video: genelde gerekmez */ }
         const ready = () => { if (stream !== s) return; videoReady = ui.video.videoWidth > 0; refresh(); };
-        if (ui.video.readyState >= 2) ready(); else ui.video.addEventListener('loadeddata', ready, { once: true });
+        // Bazı tarayıcılarda boyut ilk karede 0 gelir: boyut ve oynatma olaylarında da yeniden bakılır
+        ['loadeddata', 'playing', 'resize'].forEach((ev) => ui.video.addEventListener(ev, ready));
+        if (ui.video.readyState >= 2) ready();
         if (!engineReady) ui.status.textContent = 'Okuma aracı hazırlanıyor… (yalnızca ilk kullanımda iner)';
       })
       .catch((e) => {
@@ -181,10 +183,4 @@ export function openCamera() {
 
   open = { promise };
   return promise;
-}
-
-/** Testler ve açık katman için: katman açıksa kapatır. */
-export function closeCamera() {
-  const o = document.getElementById('camCancel');
-  if (o) o.click();
 }
