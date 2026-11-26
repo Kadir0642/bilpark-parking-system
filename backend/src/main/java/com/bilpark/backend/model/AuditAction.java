@@ -6,7 +6,7 @@ public enum AuditAction {
     LOGIN,
     LOGIN_FAILED,
     LOGOUT,
-    SHIFT_AUTO_CLOSED,   // system: shift closed by login on another device or by the nightly job
+    SHIFT_AUTO_CLOSED,   // system: shift closed by login on another device, by the nightly job, or a logout capped at the day boundary
     PASSWORD_CHANGED,
 
     // Vehicles and records

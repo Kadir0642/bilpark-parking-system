@@ -40,4 +40,7 @@ public final class ErrorCodes {
     // Idempotent giriş
     public static final String INVALID_REQUEST_ID = "INVALID_REQUEST_ID";   // checkInRequestId biçimi geçersiz
     public static final String DUPLICATE_REQUEST = "DUPLICATE_REQUEST";     // aynı istek daha önce işlendi, kayıt artık aktif değil
+
+    // Plaka sorgu hız sınırı (429)
+    public static final String RATE_LIMITED = "RATE_LIMITED";
 }
