@@ -71,8 +71,8 @@ def gc(path):
 
 def table(d, labels):
     print("| koşu | istek/sn | hata % | p50 | p95 | p99 | giriş (check-in) p95 | SSE p95 | app CPU ort/max (%, sınır 10) "
-          "| RSS max MB | full GC | havuz bekleyen max | havuz zaman aşımı | ana makine CPU ort/max |")
-    print("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+          "| RSS max MB | full GC | havuz bekleyen max | havuz zaman aşımı | 503 | oturumdan atılan görevli | ana makine CPU ort/max |")
+    print("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for label in labels:
         j = json.load(open(d / f"{label}.json", encoding="utf-8"))
         t, s = j["total"], j["sse"]
@@ -80,10 +80,12 @@ def table(d, labels):
         h = hikari(d / f"{label}-hikari.txt")
         g = gc(d / f"{label}-gc.txt") or {"full": "-"}
         ci = next((e for e in j["endpoints"] if e["name"] == "POST /api/parking/check-in"), None)
+        n503 = sum(e["codes"].get("503", 0) for e in j["endpoints"])
+        lo = j["correctness"].get("loggedOutOfficers", "-")
         sec = lambda ms: f"{ms / 1000:.1f} sn" if ms is not None else "-"
         print(f"| {label} | {t['rps']} | {t['errPct']} | {sec(t['p50'])} | {sec(t['p95'])} | {sec(t['p99'])} | "
               f"{sec(ci['p95']) if ci else '-'} | {sec(s['p95'])} | {r['app_cpu'][0]:.1f} / {r['app_cpu'][1]:.1f} | "
-              f"{r['app_rss'][1]:.0f} | {g['full']} | {h[1]} | {h[2]} | {r['host_cpu'][0]:.0f} / {r['host_cpu'][1]:.0f} |")
+              f"{r['app_rss'][1]:.0f} | {g['full']} | {h[1]} | {h[2]} | {n503} | {lo} | {r['host_cpu'][0]:.0f} / {r['host_cpu'][1]:.0f} |")
 
 
 def main():

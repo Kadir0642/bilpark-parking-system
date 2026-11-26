@@ -61,8 +61,8 @@ services:
     image: bilpark-yuk-backend:latest
     build: ../backend
     cpus: ${APP_CPUS:-0.1}
-    mem_limit: 512m
-    memswap_limit: 512m
+    mem_limit: ${APP_MEM:-512m}
+    memswap_limit: ${APP_MEM:-512m}
     environment:
       DB_URL: jdbc:postgresql://dbproxy:5432/bilpark_yuk
       DB_USERNAME: bilpark

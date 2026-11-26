@@ -392,3 +392,25 @@ için ölçmek gerekir.
 - **Ana makine gürültüsü.** Başka projelerin konteynerleri ve başka bir agent'ın derlemeleri aynı makinede çalıştı
   (§1). Android emülatörü hiçbir koşu sırasında açık değildi.
 - **Ölçüm için açılan günlükler.** Hikari DEBUG ve `-Xlog:gc` küçük bir ek yük getiriyor.
+
+## 2. tur (iyileştirmeler sonrası): ARA SONUÇ / yarım
+
+Ölçülen kod: `main` @ `4a3ec19` (backend #29, mobil #28, panel #27). Çalışma kullanıcının isteğiyle durduruldu.
+
+- **Bitti:**
+  - Yük üreteci yeni istemcilere göre güncellendi (`CLIENT=new`, varsayılan). Eski davranış `CLIENT=old` ile duruyor.
+  - Görevli olayları yerelde uygulanıyor; okumalar birleştiriliyor (en çok 2,5 sn'de bir) ve yalnızca görünen
+    sekme için yapılıyor.
+  - HEARTBEAT catch-up en çok 90 sn'de bir.
+  - Yeniden bağlanma 1-45 sn, jitterli. Retry-After'a uyuluyor.
+  - 401 alınınca `/me` ile teyit ediliyor. GET'te 503 olursa en çok 3 kez yeniden deneniyor.
+  - Kuyruk 0-20 sn rastgele gecikmeyle başlıyor, kayıtlar arasında 0,4-1,2 sn bekliyor, zaman aşımı 30 sn.
+  - Panel bileşen başına en çok ~4 sn'de bir yeniliyor. Raporda 503 alınca Retry-After kadar bekleyip yeniden
+    deniyor.
+  - "Oturumdan atılan görevli" sayacı eklendi.
+- **Tek ölçüm:** boş DB'de ilk açılış (Flyway + tohum öncesi), 0.1 CPU. `/api/health` **79 sn**'de cevap verdi
+  (1. turda 227 sn). İlk giriş +8,6 sn, ilk DB okuması +1,8 sn (`results/f2-soguk.txt`).
+- **Yapılmadı (yarım):** 10 görevli temel 15 dk (başladı, ilk dakikada durduruldu, sonuç yok); 30; 50; kırılma
+  basamakları; vatandaş 100/200/400; kesinti kuyruğu 10 ve 30; 30 dk dayanıklılık; göçü yapılmış DB'de soğuk
+  başlatma; 0.5 CPU ve 1 CPU/2 GB temel koşuları; eski-yeni karşılaştırma tablosu.
+- **Sürdürmek için** `loadtest/README.md` "2. tur" bölümündeki komutlar sırayla koşulur.

@@ -90,3 +90,18 @@ docker exec -i bilpark-yuk-db-1 psql -U bilpark -d bilpark_yuk < loadtest/explai
 docker compose -p bilpark-yuk -f loadtest/docker-compose.yml --profile gen down -v
 docker image rm bilpark-yuk-backend:latest    # isteğe bağlı
 ```
+
+## 2. tur (iyileştirmeler sonrası, main @ 4a3ec19)
+
+`CLIENT=new` (varsayılan) yeni mobil ve panel davranışını, `CLIENT=old` 1. turdaki davranışı taklit eder.
+`HOME_TAB=0.3`: görevlilerin gösterge sekmesinde olan oranı (kalanı cadde sekmesinde). 1 CPU / 2 GB için
+`APP_CPUS=1 APP_MEM=2g`. Önce "Kurulum" adımları (yeni imaj, `coldstart.sh`, `seed.sql`).
+
+```bash
+bash loadtest/seri.sh "r2-a-temel-10 OFFICERS=10 DURATION=900 ADMINS=2 RUN_ID=31" "r2-b-30 OFFICERS=30 DURATION=600 ADMINS=3 RUN_ID=32" "r2-c-50 OFFICERS=50 DURATION=600 ADMINS=3 RAMP=90 RUN_ID=33" "r2-v-dalga OFFICERS=10 DURATION=660 ADMINS=2 WAVES=100,200,400 WAVE_START=90 WAVE_GAP=180 RUN_ID=34" "r2-d-kuyruk-10 SCENARIO=spike OFFICERS=10 DURATION=480 ADMINS=2 SPIKE_AT=90 OUTAGE=120 QUEUE=20 RUN_ID=35" "r2-d-kuyruk-30 SCENARIO=spike OFFICERS=30 DURATION=540 ADMINS=2 SPIKE_AT=120 OUTAGE=120 QUEUE=20 RUN_ID=36" "r2-e-dayaniklilik OFFICERS=10 DURATION=1800 ADMINS=2 RUN_ID=37" "r2-k-kirilma OFFICER_STEPS=50,75,100,150,200 STEP_SEC=150 DURATION=750 ADMINS=3 RUN_ID=38"
+bash loadtest/coldstart.sh 2tur-soguk-0.1cpu-gocmus-db
+$P stop app && APP_CPUS=0.5 bash loadtest/coldstart.sh 2tur-soguk-0.5cpu
+bash loadtest/seri.sh "r2-p05-temel-10 OFFICERS=10 DURATION=600 ADMINS=2 RUN_ID=39"
+$P stop app && APP_CPUS=1 APP_MEM=2g bash loadtest/coldstart.sh 2tur-soguk-1cpu-2gb
+bash loadtest/seri.sh "r2-p1-temel-10 OFFICERS=10 DURATION=600 ADMINS=2 RUN_ID=40" "r2-p1-kirilma OFFICER_STEPS=50,100,150,200 STEP_SEC=150 DURATION=600 ADMINS=3 RUN_ID=41"
+```
