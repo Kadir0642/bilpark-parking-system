@@ -51,6 +51,10 @@ Map<String, Object?> _dump(RecognizedText t) => {
                     'box': _rect(e.boundingBox),
                     'corners': _pts(e.cornerPoints),
                     'confidence': e.confidence,
+                    'symbols': [
+                      for (final s in e.symbols)
+                        {'text': s.text, 'box': _rect(s.boundingBox), 'corners': _pts(s.cornerPoints)},
+                    ],
                   },
               ],
             },
