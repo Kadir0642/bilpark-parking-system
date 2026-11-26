@@ -4,10 +4,12 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'api_client.dart';
 import 'app_info.dart';
+import 'backoff.dart';
 import 'constants.dart';
 
 enum LiveStatus { connecting, online, reconnecting, offline }
@@ -50,16 +52,20 @@ class _Unauthorized implements Exception {}
 
 class _Failure implements Exception {
   final String reason;
-  _Failure(this.reason);
+
+  /// 503/429'daki Retry-After (varsa): bir sonraki bekleme bundan kısa olmaz.
+  final Duration? retryAfter;
+  _Failure(this.reason, {this.retryAfter});
   @override
   String toString() => 'LiveSync: $reason';
 }
 
-Duration _defaultBackoff(int attempt) {
-  const secs = [1, 2, 4, 8, 16, 30];
-  final i = (attempt - 1).clamp(0, secs.length - 1);
-  return Duration(seconds: secs[i]);
-}
+/// Yeniden bağlanma beklemesi: 1-2-4-8-16-32-45 sn (üst sınır 45 sn) ve jitter (değerin %50-100'ü).
+/// Jitter, sunucu yeniden başlayınca bütün telefonların aynı saniyelerde geri bağlanmasını önler.
+Duration defaultReconnectBackoff(int attempt, [Random? rng]) =>
+    backoffDelay(attempt, base: const Duration(seconds: 1), cap: const Duration(seconds: 45), rng: rng);
+
+Duration _defaultBackoff(int attempt) => defaultReconnectBackoff(attempt);
 
 class LiveSync {
   final String apiBase;
@@ -70,6 +76,14 @@ class LiveSync {
   final Duration Function(int attempt) _backoff;
   final int offlineAfterFailures;
 
+  /// HEARTBEAT'teki sürüm geride kalmayı gösterse de (başka bölgelerin olayları da sürümü artırır) /sync?since
+  /// çağrısı en çok bu aralıkla yapılır. Akış sıralı ve güvenilirdir; kopmada zaten catch-up çalışır.
+  final Duration heartbeatCatchUpMinInterval;
+
+  /// 401 alınınca oturumun gerçekten geçersiz olup olmadığını teyit eder. false dönerse (sunucu yoğun, ağ hatası)
+  /// oturum KAPATILMAZ; hata sayılıp beklemeyle yeniden denenir. null: her 401 gerçek sayılır.
+  Future<bool> Function()? verifyUnauthorized;
+
   LiveSync({
     required this.apiBase,
     required this.token,
@@ -78,8 +92,13 @@ class LiveSync {
     this.heartbeatTimeout = const Duration(seconds: 60),
     Duration Function(int attempt)? backoff,
     this.offlineAfterFailures = 3,
+    this.heartbeatCatchUpMinInterval = const Duration(seconds: 90),
+    this.verifyUnauthorized,
   })  : _clientFactory = clientFactory ?? http.Client.new,
         _backoff = backoff ?? _defaultBackoff;
+
+  DateTime? _lastHeartbeatCatchUp;
+  Duration? _retryAfter; // son 503/429 yanıtındaki Retry-After; bir sonraki beklemede tüketilir
 
   final ValueNotifier<LiveStatus> status = ValueNotifier(LiveStatus.connecting);
 
@@ -181,11 +200,42 @@ class LiveSync {
     onUnauthorized?.call();
   }
 
+  /// 401 alındı: oturum gerçekten geçersizse akış durdurulur ve true döner (çağıran çıkar).
+  /// Teyit "geçersiz değil" derse (sunucu yoğun, ağ hatası) false döner: çağıran bunu sıradan hata sayar,
+  /// oturum kapatılmaz. Akış bu arada durdurulduysa true döner.
+  Future<bool> _confirmUnauthorized(int gen) async {
+    final verify = verifyUnauthorized;
+    if (verify != null) {
+      var invalid = false;
+      try {
+        invalid = await verify();
+      } catch (_) {
+        invalid = false;
+      }
+      if (!_alive(gen)) return true;
+      if (!invalid) return false;
+    }
+    _unauthorized(gen);
+    return true;
+  }
+
   /// Başarısız deneme: durum reconnecting, yeterince üst üste olunca offline.
-  void _fail() {
+  /// [cause] 503/429 Retry-After taşıyorsa sonraki bekleme bundan kısa olmaz.
+  void _fail([Object? cause]) {
     _failures++;
+    if (cause is _Failure && cause.retryAfter != null) _retryAfter = cause.retryAfter;
     _setStatus(_failures >= offlineAfterFailures ? LiveStatus.offline : LiveStatus.reconnecting);
   }
+
+  /// Bir sonraki yeniden bağlanma beklemesi: üstel + jitter, varsa Retry-After'dan kısa değil.
+  Duration _nextDelay() {
+    final b = _backoff(_failures);
+    final r = _retryAfter;
+    _retryAfter = null;
+    return r != null && r > b ? r : b;
+  }
+
+  Duration? _retryAfterOf(http.BaseResponse r) => parseRetryAfter(r.headers['retry-after'], cap: const Duration(seconds: 60));
 
   Future<void> _sleep(int gen, Duration d) async {
     if (!_alive(gen)) return;
@@ -236,12 +286,13 @@ class LiveSync {
           _touch();
           if (!_reloads.isClosed) _reloads.add(null);
         } on _Unauthorized {
-          _unauthorized(gen);
-          return;
-        } catch (_) {
-          if (!_alive(gen)) return;
+          if (await _confirmUnauthorized(gen)) return;
           _fail();
-          await _sleep(gen, _backoff(_failures));
+          await _sleep(gen, _nextDelay());
+        } catch (e) {
+          if (!_alive(gen)) return;
+          _fail(e);
+          await _sleep(gen, _nextDelay());
         }
       }
 
@@ -249,16 +300,17 @@ class LiveSync {
       var needCatchUp = false;
       while (_alive(gen)) {
         if (needCatchUp) {
-          await _sleep(gen, _backoff(_failures));
+          await _sleep(gen, _nextDelay());
           if (!_alive(gen)) return;
           try {
             await _catchUp(gen);
           } on _Unauthorized {
-            _unauthorized(gen);
-            return;
-          } catch (_) {
-            if (!_alive(gen)) return;
+            if (await _confirmUnauthorized(gen)) return;
             _fail();
+            continue;
+          } catch (e) {
+            if (!_alive(gen)) return;
+            _fail(e);
             continue;
           }
           if (!_alive(gen)) return;
@@ -268,11 +320,11 @@ class LiveSync {
           if (!_alive(gen)) return;
           _fail(); // akış sunucu tarafından kapandı
         } on _Unauthorized {
-          _unauthorized(gen);
-          return;
-        } catch (_) {
-          if (!_alive(gen)) return;
+          if (await _confirmUnauthorized(gen)) return;
           _fail();
+        } catch (e) {
+          if (!_alive(gen)) return;
+          _fail(e);
         }
         needCatchUp = true;
       }
@@ -290,7 +342,7 @@ class LiveSync {
       final resp = await client.send(req).timeout(const Duration(seconds: 15));
       final body = await resp.stream.bytesToString().timeout(const Duration(seconds: 15));
       if (resp.statusCode == 401) throw _Unauthorized();
-      if (resp.statusCode != 200) throw _Failure('sync ${resp.statusCode}');
+      if (resp.statusCode != 200) throw _Failure('sync ${resp.statusCode}', retryAfter: _retryAfterOf(resp));
       final j = jsonDecode(body);
       if (j is! Map) throw _Failure('sync gövdesi geçersiz');
       return Map<String, dynamic>.from(j);
@@ -334,6 +386,10 @@ class LiveSync {
     }
   }
 
+  /// Test için: olayı ağ olmadan akışa verir (sürüm sırası ve bölge süzgeci uygulanır).
+  @visibleForTesting
+  void debugDeliver(SyncEvent e) => _deliver(e);
+
   /// Olayı sürüm sırasıyla yayınlar; eski/yinelenen sürümler atılır.
   void _deliver(SyncEvent e) {
     final cur = _version ?? 0;
@@ -362,7 +418,7 @@ class LiveSync {
       final resp = await client.send(req).timeout(heartbeatTimeout);
       if (!_alive(gen)) return;
       if (resp.statusCode == 401) throw _Unauthorized();
-      if (resp.statusCode != 200) throw _Failure('events ${resp.statusCode}');
+      if (resp.statusCode != 200) throw _Failure('events ${resp.statusCode}', retryAfter: _retryAfterOf(resp));
 
       void arm() {
         watchdog?.cancel();
@@ -440,9 +496,14 @@ class LiveSync {
       case 'HEARTBEAT':
         _touch();
         final v = (j['version'] as num?)?.toInt();
-        if (v != null && v > (_version ?? 0)) {
-          unawaited(_catchUp(gen).catchError((Object e) {
-            if (e is _Unauthorized) _unauthorized(gen);
+        final last = _lastHeartbeatCatchUp;
+        final now = DateTime.now();
+        if (v != null &&
+            v > (_version ?? 0) &&
+            (last == null || now.difference(last) >= heartbeatCatchUpMinInterval)) {
+          _lastHeartbeatCatchUp = now;
+          unawaited(_catchUp(gen).catchError((Object e) async {
+            if (e is _Unauthorized) await _confirmUnauthorized(gen);
           }));
         }
         break;
@@ -465,6 +526,8 @@ final LiveSync liveSync = LiveSync(
   apiBase: AppConstants.apiBase,
   token: ApiClient.getToken,
   deviceId: ApiClient.getDeviceId,
+  // Aşırı yükte sunucu geçerli oturuma da 401 dönebilir: /me ile teyit edilmeden oturum kapatılmaz
+  verifyUnauthorized: ApiClient.sessionIsInvalid,
 )..onUnauthorized = () {
     ApiClient.handleUnauthorized();
   };

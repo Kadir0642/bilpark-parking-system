@@ -65,10 +65,12 @@ Future<void> _pumpFor(WidgetTester tester, [int ms = 600]) async {
 
 /// Snack'ler ve 30 sn'lik saat bitsin, ekran kapansın (bekleyen zamanlayıcı kalmasın).
 Future<void> _teardown(WidgetTester tester) async {
+  entryQueue.cancelScheduled();
   await tester.pump(const Duration(seconds: 15));
   await tester.pumpWidget(const SizedBox());
   await tester.pump(const Duration(seconds: 1));
   liveSync.status.value = LiveStatus.connecting;
+  entryQueue.cancelScheduled(); // hata sonrası otomatik yeniden deneme zamanlayıcısı kalmasın
   entryQueue.items.value = [];
 }
 

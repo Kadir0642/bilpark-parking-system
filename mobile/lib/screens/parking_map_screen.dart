@@ -8,6 +8,8 @@ import '../core/format.dart';
 import '../core/license.dart';
 import '../core/live_sync.dart';
 import '../core/plate.dart';
+import '../core/refresh_coalescer.dart';
+import '../core/spot_events.dart';
 import '../core/tariff.dart';
 import '../core/theme.dart';
 import '../core/vehicle_types.dart';
@@ -58,7 +60,7 @@ class _FailedAction {
 
   // Ağ/sunucu hatası ve kilit çakışması tekrar denenebilir; "zaten işlendi", "abonelik yok" gibi iş kuralı hataları denenemez
   // 423 READ_ONLY dahil diğer 4xx hataları tekrar denenemez
-  bool get retryable => kind != _ActionKind.checkIn && (statusCode == null || statusCode! >= 500 || code == 'CONFLICT');
+  bool get retryable => kind != _ActionKind.checkIn && (statusCode == null || statusCode! >= 500 || statusCode == 429 || code == 'CONFLICT');
 }
 
 class ParkingMapScreen extends StatefulWidget {
@@ -82,9 +84,15 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
   List<dynamic> activeVehicles = [];
   Timer? _clock; // kart sürelerini yerelde yeniler (ağ yok)
   Timer? _pendingTick; // geri alma geri sayımı
-  Timer? _debounce; // art arda gelen yenileme istekleri tek istek olur
-  StreamSubscription<SyncEvent>? _evSub;
-  StreamSubscription<void>? _reloadSub;
+  // Kendi işlemlerimizin (giriş, çıkış, kuyruktan gönderim) yenilemeleri: art arda gelenler en çok 1,5 sn
+  // aralıkla tek GET /parking/filter olur (kuyruk boşalırken her kayıt için ayrı istek gitmez).
+  late final RefreshCoalescer _refresher = RefreshCoalescer(
+      action: fetchActiveVehicles, lead: const Duration(milliseconds: 300), window: const Duration(milliseconds: 1500));
+  final SpotFetchGuard _guard = SpotFetchGuard();
+  /// Testlerde sahte saat için (üretimde DateTime.now).
+  @visibleForTesting
+  static DateTime Function() clockNow = DateTime.now;
+  DateTime? _lastFetch; // son GET /parking/filter başlangıcı (aynı anda gelen yinelenen yenilemeyi atlamak için)
   StreamSubscription<EntrySendResult>? _queueSub;
   final GlobalKey _actionsKey = GlobalKey(); // alttaki düğme sütunu: bildirimler bunun üstünde kalır
   bool _failedExpanded = true;
@@ -108,8 +116,8 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
     _clock = Timer.periodic(const Duration(seconds: 30), (t) {
       if (mounted) setState(() {});
     });
-    _evSub = liveSync.events.listen(_onEvent);
-    _reloadSub = liveSync.reloads.listen((_) => scheduleRefresh());
+    // Canlı olaylar (SSE) ve yeniden yükleme istekleri MainContainer'dan gelir: tek yerde birleştirilir,
+    // yalnızca görünen ekran yenilenir (applyEvent / fetchActiveVehicles).
     TariffStore.current.addListener(_onTariff);
     _queueSub = entryQueue.results.listen(_onQueueResult);
     entryQueue.items.addListener(_onQueueItems);
@@ -123,26 +131,27 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
     if (mounted) setState(() {});
   }
 
-  void _onEvent(SyncEvent e) {
-    if (e.type != 'VEHICLE_ENTERED' && e.type != 'VEHICLE_EXITED' && e.type != 'VEHICLE_RUNAWAY') return;
+  /// Canlı araç olayını listeye doğrudan uygular (ağ yok): çıkan/kaçan araç silinir, giren araç eklenir.
+  /// Bu bölgenin olayı değilse hiçbir şey yapmaz. Değişiklik olduysa true.
+  bool applyEvent(SyncEvent e) {
     final mine = widget.zoneId != null ? e.zoneId == widget.zoneId : e.street == widget.streetCode;
-    if (mine) scheduleRefresh();
+    if (!mine) return false;
+    _guard.record(e); // uçuştaki GET /parking/filter yanıtına da uygulanır
+    final next = applyVehicleEvent(activeVehicles, e);
+    if (identical(next, activeVehicles)) return false;
+    if (mounted) setState(() => activeVehicles = next);
+    return true;
   }
 
   /// Yenilemeyi ~300 ms geciktirir; art arda gelen tetikler tek GET /parking/filter olur.
   void scheduleRefresh() {
     if (!mounted) return;
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      if (mounted) fetchActiveVehicles();
-    });
+    _refresher.request();
   }
 
   @override
   void dispose() {
-    _debounce?.cancel();
-    _evSub?.cancel();
-    _reloadSub?.cancel();
+    _refresher.dispose();
     _queueSub?.cancel();
     entryQueue.items.removeListener(_onQueueItems);
     TariffStore.current.removeListener(_onTariff);
@@ -161,21 +170,32 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
   }
 
   // --- API İŞLEMLERİ ---
-  Future<void> fetchActiveVehicles({bool userTriggered = false}) async {
+  /// [minAge]: son çekme bundan yeniyse sunucuya gitmez (kendi işlemimizin yenilemesi ile olay yenilemesi çakışınca).
+  /// Dönüş: istek gerçekten yapıldı mı (false: [minAge] yüzünden atlandı; çağıran isterse yeniden zamanlar).
+  Future<bool> fetchActiveVehicles({bool userTriggered = false, Duration? minAge}) async {
+    final last = _lastFetch;
+    if (minAge != null && last != null && clockNow().difference(last) < minAge) return false;
+    _lastFetch = clockNow();
+    final id = _guard.begin();
     try {
       final data = await ApiClient.get('/parking/filter', query: {'street': _backendStreetEnum});
-      if (!mounted) return;
+      if (!mounted) return true;
       var list = data is List ? data : <dynamic>[];
       if (widget.zoneId != null) {
         list = list.where((spot) => spot['zone'] != null && spot['zone']['id'] == widget.zoneId).toList();
       }
-      setState(() => activeVehicles = list);
+      // Çekme sırasında gelen çıkış/giriş olayları yanıta yeniden uygulanır (çıkan araç canlanmasın)
+      final reconciled = _guard.finish(id, list);
+      setState(() => activeVehicles = reconciled);
     } on ApiException catch (e) {
       // Bağlantı durumunu canlı senkron bandı gösterir; yalnızca kullanıcı işleminden sonraki hata bildirilir
       if (userTriggered && mounted && !e.isUnauthorized) {
         _showSnack('Liste yenilenemedi: ${e.message}', tone: BadgeTone.danger);
       }
+    } finally {
+      _guard.cancel(id);
     }
+    return true;
   }
 
   void _showSnack(String msg, {BadgeTone? tone, Duration duration = const Duration(seconds: 4), SnackBarAction? action}) {
@@ -224,9 +244,10 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
       _warnDebt(entry.plate, data);
     } on ApiException catch (e) {
       if (e.isUnauthorized) return;
-      // Ağ/zaman aşımı: AYNI requestId ile kuyruğa; istek ulaşmışsa sunucu tekrarı çift kayıt yapmaz
-      if (e.statusCode == null) {
-        await _queueEntry(entry);
+      // Ağ/zaman aşımı ya da sunucu yoğun (503/429): AYNI requestId ile kuyruğa; istek ulaşmışsa sunucu tekrarı
+      // çift kayıt yapmaz. Kuyruk bekleyip (üstel bekleme + Retry-After) kendiliğinden yeniden dener.
+      if (e.statusCode == null || e.isBusy) {
+        await _queueEntry(entry, failure: e);
         return;
       }
       // 409 ALREADY_PARKED / 400 INVALID_PLATE: sunucunun mesajı olduğu gibi gösterilir
@@ -237,14 +258,21 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
     }
   }
 
-  Future<void> _queueEntry(PendingEntry entry) async {
+  /// [failure]: doğrudan gönderimin az önce aldığı hata (ağ/503/429). Verilmişse kuyruk hemen yeniden denemez;
+  /// üstel bekleme ve Retry-After'a göre zamanlar. Verilmemişse (çevrimdışı / önde kayıt var) zamanlanmış bir
+  /// bekleme varsa ona uyulur, yoksa hemen başlanır. Zamanlanmış beklemeyi bozan flush() kullanılmaz.
+  Future<void> _queueEntry(PendingEntry entry, {ApiException? failure}) async {
     final ok = await entryQueue.enqueue(entry);
     if (!ok) {
       _showSnack('${entry.plate} zaten beklemede.', tone: BadgeTone.danger);
       return;
     }
     _showSnack('${entry.plate} bağlantı gelince gönderilecek (beklemede).');
-    unawaited(entryQueue.flush());
+    if (failure != null) {
+      entryQueue.retryLater(retryAfter: failure.retryAfter);
+    } else {
+      entryQueue.flushLater(maxJitter: Duration.zero);
+    }
   }
 
   /// Giriş yapıldıktan sonra: ödenmemiş kaçak borcu varsa engellemeyen uyarı.

@@ -8,6 +8,8 @@ import 'core/entry_queue.dart';
 import 'core/format.dart';
 import 'core/license.dart';
 import 'core/live_sync.dart';
+import 'core/refresh_coalescer.dart';
+import 'core/spot_events.dart';
 import 'core/tariff.dart';
 import 'core/user_update.dart';
 import 'core/vehicle_types.dart';
@@ -117,11 +119,23 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
 
   StreamSubscription<SyncEvent>? _eventSub;
   StreamSubscription<void>? _reloadSub;
-  Timer? _debounce;
 
-  // Bağlantı gelince çevrimdışı giriş kuyruğu boşaltılır
+  // Canlı olay kaynaklı yenilemeler: olaylar yerelde uygulanır, sunucudan okuma tek yerde birleştirilir
+  // (en çok 2,5 sn'de bir), yalnızca GÖRÜNEN sekme için ve uygulama öndeyken yapılır.
+  late final RefreshCoalescer _gate =
+      RefreshCoalescer(action: () => _flushTab(_index, includeAged: false), canRun: () => _foreground);
+  bool _foreground = true;
+  final Set<RefreshTarget> _dirty = {}; // eskidiği bilinen ama henüz çekilmemiş veriler
+  final Map<RefreshTarget, DateTime> _fetchedAt = {};
+  final DateTime _startedAt = DateTime.now();
+
+  /// Sekme verisi bu süreden eskiyse (olay gelmese de) sekmeye dönüşte tazelenir.
+  static const Duration _maxAge = Duration(seconds: 60);
+
+  // Bağlantı gelince çevrimdışı giriş kuyruğu boşaltılır; bir kesintiden sonra bütün telefonlar aynı anda
+  // göndermesin diye başlangıç 0-20 sn rastgele geciktirilir.
   void _onLiveStatus() {
-    if (liveSync.status.value == LiveStatus.online) entryQueue.flush();
+    if (liveSync.status.value == LiveStatus.online) entryQueue.flushLater();
   }
 
   @override
@@ -134,13 +148,18 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
     LicenseStore.load();
     _eventSub = liveSync.events.listen(_onEvent);
     _reloadSub = liveSync.reloads.listen((_) {
-      TariffStore.load();
-      VehicleTypeStore.load();
-      LicenseStore.load();
-      _scheduleRefresh();
+      // Açılışta ekranlar ve depolar zaten kendi verisini yükledi; ilk senkron yüklemesi çifte çekim yapmasın
+      final fresh = DateTime.now().difference(_startedAt) < const Duration(seconds: 5);
+      if (!fresh) {
+        TariffStore.load();
+        VehicleTypeStore.load();
+        LicenseStore.load();
+      }
+      _markAllDirty(skipFresh: true);
+      _gate.request();
     });
     liveSync.onDeactivated = _onDeactivated;
-    entryQueue.load().then((_) => entryQueue.flush());
+    entryQueue.load().then((_) => entryQueue.flushLater(maxJitter: const Duration(seconds: 5)));
     liveSync.status.addListener(_onLiveStatus);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) liveSync.start(zoneId: widget.zoneId);
@@ -151,7 +170,7 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _pages.dispose();
-    _debounce?.cancel();
+    _gate.dispose();
     _eventSub?.cancel();
     _reloadSub?.cancel();
     liveSync.status.removeListener(_onLiveStatus);
@@ -164,9 +183,67 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    _foreground = state == AppLifecycleState.resumed;
+    if (_foreground) {
       liveSync.reconnectNow();
-      entryQueue.flush();
+      entryQueue.flushLater(maxJitter: const Duration(seconds: 5));
+      // Arka plandayken biriken olaylar tek yenilemeyle yetişir; uzun süre kapalı kaldıysa görünen sekme tazelenir
+      _gate.resume();
+      _flushTab(_index, includeAged: true);
+    }
+  }
+
+  /// Bir sekmenin gösterdiği veriler.
+  Set<RefreshTarget> _targetsOf(int tab) => switch (tab) {
+        _home => {RefreshTarget.dashSpots, RefreshTarget.dashSummary},
+        _street => {RefreshTarget.map},
+        _history => {RefreshTarget.history},
+        _ => {RefreshTarget.runaways},
+      };
+
+  void _markAllDirty({bool skipFresh = false}) {
+    final now = DateTime.now();
+    for (final t in RefreshTarget.values) {
+      if (skipFresh && now.difference(_fetchedAt[t] ?? _startedAt) < const Duration(seconds: 3)) continue;
+      _dirty.add(t);
+    }
+  }
+
+  /// [tab] sekmesinin kirli (ve [includeAged] ise eskimiş ya da bağlantı kopukken ziyaret edilen) verilerini çeker.
+  void _flushTab(int tab, {required bool includeAged}) {
+    if (!mounted) return;
+    final now = DateTime.now();
+    final aged = includeAged && liveSync.status.value != LiveStatus.online;
+    final todo = <RefreshTarget>{};
+    for (final t in _targetsOf(tab)) {
+      final old = includeAged && now.difference(_fetchedAt[t] ?? _startedAt) > _maxAge;
+      if (_dirty.contains(t) || old || aged) todo.add(t);
+    }
+    if (todo.isEmpty) return;
+    _dirty.removeAll(todo);
+    for (final t in todo) {
+      _fetchedAt[t] = now;
+    }
+    switch (tab) {
+      case _home:
+        _dashKey.currentState?.refresh(
+          spots: todo.contains(RefreshTarget.dashSpots),
+          summary: todo.contains(RefreshTarget.dashSummary),
+          vehicleTypes: includeAged, // araç tipleri olayla değil, ekrana dönüşte tazelenir (TYPES olayı ayrıca işlenir)
+        );
+      case _street:
+        // Kendi işlemimizin yenilemesi az önce çektiyse yinelenen istek atlanır
+        // Atlandıysa (az önce başlamış bir çekme olay öncesini görmüş olabilir) bir kez daha zamanlanır
+        _mapKey.currentState?.fetchActiveVehicles(minAge: const Duration(seconds: 2)).then((ran) {
+          if (!ran && mounted) {
+            _dirty.add(RefreshTarget.map);
+            _gate.request();
+          }
+        });
+      case _history:
+        _historyKey.currentState?.refresh();
+      case _runaways:
+        _runawayKey.currentState?.refresh();
     }
   }
 
@@ -207,19 +284,14 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
         final who = e.payload['username'];
         if (who == AppConstants.currentUser) _onUserUpdated(e.payload);
       case 'VEHICLE_ENTERED' || 'VEHICLE_EXITED' || 'VEHICLE_RUNAWAY' || 'VEHICLE_CANCELLED' || 'RECORD_CANCELLED':
-        if (_isMine(e)) _scheduleRefresh();
+        if (!_isMine(e)) return;
+        // 1) Yük yeterliyse araç listesine ağsız uygulanır (çıkan araç silinir, giren eklenir)
+        _dashKey.currentState?.applyEvent(e);
+        _mapKey.currentState?.applyEvent(e);
+        // 2) Geri kalan (özet, geçmiş, borç bilgisi) birleştirilmiş tek yenilemeyle, yalnızca görünen sekme için
+        _dirty.addAll(targetsForEvent(e.type));
+        _gate.request();
     }
-  }
-
-  /// Art arda gelen olaylar tek yenilemeye indirgenir.
-  void _scheduleRefresh() {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
-      if (!mounted) return;
-      _dashKey.currentState?.refresh();
-      _historyKey.currentState?.refresh();
-      _runawayKey.currentState?.refresh();
-    });
   }
 
   /// Oturumu yerelde kapatıp giriş ekranına döner. [logoutFirst]: önce sunucuda vardiya kapatılmaya çalışılır, hata yutulur.
@@ -313,15 +385,16 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
         if (_target == i) _target = null;
       });
     }
-    if (firstVisit) return; // ilk kurulumda ekran kendi verisini çeker
-    switch (i) {
-      case _home:
-        _dashKey.currentState?.refresh();
-      case _history:
-        _historyKey.currentState?.refresh();
-      case _runaways:
-        _runawayKey.currentState?.refresh();
+    if (firstVisit) {
+      // ilk kurulumda ekran kendi verisini çeker
+      final now = DateTime.now();
+      for (final t in _targetsOf(i)) {
+        _dirty.remove(t);
+        _fetchedAt[t] = now;
+      }
+      return;
     }
+    _flushTab(i, includeAged: true); // yalnızca eskimiş/kirli ya da bağlantı kopukken
   }
 
   @override

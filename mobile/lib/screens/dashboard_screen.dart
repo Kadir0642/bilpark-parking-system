@@ -3,6 +3,8 @@ import 'settings_screen.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
 import '../core/format.dart';
+import '../core/live_sync.dart';
+import '../core/spot_events.dart';
 import '../core/tariff.dart';
 import '../core/vehicle_types.dart';
 import '../core/theme.dart';
@@ -58,28 +60,57 @@ class DashboardScreenState extends State<DashboardScreen> {
     refresh();
   }
 
-  Future<void> refresh() async {
-    // Araç tipleri de her yenilemede tazelenir (giriş formu güncel kalsın)
-    await Future.wait([_fetchStats(), _fetchSummary(), VehicleTypeStore.load()]);
+  /// Son bilinen içerideki araçlar (sayılar buradan hesaplanır; canlı olaylar buna doğrudan uygulanır).
+  List<dynamic> _spots = const [];
+  final SpotFetchGuard _guard = SpotFetchGuard();
+
+  /// [spots]: araç sayıları (GET /parking/filter), [summary]: vardiya özeti (GET /parking/history),
+  /// [vehicleTypes]: araç tipi listesi. Canlı olay tazelemeleri yalnızca gerekeni ister; ekrana dönüşte
+  /// hepsi tazelenir.
+  Future<void> refresh({bool spots = true, bool summary = true, bool vehicleTypes = true}) async {
+    await Future.wait([
+      if (spots) _fetchStats(),
+      if (summary) _fetchSummary(),
+      if (vehicleTypes) VehicleTypeStore.load(),
+    ]);
+  }
+
+  /// Canlı araç olayını sayılara doğrudan uygular (ağ yok). Değişiklik olduysa true.
+  bool applyEvent(SyncEvent e) {
+    _guard.record(e); // uçuştaki GET /parking/filter yanıtına da uygulanır
+    final next = applyVehicleEvent(_spots, e);
+    if (identical(next, _spots)) return false;
+    if (mounted) setState(() => _setSpots(next));
+    return true;
+  }
+
+  void _setSpots(List<dynamic> list) {
+    _spots = list;
+    activeVehicleCount = list.length;
+    leftCount = list.where((s) => s['side'] == 'LEFT' || s['side'] == null).length;
+    rightCount = list.where((s) => s['side'] == 'RIGHT').length;
+    subscriberCount = list.where((s) => s['hasSubscription'] == true).length;
   }
 
   Future<void> _fetchStats() async {
+    final id = _guard.begin();
     try {
       final spots = await ApiClient.get('/parking/filter', query: {'street': widget.streetCode});
-      if (!mounted) return;
+      if (!mounted) {
+        _guard.cancel(id);
+        return;
+      }
       var list = spots is List ? spots : [];
       // Görevli yalnızca kendi bölgesini görür (harita ekranıyla aynı süzme)
       if (widget.zoneId != null) {
         list = list.where((s) => s['zone'] != null && s['zone']['id'] == widget.zoneId).toList();
       }
-      setState(() {
-        activeVehicleCount = list.length;
-        leftCount = list.where((s) => s['side'] == 'LEFT' || s['side'] == null).length;
-        rightCount = list.where((s) => s['side'] == 'RIGHT').length;
-        subscriberCount = list.where((s) => s['hasSubscription'] == true).length;
-      });
+      list = _guard.finish(id, list); // çekme sırasında gelen çıkış/giriş olayları yanıta yeniden uygulanır
+      setState(() => _setSpots(list));
     } on ApiException {
       // Bağlantı durumunu canlı senkron bandı gösterir; sayılar son değerde kalır
+    } finally {
+      _guard.cancel(id); // finish çağrıldıysa etkisiz; hata yolunda kayıt birikmesin
     }
   }
 
