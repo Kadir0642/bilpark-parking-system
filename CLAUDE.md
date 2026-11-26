@@ -36,7 +36,7 @@ Açık hava otopark takip sistemi (plaka girişi/çıkışı, tarife, tahsilat, 
 ## 4. Korunan kaynaklar (agent'lar dokunmaz)
 - Canlı Render servisi, Neon veritabanı ve UptimeRobot: bağlanma, deploy etme, ayar değiştirme yok. Deploy'u yalnızca kullanıcı yapar.
 - Kullanıcının yerel demo konteynerleri (başlatma, durdurma, silme, veritabanına yazma yok) ve başka projelerin konteynerleri. Test için kendi geçici Testcontainers'ın serbesttir; ayrı proje adı ve boş portlar kullan, bitince `down -v`.
-- Kullanıcının kişisel telefonu: `adb shell input` ve `monkey` YASAK. Yalnızca kurulum, `adb reverse`, `logcat` ve `flutter test integration_test`.
+- Kullanıcının kişisel telefonu: agent'lar brief açıkça izin vermedikçe telefonda adb KULLANMAZ. İzin varsa bile yalnızca kurulum, `adb reverse`, `logcat`, salt okunur `dumpsys` ve `flutter test integration_test`; `adb shell input`, `monkey` ve `am start` hiçbir koşulda yok.
 - Ana checkout (repo kök klasörü): kullanıcının commit'lenmemiş değişiklikleri olabilir. Orada çalışma; worktree kullan.
 - Çalışan başka bir agent'ın ya da demonun kullandığı worktree silinmez.
 
