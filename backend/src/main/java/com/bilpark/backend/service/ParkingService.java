@@ -189,11 +189,22 @@ public class ParkingService
     public ParkSpot checkInVehicle(String licensePlate,String vehicleType,StreetLocation street,String side, Long zoneId, User actor,
                                    String checkInRequestId, String clientEntryTime, boolean foreignPlate)
     {
+        return checkInVehicle(licensePlate, vehicleType, street, side, zoneId, actor, checkInRequestId, clientEntryTime,
+                foreignPlate, null);
+    }
+
+    // foreignCountryCode: isteğe bağlı ülke kodu (V11, 1-3 harf A-Z); yalnızca foreignPlate = true ile kabul edilir
+    @Transactional
+    public ParkSpot checkInVehicle(String licensePlate,String vehicleType,StreetLocation street,String side, Long zoneId, User actor,
+                                   String checkInRequestId, String clientEntryTime, boolean foreignPlate,
+                                   String foreignCountryCode)
+    {
         if (checkInRequestId != null && !REQUEST_ID.matcher(checkInRequestId).matches()) {
             throw ApiException.badRequest(ErrorCodes.INVALID_REQUEST_ID,
                     "Geçersiz istek kimliği (8-64 karakter, harf/rakam/tire).");
         }
         String plate = PlateNormalizer.normalize(licensePlate, foreignPlate);
+        String countryCode = PlateNormalizer.normalizeCountryCode(foreignCountryCode, foreignPlate);
 
         if (isOfficer(actor)) {
             Zone assigned = requireAssignedZone(actor);
@@ -237,6 +248,7 @@ public class ParkingService
 
         ParkSpot newSpot = new ParkSpot(plate, street, type, "Merkez", "Bilecik", side, zone);
         newSpot.setForeignPlate(foreignPlate);
+        newSpot.setForeignCountryCode(countryCode);
         EntryTime entry = resolveEntryTime(clientEntryTime, LocalDateTime.now(clock));
         newSpot.setEntryTime(entry.time());
 
@@ -281,6 +293,7 @@ public class ParkingService
         after.put("entryTimeSource", entry.source());
         if (clientEntryTime != null) after.put("clientEntryTime", clientEntryTime);
         if (foreignPlate) after.put("foreignPlate", true);
+        if (countryCode != null) after.put("foreignCountryCode", countryCode);
         auditService.log(AuditAction.VEHICLE_CHECK_IN, "ParkSpot", result.getId(),
                 plate + " giriş: " + (zone != null ? zone.getZoneName() : (street != null ? street.getDisplayName() : "-")),
                 null, after);
@@ -298,6 +311,7 @@ public class ParkingService
         p.put("entryTime", spot.getEntryTime() != null ? spot.getEntryTime().toString() : null);
         p.put("hasSubscription", Boolean.TRUE.equals(spot.getHasSubscription()));
         p.put("foreignPlate", spot.isForeignPlate());
+        p.put("foreignCountryCode", spot.getForeignCountryCode());
         p.put("spotId", spot.getId());
         changePublisher.zoneEvent(SyncEventType.VEHICLE_ENTERED, zoneIdOf(spot), spot.getStreet(), p);
     }
@@ -364,6 +378,7 @@ public class ParkingService
         aud.put("paymentMethod", effective.name());
         aud.put("zoneId", zoneIdOf(spot));
         if (record.isForeignPlate()) aud.put("foreignPlate", true);
+        if (record.getForeignCountryCode() != null) aud.put("foreignCountryCode", record.getForeignCountryCode());
         auditService.log(AuditAction.VEHICLE_CHECK_OUT, "ParkingRecord", record.getId(),
                 record.getLicensePlate() + " çıkış: " + money(fee) + " TL (" + effective.name() + ")", null, aud);
 
@@ -424,6 +439,7 @@ public class ParkingService
         aud.put("plate", record.getLicensePlate());
         aud.put("debt", debt);
         if (record.isForeignPlate()) aud.put("foreignPlate", true);
+        if (record.getForeignCountryCode() != null) aud.put("foreignCountryCode", record.getForeignCountryCode());
         auditService.log(AuditAction.VEHICLE_RUNAWAY, "ParkingRecord", record.getId(),
                 record.getLicensePlate() + " kaçak: " + money(debt) + " TL borç", null, aud);
 
@@ -449,6 +465,7 @@ public class ParkingService
         record.setExitTime(now);
         record.setVehicleType(spot.getCurrentType());
         record.setForeignPlate(spot.isForeignPlate());
+        record.setForeignCountryCode(spot.getForeignCountryCode());
         return record;
     }
 
@@ -618,6 +635,7 @@ public class ParkingService
         m.put("cancelReason", r.getCancelReason());
         m.put("collectedBy", r.getCollectedByUsername());
         m.put("foreignPlate", r.isForeignPlate());
+        m.put("foreignCountryCode", r.getForeignCountryCode());
         return m;
     }
 
@@ -728,6 +746,7 @@ public class ParkingService
         response.put("streetName",spot.getStreet().getDisplayName());
         response.put("plate",spot.getCurrentPlate());
         response.put("foreignPlate", spot.isForeignPlate());
+        response.put("foreignCountryCode", spot.getForeignCountryCode());
         response.put("entryTime",spot.getEntryTime());
         response.put("durationMinutes",b.totalMinutes());
         response.put("fee",fee);

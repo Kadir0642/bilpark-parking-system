@@ -321,7 +321,10 @@
     }
 
     function renderResult(data, tariff) {
-        $('resPlate').textContent = fmtPlate(data.plate || lastPlate, data.foreignPlate === true);
+        // yabancı plakada isteğe bağlı ülke kodu (V11) plakanın yanında: "MAB1234 · D"
+        const foreign = data.foreignPlate === true;
+        const country = foreign && data.foreignCountryCode ? ' · ' + data.foreignCountryCode : '';
+        $('resPlate').textContent = fmtPlate(data.plate || lastPlate, foreign) + country;
         $('resStreet').textContent = data.streetName || '';
         const sub = !!data.hasSubscription;
         $('resFee').hidden = sub;

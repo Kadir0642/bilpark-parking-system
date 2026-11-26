@@ -141,14 +141,40 @@ yoksa yalnızca Türk plakası kabul edilir.
   `GET /api/parking/debt` yanıtında da `foreignPlate` var. Mevcut satırlar (V9 ve öncesi) `false` kalır.
 - `GET /api/parking/debt` (vatandaş sayfası / QR) hem TR hem yabancı / özel plakayı sorgular (yabancı kural TR
   plakalarını da kapsar).
-- Rapor: Excel/CSV "Kayıtlar" ve "Kaçak Araçlar" sayfalarında son sütun "Yabancı plaka" (`Evet` ya da boş). Panel kayıt
+- Rapor: Excel/CSV "Kayıtlar" ve "Kaçak Araçlar" sayfalarında "Yabancı plaka" sütunu (`Evet` ya da boş). Panel kayıt
   ve kaçak listelerinde plakanın yanında "Yabancı" işareti.
-- Ülke alanı yok (müşteriye soruluyor). Eklenirse bayrağın yanına ayrı bir sütun olarak gelir; kural ve saklama biçimi
-  değişmez.
+- Ülke kodu isteğe bağlıdır, ayrıntısı aşağıda ("Yabancı plaka ülke kodu", V11).
 - Mobil: giriş formunun başlık satırında "Yabancı / özel plaka" anahtarı (varsayılan kapalı). Açıkken TR denetimi ve
   OCR düzeltmesi (O→0 gibi) yapılmaz; kamera ekranındaki aynı adlı seçenekle okunan ham metin forma gelir, görevli
   onaylar ya da düzeltir. Çevrimdışı kuyruk bayrağı saklar ve gönderir.
 - Geliştirici görünümü: yabancı plakalar da maskelenir, arama yalnızca tam plakayla (bkz. `api-gelistirici-izleme.md`).
+
+### Yabancı plaka ülke kodu (`foreignCountryCode`, Flyway V11)
+Yabancı plakanın ülkesi: aracın uluslararası tanıtma işareti (ör. `D` Almanya, `NL`, `GB`, `BG`, `RO`, `CH`).
+- `POST /api/parking/check-in` isteğe bağlı `foreignCountryCode` alır (ör. `&foreignPlate=true&foreignCountryCode=D`).
+- Kural: baştaki ve sondaki boşluk atılır, büyük harfe çevrilir (Türkçe `i/ı/İ` → `I`), sonra 1-3 harf `A-Z` olmalı
+  (`d` → `D`, ` nl ` → `NL`). Rakam, iç boşluk, tire, Türkçe harf (`Ü`, `Ç`) ya da 4+ harf → 400
+  `INVALID_COUNTRY_CODE` ("Geçersiz ülke kodu: …").
+- Boş ya da hiç gönderilmeyen kod `null` saklanır; giriş yine çalışır (görevli ülkeyi bilmeyebilir).
+- Yalnızca `foreignPlate=true` ile kabul edilir. TR plakasında (bayrak yok ya da `false`) dolu bir kod gelirse 400
+  `INVALID_COUNTRY_CODE` ("Ülke kodu yalnızca yabancı / özel plakada girilebilir …"); sessizce atılmaz. Boş kod TR
+  plakasında sorun değildir.
+- Doğrulama plaka denetiminden hemen sonra, `checkInRequestId` tekrarından önce yapılır. Tekrar (aynı istek kimliği)
+  ilk girişte saklanan aracı ve kodunu döndürür.
+- Saklama: `active_park_spots.foreign_country_code` ve `parking_records.foreign_country_code` (`varchar(3)`, boş
+  bırakılabilir, varsayılan yok). Çıkış, kaçak ve iptalde kayda kopyalanır. Mevcut satırlar (V10 ve öncesi) `NULL`
+  kalır.
+- JSON alanı: `ParkSpot.foreignCountryCode`, `ParkingRecord.foreignCountryCode`; `GET /api/parking/debt` yanıtında,
+  iptal listesinde (`GET /api/admin/records/cancelled`), `VEHICLE_ENTERED` eşitleme olayında ve giriş/çıkış/kaçak
+  denetim kayıtlarının `after` verisinde de var (kod varsa).
+- Rapor: Excel/CSV "Kayıtlar" ve "Kaçak Araçlar" sayfalarında "Yabancı plaka" sütunundan sonra "Ülke kodu" sütunu.
+  Panel kayıt, kaçak ve iptal listelerinde işaret "Yabancı · D" olarak görünür; panelin kendi Excel dışa aktarımında da
+  "Ülke kodu" sütunu var.
+- Vatandaş sayfası / QR: plaka zaten gösterildiği için kod plakanın yanında görünür ("MAB1234 · D"). Yeni kişisel veri
+  yok.
+- Geliştirici görünümü: ülke kodu kişisel veri değildir, maskelenmez; plaka eskisi gibi maskelenir.
+- Abonelikte yabancı plaka bayrağı ve ülke kodu yok (V10 da aboneliğe bayrak eklemedi).
+- Mobil: ayrı PR'da gelecek; bu sürümde mobil kodu göndermez, sunucu kodu `null` saklar.
 
 ### Ücret
 `FeeEngine` tipin tarife satırındaki fiyatı kullanır. Park hâlindeyken tipi pasifleşen araç: satırda fiyat

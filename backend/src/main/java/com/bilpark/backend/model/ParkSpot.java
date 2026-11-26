@@ -45,6 +45,10 @@ public class ParkSpot {
     @Column(name = "foreign_plate", nullable = false)
     private boolean foreignPlate = false;
 
+    // Optional country code of a foreign plate, 1-3 letters A-Z (V11); null for TR plates. JSON: "foreignCountryCode"
+    @Column(name = "foreign_country_code", length = 3)
+    private String foreignCountryCode;
+
     @Transient
     private Double accumulatedDebt; // Used to show unpaid runaway debts on check-in
 

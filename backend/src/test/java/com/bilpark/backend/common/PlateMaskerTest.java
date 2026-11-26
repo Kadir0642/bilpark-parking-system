@@ -72,6 +72,18 @@ class PlateMaskerTest {
     }
 
     @Test
+    void maskJson_countryCodeIsNotPersonalData_staysReadable_plateStillMasked() {
+        // V11: the country code (D, NL, BIH) is not personal data and is never masked; the plate next to it is
+        for (String code : List.of("D", "NL", "GB", "BIH")) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> m = (Map<String, Object>) PlateMasker.maskJson(
+                    Map.of("plate", "MAB1234", "foreignPlate", true, "foreignCountryCode", code));
+            assertEquals("MA***34", m.get("plate"));
+            assertEquals(code, m.get("foreignCountryCode"));
+        }
+    }
+
+    @Test
     void maskText_masksEveryPlateShapedPart() {
         assertEquals("34****23 giriş: Saha 1", PlateMasker.maskText("34ABC123 giriş: Saha 1"));
         assertEquals("a 34 *** *23 b 06 ** **45 c",

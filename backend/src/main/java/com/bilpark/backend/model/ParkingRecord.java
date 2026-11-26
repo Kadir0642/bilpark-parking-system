@@ -89,6 +89,10 @@ public class ParkingRecord {
     @Column(name = "foreign_plate", nullable = false)
     private boolean foreignPlate = false;
 
+    // Copied from the active spot like foreignPlate (V11): optional country code, 1-3 letters A-Z. JSON: "foreignCountryCode"
+    @Column(name = "foreign_country_code", length = 3)
+    private String foreignCountryCode;
+
     public ParkingRecord(String licensePlate, StreetLocation street, Zone zone,
                          String region, String neighborhood, LocalDateTime entryTime) {
         this.licensePlate = licensePlate;

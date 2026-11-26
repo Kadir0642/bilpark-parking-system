@@ -12,7 +12,7 @@ public record RecordRow(Long id, String plate, StreetLocation street, Long zoneI
                         ParkingStatus status, boolean debtPaid, PaymentMethod paymentMethod,
                         String collectedBy, String deviceId, Long tariffId, Integer paidMinutes,
                         ParkingStatus cancelledFrom, LocalDateTime cancelledAt, String cancelReason,
-                        boolean foreignPlate) {
+                        boolean foreignPlate, String foreignCountryCode) {
 
     /** "Evet" for a foreign / special plate, empty otherwise (export column "Yabancı plaka"). */
     public String foreignLabel() {

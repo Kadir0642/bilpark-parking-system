@@ -85,8 +85,8 @@ class TeslimSifirlamaPostgresTest {
                 INSERT INTO active_park_spots (version, current_plate, street, zone_id, entry_time, current_type, status)
                 VALUES (0, '34DEMO1', 'TEVFIK_BEY', ?, now(), 'SMALL', 'ACTIVE')""", zone);
         jdbc.update("""
-                INSERT INTO active_park_spots (version, current_plate, street, zone_id, entry_time, current_type, status, foreign_plate)
-                VALUES (0, 'MDEMO123', 'TEVFIK_BEY', ?, now(), 'SMALL', 'ACTIVE', true)""", zone);
+                INSERT INTO active_park_spots (version, current_plate, street, zone_id, entry_time, current_type, status, foreign_plate, foreign_country_code)
+                VALUES (0, 'MDEMO123', 'TEVFIK_BEY', ?, now(), 'SMALL', 'ACTIVE', true, 'D')""", zone);
         jdbc.update("""
                 INSERT INTO parking_records (license_plate, street, zone_id, entry_time, exit_time, vehicle_type, fee, status,
                                              debt_paid, collected_by_id, collected_by_username, tariff_id, payment_method)
@@ -195,8 +195,8 @@ class TeslimSifirlamaPostgresTest {
         try (ConfigurableApplicationContext second = SpringApplication.run(BackendApplication.class, args)) {
             assertTrue(second.isRunning());
         }
-        // the schema stays at the latest migration (V10), the history is kept
-        assertEquals(10, jdbc.queryForObject("SELECT max(version::int) FROM flyway_schema_history WHERE version IS NOT NULL", Integer.class));
+        // the schema stays at the latest migration (V11), the history is kept
+        assertEquals(11, jdbc.queryForObject("SELECT max(version::int) FROM flyway_schema_history WHERE version IS NOT NULL", Integer.class));
         // the start did not re-seed anything: users still exist, so ADMIN_PASSWORD is not read again
         assertEquals(2, count("users"));
         assertEquals(1, count("audit_logs"));

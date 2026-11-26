@@ -66,6 +66,43 @@ class PlateNormalizerTest {
     }
 
     @Test
+    void countryCode_validCodesAreTrimmedAndUpperCased() {
+        assertEquals("D", PlateNormalizer.normalizeCountryCode("d", true));
+        assertEquals("NL", PlateNormalizer.normalizeCountryCode(" nl ", true));
+        assertEquals("GB", PlateNormalizer.normalizeCountryCode("GB", true));
+        assertEquals("BIH", PlateNormalizer.normalizeCountryCode("bih", true)); // 3 harf
+        assertEquals("IRL", PlateNormalizer.normalizeCountryCode("ırl", true)); // Türkçe ı -> I
+        assertEquals("IRL", PlateNormalizer.normalizeCountryCode("İRL", true));
+    }
+
+    @Test
+    void countryCode_emptyIsNull_forForeignAndTurkishPlates() {
+        for (boolean foreign : new boolean[]{true, false}) {
+            assertNull(PlateNormalizer.normalizeCountryCode(null, foreign));
+            assertNull(PlateNormalizer.normalizeCountryCode("", foreign));
+            assertNull(PlateNormalizer.normalizeCountryCode("   ", foreign));
+        }
+    }
+
+    @Test
+    void countryCode_invalidIsRejected() {
+        for (String bad : new String[]{"ABCD", "N1", "1", "N L", "N-L", "Ü", "ÇH", "D.", "TR!"}) {
+            ApiException ex = assertThrows(ApiException.class, () -> PlateNormalizer.normalizeCountryCode(bad, true), bad);
+            assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+            assertEquals(ErrorCodes.INVALID_COUNTRY_CODE, ex.getCode());
+            assertTrue(ex.getMessage().contains("ülke kodu"), ex.getMessage());
+        }
+    }
+
+    @Test
+    void countryCode_withTurkishPlateIsRejected() {
+        ApiException ex = assertThrows(ApiException.class, () -> PlateNormalizer.normalizeCountryCode("D", false));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        assertEquals(ErrorCodes.INVALID_COUNTRY_CODE, ex.getCode());
+        assertTrue(ex.getMessage().contains("yabancı"), ex.getMessage());
+    }
+
+    @Test
     void cleanDoesNotValidate() {
         assertEquals("", PlateNormalizer.clean(null));
         assertEquals("34AB", PlateNormalizer.clean(" 34-ab "));

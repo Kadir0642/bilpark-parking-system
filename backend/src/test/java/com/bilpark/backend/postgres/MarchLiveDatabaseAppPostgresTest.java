@@ -61,7 +61,7 @@ class MarchLiveDatabaseAppPostgresTest {
 
     @Test
     void oldRowsWorkAfterTheFirstStart() {
-        assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8", "SQL:9", "SQL:10"),
+        assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8", "SQL:9", "SQL:10", "SQL:11"),
                 jdbc.queryForList("SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank",
                         String.class));
         // users did not exist in March: created from ADMIN_PASSWORD / OFFICER_PASSWORD on the first start
@@ -112,5 +112,17 @@ class MarchLiveDatabaseAppPostgresTest {
         assertTrue(foreignOut.isForeignPlate());
         assertEquals(List.of("MAB1234"),
                 jdbc.queryForList("SELECT license_plate FROM parking_records WHERE foreign_plate", String.class));
+
+        // V11: optional country code goes in and out with the foreign plate; old rows stay NULL
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM parking_records WHERE foreign_country_code IS NULL "
+                + "AND license_plate = 'MAB1234'", Long.class));
+        ParkSpot withCode = parkingService.checkInVehicle("NL 12 ABC 3", "SMALL", StreetLocation.TEVFIK_BEY, "LEFT",
+                zoneId, officer, null, null, true, "nl");
+        assertEquals("NL", withCode.getForeignCountryCode());
+        ParkingRecord withCodeOut = parkingService.checkOutVehicle("NL12ABC3", PaymentMethod.CASH, officer, "prova-1");
+        assertEquals("NL", withCodeOut.getForeignCountryCode());
+        assertEquals(List.of("NL12ABC3:NL"),
+                jdbc.queryForList("SELECT license_plate || ':' || foreign_country_code FROM parking_records "
+                        + "WHERE foreign_country_code IS NOT NULL", String.class));
     }
 }
