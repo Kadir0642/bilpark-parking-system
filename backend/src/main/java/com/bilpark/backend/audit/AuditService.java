@@ -100,7 +100,7 @@ public class AuditService {
         if (req != null) {
             String device = req.getHeader("X-Device-Id");
             row.setDeviceId(device != null ? DeviceIds.sanitize(device) : null);
-            row.setIpAddress(truncate(clientIp(req), 64));
+            row.setIpAddress(truncate(com.bilpark.backend.common.ClientIp.of(req), 64));
         }
         row.setAction(action);
         row.setEntityType(truncate(entityType, 50));
@@ -127,12 +127,6 @@ public class AuditService {
         RequestAttributes attrs = RequestContextHolder.getRequestAttributes();
         if (attrs instanceof ServletRequestAttributes sra) return sra.getRequest();
         return null;
-    }
-
-    private static String clientIp(HttpServletRequest req) {
-        String fwd = req.getHeader("X-Forwarded-For"); // Render puts the client first
-        if (fwd != null && !fwd.isBlank()) return fwd.split(",")[0].trim();
-        return req.getRemoteAddr();
     }
 
     private static String truncate(String s, int max) {

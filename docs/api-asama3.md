@@ -173,6 +173,14 @@ Eski alanlar aynen duruyor: `streetName`, `plate`, `entryTime`, `durationMinutes
 
 Abonelerde `fee` 0 olur. Döküm yine dolu gelir.
 
+**Hız sınırı:** sorgular istemci IP'si başına sayılır (denetim kaydındaki IP ile aynı biçimde). Mobil operatörler çok sayıda telefonu aynı genel IP'nin arkasına koyduğu için genel sınır geniştir: 60 saniyede IP başına 120 sorgu. Sıkı olan, plakaları tek tek deneme biçimidir: boşluk ve tire atıldıktan sonra en çok 5 karakterlik **farklı** plaka sayısı IP başına 10, bütün istemciler için toplam 100. Aynı plakayı yeniden sorgulamak (yenile, QR'ı tekrar okutmak) bu sayaçları artırmaz. Memur ve yönetici uçları (giriş/çıkış, panel, SSE) sınırlanmaz. Aşılırsa `429` döner, `Retry-After` başlığı saniye cinsindendir:
+
+```json
+{ "error": "Çok fazla plaka sorgusu yapıldı. Lütfen biraz bekleyip tekrar deneyin.", "code": "RATE_LIMITED" }
+```
+
+Ayarlar `bilpark.rate-limit.plate-lookup.*` (`enabled`, `window-seconds`, `per-ip`, `short-distinct-per-ip`, `short-max-length`, `short-distinct-global`, `max-tracked-clients`). Sayaçlar bellekte tutulur (tek sunucu); yeniden başlatma sıfırlar.
+
 ### `GET /api/parking/fee-preview?plate=34ABC123` (oturum gerekli, memur ve admin)
 
 Memurun ödeme ekranı için kullanılır. Gövde `/debt` ile aynıdır, ayrıca `vehicleType` ve `zoneId` içerir. Memur yalnızca kendi bölümündeki aracı sorgulayabilir, başka bölüm için 403 döner. Araç yoksa 404 `VEHICLE_NOT_FOUND` döner.

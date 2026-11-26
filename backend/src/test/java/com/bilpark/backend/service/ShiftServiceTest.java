@@ -135,7 +135,7 @@ class ShiftServiceTest {
     @Test
     void nightlyJobIgnoresAlreadyClosedShiftsAndIsNoOpWhenNoneOpen() {
         Shift s = serviceAt(LocalDateTime.of(2026, 11, 25, 9, 0)).openShift(officer, "devA");
-        service.closeShift(officer, "devA");
+        serviceAt(LocalDateTime.of(2026, 11, 25, 17, 0)).closeShift(officer, "devA"); // same-day normal logout
         LocalDateTime end = s.getEndTime();
         assertEquals(0, serviceAt(LocalDateTime.of(2026, 11, 25, 22, 30)).closeForgottenShifts());
         assertEquals(end, s.getEndTime());
@@ -250,7 +250,10 @@ class ShiftServiceTest {
         Shift s = serviceAt(LocalDateTime.of(2026, 11, 25, 9, 0)).openShift(officer, "devA");
         serviceAt(LocalDateTime.of(2026, 11, 26, 8, 15)).closeShift(officer, "devA");
         assertEquals(LocalDateTime.of(2026, 11, 25, 22, 0), s.getEndTime());
-        assertFalse(s.isAutoClosed(), "çıkış kullanıcı eylemidir, otomatik kapanış değil");
+        // bitişi sistem belirledi (sınıra kırpıldı): panelde normal çıkış gibi görünmesin
+        assertTrue(s.isAutoClosed(), "kırpılan çıkış otomatik kapanış olarak işaretlenir");
+        verify(audit, times(1)).logSystem(eq(AuditAction.SHIFT_AUTO_CLOSED), eq("Shift"), eq(s.getId()),
+                contains("gün sınırından sonra"), any(), any());
     }
 
     @Test
@@ -258,6 +261,9 @@ class ShiftServiceTest {
         Shift s = serviceAt(LocalDateTime.of(2026, 11, 25, 22, 40)).openShift(officer, "devA");
         serviceAt(LocalDateTime.of(2026, 11, 26, 8, 15)).closeShift(officer, "devA");
         assertEquals(LocalDateTime.of(2026, 11, 25, 23, 59, 59), s.getEndTime());
+        assertTrue(s.isAutoClosed());
+        verify(audit, times(1)).logSystem(eq(AuditAction.SHIFT_AUTO_CLOSED), eq("Shift"), eq(s.getId()),
+                contains("gün sınırından sonra"), any(), any());
     }
 
     @Test
@@ -266,6 +272,16 @@ class ShiftServiceTest {
         serviceAt(LocalDateTime.of(2026, 11, 25, 17, 45)).closeShift(officer, "devA");
         assertEquals(LocalDateTime.of(2026, 11, 25, 17, 45), s.getEndTime());
         assertFalse(s.isAutoClosed());
+        verifyNoInteractions(audit);
+    }
+
+    @Test
+    void logoutExactlyAtTenPmIsNormalLogout() {
+        Shift s = serviceAt(LocalDateTime.of(2026, 11, 25, 9, 0)).openShift(officer, "devA");
+        serviceAt(LocalDateTime.of(2026, 11, 25, 22, 0)).closeShift(officer, "devA");
+        assertEquals(LocalDateTime.of(2026, 11, 25, 22, 0), s.getEndTime());
+        assertFalse(s.isAutoClosed());
+        verifyNoInteractions(audit);
     }
 
     @Test
@@ -273,6 +289,9 @@ class ShiftServiceTest {
         Shift s = serviceAt(LocalDateTime.of(2026, 11, 25, 9, 0)).openShift(officer, "devA");
         serviceAt(LocalDateTime.of(2026, 11, 25, 22, 20)).closeShift(officer, "devA");
         assertEquals(LocalDateTime.of(2026, 11, 25, 22, 0), s.getEndTime());
+        assertTrue(s.isAutoClosed());
+        verify(audit, times(1)).logSystem(eq(AuditAction.SHIFT_AUTO_CLOSED), eq("Shift"), eq(s.getId()),
+                contains("gün sınırından sonra"), any(), any());
     }
 
     @Test
@@ -280,6 +299,9 @@ class ShiftServiceTest {
         Shift s = serviceAt(LocalDateTime.of(2026, 11, 25, 9, 0)).openShift(officer, "devA");
         serviceAt(LocalDateTime.of(2026, 11, 25, 8, 0)).closeShift(officer, "devA");
         assertEquals(LocalDateTime.of(2026, 11, 25, 9, 0), s.getEndTime());
+        // saat kayması kırpma değildir: normal çıkış kalır
+        assertFalse(s.isAutoClosed());
+        verifyNoInteractions(audit);
     }
 
     @Test
@@ -298,6 +320,15 @@ class ShiftServiceTest {
         assertEquals(LocalDateTime.of(2026, 11, 25, 23, 59, 59), b.getEndTime());
         assertEquals(LocalDateTime.of(2026, 11, 26, 10, 0), c.getEndTime());
         assertTrue(service.listOpenShifts().isEmpty());
+        // a ve b sınıra kırpıldı: otomatik kapanış + denetim kaydı; c şimdi kapandı: normal kapanış
+        assertTrue(a.isAutoClosed());
+        assertTrue(b.isAutoClosed());
+        assertFalse(c.isAutoClosed());
+        verify(audit).logSystem(eq(AuditAction.SHIFT_AUTO_CLOSED), eq("Shift"), eq(a.getId()),
+                contains("hesap değişikliği"), any(), any());
+        verify(audit).logSystem(eq(AuditAction.SHIFT_AUTO_CLOSED), eq("Shift"), eq(99L),
+                contains("hesap değişikliği"), any(), any());
+        verify(audit, never()).logSystem(any(), any(), eq(100L), any(), any(), any());
     }
 
     @Test
