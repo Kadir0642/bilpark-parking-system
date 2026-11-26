@@ -24,7 +24,10 @@ Açık hava otopark takip sistemi (plaka girişi/çıkışı, tarife, tahsilat, 
 - Orkestrasyon skill'i kullanılır: orkestratör planlar, alt agent'lar iş yapar.
 - Her agent kendi worktree'sinde ve kendi dalında (`claude/<konu>`) çalışır; başkasının dalına/dosyasına dokunmaz, dosya sahipliği brief'te yazılıdır.
 - PR'ı yalnızca kullanıcı birleştirir. Agent'lar asla birleştirmez, `main`'e doğrudan push etmez.
+- Agent'lar PR'ı **taslak (draft)** açar: `gh pr create --draft`. Taslak GitHub'da birleştirilemez. Bağımsız inceleme geçince, düzeltmeler uygulanıp son commit'te CI yeşil olunca orkestratör `gh pr ready <no>` ile hazıra çevirir ve kullanıcıya bildirir. Kullanıcı yalnızca hazır işaretli PR'ları birleştirir.
 - Her PR'ı yazandan FARKLI bir model inceler; düzeltmeler yazara geri gider.
+- PR açmadan önce yazar kendi diff'ini (`git diff origin/main...HEAD`) satır satır öz inceler ve raporda "öz inceleme: N düzeltme" yazar. Öz inceleme bağımsız incelemenin yerini tutmaz.
+- Claude Code'un yerleşik `/ship`, `/steward` ve `/code-review` komutlarını yalnızca kullanıcı bir oturumda yazarak başlatır; hiçbiri birleştirmez, farklı model incelemesinin yerini tutmaz. `/code-review ultra` ücretlidir, kullanıcının maliyet onayı gerekir.
 - Erken birleştirilmiş bir PR'ın düzeltmesi, güncel `main`'den açılan yeni dalda ve yeni PR'da yapılır.
 - Push'tan önce `git fetch origin` ve `origin/main`'i dala birleştir. Commit'ler sık atılır.
 - Commit mesajı Türkçe; sonuna imza satırı: `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` (kullanılan modele göre ad değişir). PR gövdesi `🤖 Generated with [Claude Code](https://claude.com/claude-code)` ile biter.
