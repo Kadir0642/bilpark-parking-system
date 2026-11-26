@@ -20,9 +20,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** Plate lookup rate limit (docs/api-asama3.md "Hız sınırı"): 429 RATE_LIMITED with a Turkish message. */
 @SpringBootTest(properties = {
         "bilpark.rate-limit.plate-lookup.per-ip=3",
-        "bilpark.rate-limit.plate-lookup.short-per-ip=2",
+        "bilpark.rate-limit.plate-lookup.short-distinct-per-ip=2",
         "bilpark.rate-limit.plate-lookup.short-max-length=5",
-        "bilpark.rate-limit.plate-lookup.short-global=1000"})
+        "bilpark.rate-limit.plate-lookup.short-distinct-global=1000"})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class PlateLookupRateLimitIntegrationTest {
@@ -61,6 +61,7 @@ class PlateLookupRateLimitIntegrationTest {
                 .andExpect(status().isNotFound());
         mvc.perform(get("/api/parking/debt").param("plate", "AB2").header("X-Forwarded-For", "198.51.100.20"))
                 .andExpect(status().isNotFound());
+        // a third DIFFERENT short plate is refused
         mvc.perform(get("/api/parking/debt").param("plate", "AB3").header("X-Forwarded-For", "198.51.100.20"))
                 .andExpect(status().isTooManyRequests());
         // a full plate still has room in the per-IP limit (3)
@@ -69,15 +70,25 @@ class PlateLookupRateLimitIntegrationTest {
     }
 
     @Test
+    void officerEndpointsAreNotLimited() throws Exception {
+        String adm = login("admin", "test-admin-pass");
+        for (int i = 0; i < 10; i++) {
+            mvc.perform(get("/api/parking/fee-preview").header("Authorization", adm)
+                            .header("X-Forwarded-For", "198.51.100.40").param("plate", "AB" + i))
+                    .andExpect(r -> org.junit.jupiter.api.Assertions.assertNotEquals(429, r.getResponse().getStatus()));
+        }
+    }
+
+    @Test
     void developerPlateSearchIsLimitedButFiltersAreNot() throws Exception {
         String dev = login("gelistirici", "test-developer-pass1");
         for (int i = 0; i < 2; i++) {
             mvc.perform(get("/api/developer/audit").header("Authorization", dev)
-                            .header("X-Forwarded-For", "198.51.100.30").param("q", "M1"))
+                            .header("X-Forwarded-For", "198.51.100.30").param("q", "M" + (i + 1)))
                     .andExpect(status().isOk());
         }
         mvc.perform(get("/api/developer/audit").header("Authorization", dev)
-                        .header("X-Forwarded-For", "198.51.100.30").param("q", "M2"))
+                        .header("X-Forwarded-For", "198.51.100.30").param("q", "M3"))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(jsonPath("$.code").value("RATE_LIMITED"));
 
