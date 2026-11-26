@@ -11,13 +11,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/** Writes ReportSheets as .xlsx (streaming workbook, window 500, so 100k rows stay cheap). */
+/** Writes ReportSheets as .xlsx (streaming workbook: only the last 100 rows stay in memory, the rest is flushed
+ *  to a temp file, so 100k rows stay cheap on a 512 MB host). */
 public final class XlsxWriter {
 
     private XlsxWriter() {}
 
     public static byte[] write(List<ReportSheet> sheets) {
-        SXSSFWorkbook wb = new SXSSFWorkbook(500);
+        SXSSFWorkbook wb = new SXSSFWorkbook(100);
         try {
             DataFormat fmt = wb.createDataFormat();
             Font bold = wb.createFont();

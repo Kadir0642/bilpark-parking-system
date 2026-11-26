@@ -14,6 +14,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Entity
 @Table(name = "users")
+// Evicts the user from the auth cache on every change (password, active, role, zone)
+@EntityListeners(com.bilpark.backend.auth.UserCacheEvictionListener.class)
 public class User {
 
     @Id

@@ -23,7 +23,28 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 # " --from=build" kısmı 1. aşamaya gider ve .jar dosyasını alır ve adını "app.jar" yapar.
 # 1.aşamadaki tüm kaynak kodlar ve Maven araçları çöpe gitti (final imajında yer kaplamayacak)
+
+# Spring Boot "extract" düzeni (application/app.jar + application/lib/*.jar): sınıf veri paylaşımı (CDS) iç içe
+# jar'larla çalışmaz, düz jar'lar ister. Çalıştırma aynı: java -jar application/app.jar
+RUN java -Djarmode=tools -jar app.jar extract --destination application && rm app.jar
+
+# CDS eğitim koşusu (ücretsiz, Java 21 AppCDS): uygulama bağlamı bir kez açılıp kapanır (spring.context.exit=onRefresh),
+# yüklenen sınıflar application/app.jsa arşivine yazılır. Canlıda sınıflar bu arşivden eşlenir: 0.1 CPU'da açılış kısalır.
+# Veritabanına bağlanılmaz (Flyway kapalı, ddl-auto=none, JDBC meta verisi okunmaz); değerler yalnızca bu adım içindir.
+# Arşiv oluşmazsa derleme yine geçer, JVM arşivsiz açılır (-Xshare:auto).
+RUN DB_URL=jdbc:postgresql://127.0.0.1:1/cds DB_USERNAME=cds DB_PASSWORD=cds     JWT_SECRET=test-secret-cds-egitim-kosusu-gercek-degil-0123456789     java -XX:+UseSerialGC -Xss512k -XX:TieredStopAtLevel=1 -XX:ArchiveClassesAtExit=application/app.jsa          -Dspring.context.exit=onRefresh -Dspring.flyway.enabled=false -Dspring.jpa.hibernate.ddl-auto=none          -Dspring.jpa.properties.hibernate.boot.allow_jdbc_metadata_access=false          -Dlogging.level.root=WARN -jar application/app.jar ;     if [ -f application/app.jsa ]; then echo "CDS arşivi hazır"; else echo "UYARI: CDS arşivi oluşmadı"; fi
+
+# JVM ayarları: Render Free 512 MB / ~0.1 CPU için (yük testi: docs/yuk-testi.md). Ortam değişkeniyle değiştirilebilir.
+# - SerialGC: tek çekirdekte en az ek yük; G1'in arka plan iş parçacıkları 0.1 CPU'yu yer.
+# - MaxRAMPercentage=50: 512 MB'ta ~256 MB yığın (varsayılan %25 = 128 MB yük altında tam GC'ye giriyordu);
+#   kalan ~256 MB metaspace, kod önbelleği, iş parçacıkları ve yerel bellek içindir.
+# - MaxMetaspaceSize / ReservedCodeCacheSize / Xss512k: yığın dışı belleği sınırlar (RSS 512 MB'ı geçmesin).
+# - TieredStopAtLevel=1: yalnızca C1 derleyici. 0.1 CPU'da C2 derlemesi açılıştan sonraki dakikalarda CPU'yu tüketiyordu.
+# - SharedArchiveFile: yukarıdaki CDS arşivi.
+# Saat dilimi değişmedi: BackendApplication.main Europe/Istanbul yapar.
+ENV JDK_JAVA_OPTIONS="-XX:+UseSerialGC -XX:MaxRAMPercentage=50 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=64m -Xss512k -XX:TieredStopAtLevel=1 -XX:SharedArchiveFile=/app/application/app.jsa"
+
 EXPOSE 8080
 # 8080 portunda çalışacak.
-ENTRYPOINT ["java", "-Duser.language=en", "-Duser.country=US", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Duser.language=en", "-Duser.country=US", "-jar", "application/app.jar"]
 # Konteynar(Run ettiğimiz canlı hali) ayağa kalktığında anda ilk ve tek çalışacak komut javayı ve bu JAR dosyasını çalıştır olucak.
