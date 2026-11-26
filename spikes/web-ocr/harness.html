@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Plaka OCR ölçüm koşucusu</title>
+</head>
+<body>
+<pre id="log">hazırlanıyor…</pre>
+<script type="module">
+// Başsız Chrome'da run_measure.mjs tarafından açılır: testset/ altındaki sentetik görüntüleri sırayla okur.
+// ?engine=tesseract|paddle-en|paddle-ch  &pre=band|none  &local=1  &limit=N
+import { preprocess, createTesseract, createPaddle, postprocess, textDetectorAvailable } from './ocr.js';
+
+const q = new URLSearchParams(location.search);
+const engineName = q.get('engine') || 'tesseract';
+const pre = q.get('pre') || 'band';
+const local = q.get('local') === '1';
+const limit = Number(q.get('limit') || 1e9);
+const dump = q.get('dump') === '1';
+const set = (q.get('set') || 'testset').replace(/[^a-z0-9-]/gi, '');
+const log = (s) => { document.getElementById('log').textContent += '\n' + s; };
+
+async function loadImage(url) {
+  const img = new Image();
+  img.src = url;
+  await img.decode();
+  return img;
+}
+
+window.__done = false;
+try {
+  const labels = (await (await fetch(set + '/labels.json')).json()).slice(0, limit);
+  const engine = engineName === 'tesseract' ? createTesseract({ local })
+    : createPaddle({ local, model: engineName === 'paddle-ch' ? 'ch' : 'en' });
+  const t0 = performance.now();
+  await engine.init();
+  const initMs = performance.now() - t0;
+  // Isınma (ilk çağrıda JIT/bellek ayırma olur; ölçüme katılmaz)
+  await engine.recognize(preprocess(await loadImage(set + '/' + labels[0].file), pre).canvas);
+  const results = [];
+  for (const L of labels) {
+    const img = await loadImage(set + '/' + L.file);
+    const a = performance.now();
+    const p = preprocess(img, pre);
+    const b = performance.now();
+    const r = await engine.recognize(p.canvas);
+    const c = performance.now();
+    const tr = postprocess(r, 'tr');
+    const fo = postprocess(r, 'foreign');
+    const tg = postprocess(r, 'tr-grouped');
+    results.push({
+      ...L, text: r.text, spaced: r.spaced ?? null, plateTRGrouped: tg.plate, rawText: r.rawText ?? null, conf: r.conf, minConf: r.minConf,
+      plateTR: tr.plate, fixes: tr.fixes, plateForeign: fo.plate, countryCode: fo.countryCode ?? null,
+      angle: p.angle, msPre: b - a, msOcr: c - b,
+      crop: dump ? p.canvas.toDataURL('image/png') : undefined,
+    });
+    if (results.length % 25 === 0) log(`${results.length}/${labels.length}`);
+  }
+  await engine.dispose();
+  window.__results = { engine: engineName, pre, initMs, classes: null, textDetector: textDetectorAvailable(), ua: navigator.userAgent, hw: navigator.hardwareConcurrency, results };
+  log('bitti');
+} catch (e) {
+  window.__error = String(e && e.stack || e);
+  log('HATA ' + window.__error);
+}
+window.__done = true;
+</script>
+</body>
+</html>
