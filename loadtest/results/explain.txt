@@ -1,0 +1,218 @@
+Pager usage is off.
+SET
+== 1) GET /parking/history: findTop50ByStreetOrderByEntryTimeDesc (her bölge olayında her görevli)
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Limit (actual time=90.561..90.584 rows=50 loops=1)
+   Buffers: shared hit=1382
+   ->  Sort (actual time=90.558..90.563 rows=50 loops=1)
+         Sort Key: entry_time DESC
+         Sort Method: top-N heapsort  Memory: 44kB
+         Buffers: shared hit=1382
+         ->  Seq Scan on parking_records (actual time=0.018..86.318 rows=32400 loops=1)
+               Filter: ((street)::text = 'TEVFIK_BEY'::text)
+               Rows Removed by Filter: 32400
+               Buffers: shared hit=1379
+ Planning:
+   Buffers: shared hit=226
+ Planning Time: 2.326 ms
+ Execution Time: 90.676 ms
+(14 rows)
+
+== 2) GET /parking/bi/last-records: findTop100ByOrderByEntryTimeDesc (her araç olayında her yönetici)
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Limit (actual time=96.346..99.155 rows=100 loops=1)
+   Buffers: shared hit=1415
+   ->  Gather Merge (actual time=96.343..99.133 rows=100 loops=1)
+         Workers Planned: 1
+         Workers Launched: 1
+         Buffers: shared hit=1415
+         ->  Sort (actual time=6.851..6.867 rows=100 loops=2)
+               Sort Key: entry_time DESC
+               Sort Method: top-N heapsort  Memory: 64kB
+               Buffers: shared hit=1415
+               Worker 0:  Sort Method: top-N heapsort  Memory: 67kB
+               ->  Parallel Seq Scan on parking_records (actual time=0.009..2.636 rows=32400 loops=2)
+                     Buffers: shared hit=1379
+ Planning Time: 0.107 ms
+ Execution Time: 99.318 ms
+(15 rows)
+
+== 3) GET /parking/bi/income-summary: yıllık ciro (4 toplamdan en büyüğü)
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Aggregate (actual time=116.010..116.013 rows=1 loops=1)
+   Buffers: shared hit=1379
+   ->  Seq Scan on parking_records (actual time=0.011..110.597 rows=62964 loops=1)
+         Filter: (((status)::text = 'PAID'::text) AND (exit_time < now()) AND (exit_time >= date_trunc('year'::text, now())))
+         Rows Removed by Filter: 1836
+         Buffers: shared hit=1379
+ Planning:
+   Buffers: shared hit=22
+ Planning Time: 0.475 ms
+ Execution Time: 116.056 ms
+(10 rows)
+
+== 4) GET /parking/bi/shifts: açık vardiya BAŞINA ciro (N+1)
+                                                    QUERY PLAN                                                    
+------------------------------------------------------------------------------------------------------------------
+ Aggregate (actual time=0.067..0.068 rows=1 loops=1)
+   Buffers: shared hit=5
+   InitPlan 1 (returns $0)
+     ->  Index Scan using uk_users_username on users (never executed)
+           Index Cond: ((username)::text = 'yuk001'::text)
+   ->  Index Scan using ix_parking_records_exit_time on parking_records (actual time=0.062..0.062 rows=0 loops=1)
+         Index Cond: ((exit_time >= (now() - '08:00:00'::interval)) AND (exit_time < now()))
+         Filter: (((status)::text = 'PAID'::text) AND (collected_by_id = $0) AND ((device_id)::text = 'x'::text))
+         Buffers: shared hit=5
+ Planning:
+   Buffers: shared hit=43
+ Planning Time: 0.987 ms
+ Execution Time: 0.134 ms
+(13 rows)
+
+== 5) GET /parking/bi/income-by-type/details: araç tipine göre ciro (tüm tablo)
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ HashAggregate (actual time=184.213..184.216 rows=2 loops=1)
+   Group Key: vehicle_type
+   Batches: 1  Memory Usage: 24kB
+   Buffers: shared hit=1379
+   ->  Seq Scan on parking_records (actual time=0.012..168.478 rows=62964 loops=1)
+         Filter: ((status)::text = 'PAID'::text)
+         Rows Removed by Filter: 1836
+         Buffers: shared hit=1379
+ Planning:
+   Buffers: shared hit=11
+ Planning Time: 0.394 ms
+ Execution Time: 184.287 ms
+(12 rows)
+
+== 6) GET /sync?since: findAfter + MAX(id) + en eski olay
+                                                                  QUERY PLAN                                                                  
+----------------------------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=0.107..0.126 rows=50 loops=1)
+   Buffers: shared hit=7
+   InitPlan 2 (returns $1)
+     ->  Result (actual time=0.085..0.086 rows=1 loops=1)
+           Buffers: shared hit=3
+           InitPlan 1 (returns $0)
+             ->  Limit (actual time=0.082..0.083 rows=1 loops=1)
+                   Buffers: shared hit=3
+                   ->  Index Only Scan Backward using sync_events_pkey on sync_events sync_events_1 (actual time=0.081..0.082 rows=1 loops=1)
+                         Index Cond: (id IS NOT NULL)
+                         Heap Fetches: 0
+                         Buffers: shared hit=3
+   ->  Index Scan using sync_events_pkey on sync_events (actual time=0.106..0.117 rows=50 loops=1)
+         Index Cond: (id > $1)
+         Buffers: shared hit=7
+ Planning:
+   Buffers: shared hit=64
+ Planning Time: 1.157 ms
+ Execution Time: 0.199 ms
+(19 rows)
+
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Result (actual time=0.059..0.060 rows=1 loops=1)
+   Buffers: shared hit=3
+   InitPlan 1 (returns $0)
+     ->  Limit (actual time=0.056..0.056 rows=1 loops=1)
+           Buffers: shared hit=3
+           ->  Index Only Scan Backward using sync_events_pkey on sync_events (actual time=0.055..0.055 rows=1 loops=1)
+                 Index Cond: (id IS NOT NULL)
+                 Heap Fetches: 0
+                 Buffers: shared hit=3
+ Planning Time: 0.087 ms
+ Execution Time: 0.110 ms
+(11 rows)
+
+== 7) Giriş: kaçak borç (plaka + durum) ve liste borcu (IN)
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on parking_records (actual time=0.016..0.017 rows=0 loops=1)
+   Recheck Cond: ((license_plate)::text = '06ABC123'::text)
+   Filter: ((status)::text = 'RUNAWAY'::text)
+   Buffers: shared hit=2
+   ->  Bitmap Index Scan on ix_parking_records_license_plate (actual time=0.014..0.014 rows=0 loops=1)
+         Index Cond: ((license_plate)::text = '06ABC123'::text)
+         Buffers: shared hit=2
+ Planning Time: 0.098 ms
+ Execution Time: 0.071 ms
+(9 rows)
+
+                                                                 QUERY PLAN                                                                  
+---------------------------------------------------------------------------------------------------------------------------------------------
+ GroupAggregate (actual time=0.057..0.058 rows=0 loops=1)
+   Group Key: license_plate
+   Buffers: shared hit=9
+   ->  Sort (actual time=0.056..0.057 rows=0 loops=1)
+         Sort Key: license_plate
+         Sort Method: quicksort  Memory: 25kB
+         Buffers: shared hit=9
+         ->  Bitmap Heap Scan on parking_records (actual time=0.017..0.018 rows=0 loops=1)
+               Recheck Cond: (((license_plate)::text = ANY ('{06ABC123,07DEF456,11GHI789}'::text[])) AND ((status)::text = 'RUNAWAY'::text))
+               Filter: (NOT debt_paid)
+               Buffers: shared hit=6
+               ->  BitmapAnd (actual time=0.016..0.017 rows=0 loops=1)
+                     Buffers: shared hit=6
+                     ->  Bitmap Index Scan on ix_parking_records_license_plate (actual time=0.016..0.016 rows=0 loops=1)
+                           Index Cond: ((license_plate)::text = ANY ('{06ABC123,07DEF456,11GHI789}'::text[]))
+                           Buffers: shared hit=6
+                     ->  Bitmap Index Scan on ix_parking_records_status (never executed)
+                           Index Cond: ((status)::text = 'RUNAWAY'::text)
+ Planning:
+   Buffers: shared hit=43
+ Planning Time: 0.896 ms
+ Execution Time: 0.196 ms
+(22 rows)
+
+== 8) GET /parking/filter: aktif araçlar (cadde)
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Hash Right Join (actual time=0.023..0.025 rows=0 loops=1)
+   Hash Cond: (z.id = s.zone_id)
+   ->  Seq Scan on zones z (never executed)
+   ->  Hash (actual time=0.008..0.009 rows=0 loops=1)
+         Buckets: 1024  Batches: 1  Memory Usage: 8kB
+         ->  Seq Scan on active_park_spots s (actual time=0.008..0.008 rows=0 loops=1)
+               Filter: ((street)::text = 'TEVFIK_BEY'::text)
+ Planning:
+   Buffers: shared hit=163 dirtied=1
+ Planning Time: 91.621 ms
+ Execution Time: 0.077 ms
+(11 rows)
+
+== 9) Her kimlikli istek: kullanıcı (JwtAuthFilter + controller, 2 kez)
+                                          QUERY PLAN                                           
+-----------------------------------------------------------------------------------------------
+ Nested Loop Left Join (actual time=0.034..0.036 rows=1 loops=1)
+   Join Filter: (z.id = u.zone_id)
+   Buffers: shared hit=3
+   ->  Index Scan using uk_users_username on users u (actual time=0.026..0.027 rows=1 loops=1)
+         Index Cond: ((username)::text = 'yuk001'::text)
+         Buffers: shared hit=2
+   ->  Seq Scan on zones z (actual time=0.003..0.003 rows=1 loops=1)
+         Buffers: shared hit=1
+ Planning:
+   Buffers: shared hit=45
+ Planning Time: 0.691 ms
+ Execution Time: 0.076 ms
+(12 rows)
+
+== Tablo boyutları
+        relname        | n_live_tup |  size  
+-----------------------+------------+--------
+ parking_records       |      64800 | 16 MB
+ audit_logs            |      65002 | 12 MB
+ sync_events           |       5000 | 848 kB
+ users                 |        303 | 112 kB
+ zones                 |          6 | 64 kB
+ tariffs               |          1 | 56 kB
+ flyway_schema_history |         11 | 48 kB
+ streets               |          3 | 40 kB
+ license_info          |          1 | 32 kB
+ app_settings          |          1 | 32 kB
+(10 rows)
+

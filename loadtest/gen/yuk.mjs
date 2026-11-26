@@ -628,14 +628,22 @@ async function citizens() {
       await req('GET /api/tariff/current', 'GET', '/api/tariff/current', { timeout: 30000 });
       const known = activePlates.size && Math.random() < 0.6;
       const plate = known ? pick([...activePlates]) : '34ZZ' + Math.floor(rand(100, 999));
-      await req('GET /api/parking/debt', 'GET', '/api/parking/debt', { query: { plate }, ok: [200, 404], timeout: 30000 });
+      await req('GET /api/parking/debt', 'GET', '/api/parking/debt', { query: { plate }, ok: [200, 404], timeout: 30000, headers: citizenIp() });
     })();
   }
 }
 
 // Eşzamanlı vatandaş dalgası: N kişi BURST_WINDOW sn içinde QR sayfasını açar (sayfa GitHub Pages'ten gelir,
-// backend'e yalnızca /api/tariff/current + /api/parking/debt düşer). main'de /debt hız sınırı yok; tek IP'den gelinir.
-async function citizenWave(n, windowSec, tag) {
+// backend'e yalnızca /api/tariff/current + /api/parking/debt düşer).
+// /debt'te IP başına hız sınırı var (120/dk, istemci IP'si X-Forwarded-For'un EN SAĞINDAKİ girdisi = Render'ın eklediği).
+// Her sanal vatandaş farklı bir en-sağ XFF taşır (farklı telefon = farklı IP). WAVE_SAME_IP=1 ise dalgadaki herkes
+// aynı IP'den gelir (tek operatör NAT'ı arkasındaki kalabalık).
+let ipSeq = 0;
+function citizenIp(same) {
+  const n = same ? 7 : ++ipSeq;
+  return { 'X-Forwarded-For': `198.51.100.7, 10.${(n >> 16) & 255}.${(n >> 8) & 255}.${n & 255}` };
+}
+async function citizenWave(n, windowSec, tag, same = false) {
   const t1 = now();
   console.log(`[${sec()}s] VATANDAŞ DALGASI ${tag}: ${n} kişi / ${windowSec} sn`);
   await Promise.all(Array.from({ length: n }, async () => {
@@ -644,7 +652,7 @@ async function citizenWave(n, windowSec, tag) {
     await req(`GET /api/tariff/current [${tag}]`, 'GET', '/api/tariff/current', { timeout: 30000 });
     const known = activePlates.size && Math.random() < 0.6;
     const plate = known ? pick([...activePlates]) : '34ZZ' + Math.floor(rand(100, 999));
-    await req(`GET /api/parking/debt [${tag}]`, 'GET', '/api/parking/debt', { query: { plate }, ok: [200, 404], timeout: 30000 });
+    await req(`GET /api/parking/debt [${tag}]`, 'GET', '/api/parking/debt', { query: { plate }, ok: [200, 404], timeout: 30000, headers: citizenIp(same) });
   }));
   console.log(`[${sec()}s] dalga ${tag} bitti: ${((now() - t1) / 1000).toFixed(0)} sn`);
 }
@@ -699,7 +707,8 @@ if (env('WAVES', '')) {
     for (const n of waves) {
       if (!running()) return;
       const t1 = now();
-      await citizenWave(n, num('WAVE_WINDOW', 60), 'dalga ' + n);
+      const same = env('WAVE_SAME_IP', '0') === '1';
+      await citizenWave(n, num('WAVE_WINDOW', 60), 'dalga ' + n + (same ? ' tek-IP' : ''), same);
       await sleep(num('WAVE_GAP', 180) * 1000 - (now() - t1));
     }
   })();

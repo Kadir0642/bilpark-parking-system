@@ -28,7 +28,7 @@ trap 'kill $SAMPLER 2>/dev/null' EXIT
 $P --profile gen run --rm "${envs[@]}" gen node yuk.mjs 2>&1 | tee "$R/$LABEL.log"
 
 kill $SAMPLER 2>/dev/null
-docker logs --since "$since" bilpark-yuk-app-1 2>&1 | grep -E "Pool stats|Connection is not available|Exception|ERROR|WARN" | head -400 > "$R/$LABEL-hikari.txt"
+docker logs --since "$since" bilpark-yuk-app-1 2>&1 | grep -E "cleanup stats|Timeout failure|Connection is not available|Exception|ERROR|WARN" | head -3000 >"$R/$LABEL-hikari.txt"
 docker logs --since "$since" bilpark-yuk-app-1 2>&1 | grep -E "\] GC\(" > "$R/$LABEL-gc.txt"
 docker exec bilpark-yuk-db-1 psql -U bilpark -d bilpark_yuk -P pager=off -c "
   SELECT calls, round(total_exec_time::numeric) AS total_ms, round(mean_exec_time::numeric, 2) AS mean_ms,

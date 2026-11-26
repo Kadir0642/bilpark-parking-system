@@ -1,0 +1,1 @@
+ilk-acilis-bos-db-flyway: health=434.5s ilk_giris=+19.7s ilk_db_okuma=+2.5s (spots 200) | Started BackendApplication in 403.5 seconds
