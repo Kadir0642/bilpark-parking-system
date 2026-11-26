@@ -6,6 +6,7 @@ public final class ErrorCodes {
 
     public static final String VALIDATION_ERROR = "VALIDATION_ERROR";
     public static final String INVALID_PLATE = "INVALID_PLATE";
+    public static final String INVALID_COUNTRY_CODE = "INVALID_COUNTRY_CODE"; // yabancı plaka ülke kodu geçersiz (V11)
     public static final String INVALID_PAYMENT_METHOD = "INVALID_PAYMENT_METHOD";
     public static final String NOT_FOUND = "NOT_FOUND";
     public static final String VEHICLE_NOT_FOUND = "VEHICLE_NOT_FOUND";

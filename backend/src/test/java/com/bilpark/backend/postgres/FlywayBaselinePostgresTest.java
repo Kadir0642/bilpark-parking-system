@@ -86,12 +86,12 @@ class FlywayBaselinePostgresTest {
 
         MigrateResult result = flyway(url).migrate();
         assertTrue(result.success);
-        assertEquals(10, result.migrationsExecuted, "V1 (no-op: every table exists) and V2-V10 should run");
+        assertEquals(11, result.migrationsExecuted, "V1 (no-op: every table exists) and V2-V11 should run");
 
         try (Connection c = conn(url); Statement st = c.createStatement()) {
             List<String> hist = strings(c,
                     "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank");
-            assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8", "SQL:9", "SQL:10"), hist);
+            assertEquals(List.of("BASELINE:0", "SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8", "SQL:9", "SQL:10", "SQL:11"), hist);
 
             assertEquals(0, count(c, "SELECT count(*) FROM pg_constraint WHERE conname = 'ukabc123xyz'"));
             assertEquals(1, count(c, "SELECT count(*) FROM pg_indexes WHERE indexname = 'ux_subscriptions_active_plate'"));
@@ -241,10 +241,10 @@ class FlywayBaselinePostgresTest {
         String url = urlFor("fresh_db");
         MigrateResult result = flyway(url).migrate();
         assertTrue(result.success);
-        assertEquals(10, result.migrationsExecuted);
+        assertEquals(11, result.migrationsExecuted);
 
         try (Connection c = conn(url); Statement st = c.createStatement()) {
-            assertEquals(List.of("SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8", "SQL:9", "SQL:10"),
+            assertEquals(List.of("SQL:1", "SQL:2", "SQL:3", "SQL:4", "SQL:5", "SQL:6", "SQL:7", "SQL:8", "SQL:9", "SQL:10", "SQL:11"),
                     strings(c, "SELECT type || ':' || version FROM flyway_schema_history ORDER BY installed_rank"));
             // V6: istemci giriş kimliği birincil anahtar (aynı kimlikle ikinci satır reddedilir)
             assertEquals(1, count(c, "SELECT count(*) FROM pg_constraint c JOIN pg_class t ON t.oid=c.conrelid "
@@ -264,6 +264,10 @@ class FlywayBaselinePostgresTest {
             // V10: yabancı / özel plaka bayrağı
             assertEquals(2, count(c, "SELECT count(*) FROM information_schema.columns WHERE column_name = 'foreign_plate' "
                     + "AND table_name IN ('active_park_spots', 'parking_records') AND is_nullable = 'NO'"));
+            // V11: yabancı plaka ülke kodu (boş bırakılabilir, en çok 3 karakter)
+            assertEquals(List.of("active_park_spots:YES:3", "parking_records:YES:3"),
+                    strings(c, "SELECT table_name || ':' || is_nullable || ':' || character_maximum_length "
+                            + "FROM information_schema.columns WHERE column_name = 'foreign_country_code' ORDER BY table_name"));
         }
     }
 }

@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
  * Two rules exist: the Turkish plate rule (default) and the foreign / special plate rule, used only when the
  * officer explicitly marks the entry as foreign (check-in foreignPlate=true). Both store the same cleaned form,
  * so lookups (check-out, runaway, citizen page) do not need to know which rule created the row.
- * A country field may be added later next to the flag; nothing here assumes there is none.
+ * A foreign plate may also carry an optional country code (V11, {@link #normalizeCountryCode}).
  */
 public final class PlateNormalizer {
     private PlateNormalizer() {}
@@ -91,5 +91,30 @@ public final class PlateNormalizer {
      */
     public static String normalizeAny(String raw) {
         return normalize(raw, true);
+    }
+
+    /** Country code of a foreign plate: the international distinguishing sign, 1-3 letters A-Z (D, NL, GB, CH). */
+    public static final int COUNTRY_MAX = 3;
+    private static final Pattern COUNTRY_CODE = Pattern.compile("^[A-Z]{1," + COUNTRY_MAX + "}$");
+
+    /**
+     * Optional country code on check-in (V11). Trimmed and upper-cased (Turkish i/ı/İ become I); null or blank
+     * gives null. A code is accepted only together with foreign=true; for a Turkish plate it is rejected rather
+     * than silently dropped, so a client bug is visible. Throws 400 INVALID_COUNTRY_CODE with a Turkish message.
+     */
+    public static String normalizeCountryCode(String raw, boolean foreign) {
+        if (raw == null || raw.isBlank()) return null;
+        String shown = raw.trim();
+        if (!foreign) {
+            throw ApiException.badRequest(ErrorCodes.INVALID_COUNTRY_CODE,
+                    "Ülke kodu yalnızca yabancı / özel plakada girilebilir (foreignPlate=true).");
+        }
+        String code = shown.replace('İ', 'I').replace('ı', 'I').replace('i', 'I').toUpperCase(Locale.ROOT);
+        if (!COUNTRY_CODE.matcher(code).matches()) {
+            throw ApiException.badRequest(ErrorCodes.INVALID_COUNTRY_CODE,
+                    "Geçersiz ülke kodu: \"" + shown + "\". Yalnızca A-Z harfleri, 1-" + COUNTRY_MAX
+                            + " karakter (örnek: D, NL, GB).");
+        }
+        return code;
     }
 }

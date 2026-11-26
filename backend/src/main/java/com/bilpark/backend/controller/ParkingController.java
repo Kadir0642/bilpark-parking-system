@@ -90,6 +90,7 @@ public class ParkingController {
     // POST /api/parking/check-in?plate=34ABC123&street=TEVFIK_BEY&type=SMALL&side=LEFT&zoneId=1
     //   [&checkInRequestId=<uuid>&clientEntryTime=2026-10-29T08:15:00Z]  (çevrimdışı kuyruk)
     //   [&foreignPlate=true]  (yabancı / özel plaka: TR kuralı yerine A-Z0-9, 2-12 karakter)
+    //   [&foreignCountryCode=D]  (isteğe bağlı ülke kodu, 1-3 harf A-Z; yalnızca foreignPlate=true ile, V11)
     @PostMapping("/check-in")
     public ResponseEntity<ParkSpot> checkIn(
             @RequestParam @jakarta.validation.constraints.NotBlank(message = "Plaka boş olamaz.") String plate,
@@ -100,9 +101,10 @@ public class ParkingController {
             @RequestParam(required = false) String checkInRequestId,
             @RequestParam(required = false) String clientEntryTime,
             @RequestParam(defaultValue = "false") boolean foreignPlate,
+            @RequestParam(required = false) String foreignCountryCode,
             java.security.Principal principal) {
         return ResponseEntity.ok(parkingService.checkInVehicle(plate, type, street, side, zoneId,
-                currentUser(principal), checkInRequestId, clientEntryTime, foreignPlate));
+                currentUser(principal), checkInRequestId, clientEntryTime, foreignPlate, foreignCountryCode));
     }
 
     // paymentMethod: CASH (default) | POS | SUBSCRIPTION; ONLINE is reserved

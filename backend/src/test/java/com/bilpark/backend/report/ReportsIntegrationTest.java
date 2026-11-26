@@ -252,6 +252,9 @@ class ReportsIntegrationTest {
         Zone z = zone();
         User u = newOfficer(z);
         ParkingRecord a = record(z, u, "2093-05-10T14:00:00", ParkingStatus.RUNAWAY, 45, null);
+        a.setForeignPlate(true);
+        a.setForeignCountryCode("NL");
+        records.save(a);
         ParkingRecord paidDebt = record(z, u, "2093-05-20T14:00:00", ParkingStatus.RUNAWAY, 15, null);
         paidDebt.setDebtPaid(true);
         records.save(paidDebt);
@@ -263,7 +266,7 @@ class ReportsIntegrationTest {
             assertNotNull(sheet);
             assertTrue(sheet.getRow(0).getCell(0).getStringCellValue().contains("01.05.2093"));
             assertEquals(List.of("Plaka", "Cadde", "Saha", "Giriş tarih-saat", "Çıkış (kaçak işaretleme) tarih-saat",
-                    "Tutar (TL)", "Memur", "Borç durumu", "Yabancı plaka"), headers(sheet, 1));
+                    "Tutar (TL)", "Memur", "Borç durumu", "Yabancı plaka", "Ülke kodu"), headers(sheet, 1));
             Row r = sheet.getRow(2);
             assertEquals(a.getLicensePlate(), r.getCell(0).getStringCellValue());
             assertEquals(z.getStreet().getDisplayName(), r.getCell(1).getStringCellValue());
@@ -273,6 +276,11 @@ class ReportsIntegrationTest {
             assertEquals(u.getUsername(), r.getCell(6).getStringCellValue());
             assertEquals("Ödenmedi", r.getCell(7).getStringCellValue());
             assertEquals("Ödendi", sheet.getRow(3).getCell(7).getStringCellValue());
+            // V11: foreign plate with its country code, TR plate without
+            assertEquals("Evet", r.getCell(8).getStringCellValue());
+            assertEquals("NL", r.getCell(9).getStringCellValue());
+            Row tr = sheet.getRow(3);
+            assertTrue(tr.getCell(9) == null || tr.getCell(9).getStringCellValue().isEmpty());
             // cancelled and out-of-range excluded: 2 data rows + totals
             Row total = sheet.getRow(4);
             assertTrue(total.getCell(0).getStringCellValue().contains("2 kayıt"));
@@ -408,6 +416,7 @@ class ReportsIntegrationTest {
         User u = newOfficer(z);
         ParkingRecord paid = record(z, u, "2094-02-03T10:00:00", ParkingStatus.PAID, 40, PaymentMethod.CASH);
         paid.setForeignPlate(true);
+        paid.setForeignCountryCode("D");
         records.save(paid);
         ParkingRecord canc = cancelled(z, u, "2094-02-04T10:00:00", ParkingStatus.PAID, 20, PaymentMethod.POS,
                 "2094-02-05T10:00:00");
@@ -418,6 +427,7 @@ class ReportsIntegrationTest {
             assertEquals("ID", headers(sheet, 0).get(0));
             assertEquals("İptal gerekçesi", headers(sheet, 0).get(15));
             assertEquals("Yabancı plaka", headers(sheet, 0).get(16));
+            assertEquals("Ülke kodu", headers(sheet, 0).get(17));
             assertEquals(3, sheet.getPhysicalNumberOfRows()); // header + 2
             Row r1 = sheet.getRow(1);
             assertEquals(paid.getId(), (long) r1.getCell(0).getNumericCellValue());
@@ -430,6 +440,8 @@ class ReportsIntegrationTest {
             assertEquals("test iptal", r2.getCell(15).getStringCellValue());
             assertEquals("Evet", r1.getCell(16).getStringCellValue());
             assertTrue(r2.getCell(16) == null || r2.getCell(16).getStringCellValue().isEmpty());
+            assertEquals("D", r1.getCell(17).getStringCellValue());
+            assertTrue(r2.getCell(17) == null || r2.getCell(17).getStringCellValue().isEmpty());
         }
     }
 

@@ -40,7 +40,7 @@ public class RecordsReportService {
         Map<String, String> names = support.streetNames();
         ReportSheet sheet = new ReportSheet("runaways", "Kaçak Araçlar", List.of("Plaka", "Cadde", "Saha",
                 "Giriş tarih-saat", "Çıkış (kaçak işaretleme) tarih-saat", "Tutar (TL)", "Memur", "Borç durumu",
-                "Yabancı plaka"));
+                "Yabancı plaka", "Ülke kodu"));
         sheet.title("Kaçak Araç Raporu " + range.display());
         int count = 0;
         double sum = 0;
@@ -48,7 +48,8 @@ public class RecordsReportService {
             if (filter != null && r.street() != filter) continue;
             if (unpaidOnly && r.debtPaid()) continue;
             sheet.add(r.plate(), ReportSupport.street(names, r.street()), r.zoneName(), r.entryTime(), r.exitTime(),
-                    Money.of(r.fee()), r.collectedBy(), r.debtPaid() ? "Ödendi" : "Ödenmedi", r.foreignLabel());
+                    Money.of(r.fee()), r.collectedBy(), r.debtPaid() ? "Ödendi" : "Ödenmedi", r.foreignLabel(),
+                    r.foreignCountryCode());
             count++;
             sum += r.feeOrZero();
         }
@@ -65,7 +66,7 @@ public class RecordsReportService {
         Map<String, String> names = support.streetNames();
         ReportSheet sheet = new ReportSheet("records", "Kayıtlar", List.of("ID", "Plaka", "Cadde", "Saha", "Araç tipi",
                 "Giriş", "Çıkış", "Süre (dk)", "Ücretli dk", "Ücret TL", "Durum", "Ödeme yöntemi", "Tahsil eden",
-                "Cihaz", "Tarife ID", "İptal gerekçesi", "Yabancı plaka"));
+                "Cihaz", "Tarife ID", "İptal gerekçesi", "Yabancı plaka", "Ülke kodu"));
         for (RecordRow r : repo.byEntry(range.start(), range.end())) {
             Long minutes = r.entryTime() != null && r.exitTime() != null
                     ? Math.max(0, Duration.between(r.entryTime(), r.exitTime()).toMinutes()) : null;
@@ -73,7 +74,7 @@ public class RecordsReportService {
                     vehicleTypes.displayName(r.vehicleType()), r.entryTime(), r.exitTime(), minutes,
                     r.paidMinutes(), r.fee() == null ? null : Money.of(r.fee()), status(r.status()),
                     r.paymentMethod() == null ? null : r.paymentMethod().name(), r.collectedBy(), r.deviceId(),
-                    r.tariffId(), r.cancelReason(), r.foreignLabel());
+                    r.tariffId(), r.cancelReason(), r.foreignLabel(), r.foreignCountryCode());
         }
         return sheet;
     }

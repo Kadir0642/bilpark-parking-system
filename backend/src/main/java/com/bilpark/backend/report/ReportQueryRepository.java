@@ -19,7 +19,7 @@ public interface ReportQueryRepository extends Repository<ParkingRecord, Long> {
     String ROW = "select new com.bilpark.backend.report.RecordRow(r.id, r.licensePlate, r.street, z.id, z.zoneName, "
             + "r.entryTime, r.exitTime, r.vehicleType, r.fee, r.status, r.debtPaid, r.paymentMethod, "
             + "r.collectedByUsername, r.deviceId, r.tariffId, r.paidMinutes, r.cancelledFromStatus, "
-            + "r.cancelledAt, r.cancelReason, r.foreignPlate) from ParkingRecord r left join r.zone z ";
+            + "r.cancelledAt, r.cancelReason, r.foreignPlate, r.foreignCountryCode) from ParkingRecord r left join r.zone z ";
 
     /** Closed or cancelled records whose exit or cancellation falls into the window (personnel scoring). */
     @Query(ROW + "where (r.exitTime >= :from and r.exitTime < :to and r.status in "
