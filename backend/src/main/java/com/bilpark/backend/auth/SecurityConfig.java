@@ -109,7 +109,10 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Device-Id", "X-App-Version", "X-Device", "Last-Event-ID", "Cache-Control"));
-        
+        // Browsers hide non-safelisted response headers from cross-origin JS: the citizen page reads Retry-After
+        // (429 countdown, 503 retry) and the panel reads Content-Disposition (report file name)
+        configuration.setExposedHeaders(List.of("Retry-After", "Content-Disposition"));
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

@@ -6,6 +6,7 @@ import com.bilpark.backend.model.ParkingStatus;
 import com.bilpark.backend.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -47,9 +48,11 @@ public interface ParkingRecordRepository extends JpaRepository<ParkingRecord, Lo
 
     //3. Sadece seçilen cadde filtresi ile en son 50 kaydı, bizim parametreyle birebir eşleşen, En yeni en üstte olacak şekilde getirir.
     // Geçmiş kayıt sorgusu | Sistemi yormamak için sadece son 50 olayı getirdik
+    @EntityGraph(attributePaths = "zone", type = EntityGraph.EntityGraphType.LOAD) // JSON yanıtında bölge var; open-in-view yok
     List<ParkingRecord> findTop50ByStreetOrderByEntryTimeDesc(StreetLocation street); // byregionAndNeighborhoodAndStreet -> WHERE | OrderByEntryTime ->EntryTime göre sıralar | Desc (Descending) ->En son giren araç en tepede ,Aşağı doğru giderek büyüyen [ Yeniden eskiye doğru]
 
     // 3.1. Tüm caddelerdeki son 100 kaydı getir.
+    @EntityGraph(attributePaths = "zone", type = EntityGraph.EntityGraphType.LOAD)
     List<ParkingRecord> findTop100ByOrderByEntryTimeDesc();
 
     // 3.2 Plakanın en son kapanan kaydı (eşzamanlı ikinci çıkış isteğine 409 vermek için)
@@ -65,9 +68,11 @@ public interface ParkingRecordRepository extends JpaRepository<ParkingRecord, Lo
     List<Object[]> sumUnpaidRunawayDebtByPlate(@Param("plates") java.util.Collection<String> plates);
 
     // 5. Plakaya göre geçmiş fişleri getir. (Arama çubuğu için; temizlenmiş plaka veya parçası)
+    @EntityGraph(attributePaths = "zone", type = EntityGraph.EntityGraphType.LOAD)
     List<ParkingRecord> findByLicensePlateContainingOrderByEntryTimeDesc(String platePart);
 
     // 6. Tarih aralığına göre tüm kayıtları getir (Excel indirme için, start <= entryTime < end)
+    @EntityGraph(attributePaths = "zone", type = EntityGraph.EntityGraphType.LOAD)
     @Query("SELECT r FROM ParkingRecord r WHERE r.entryTime >= :start AND r.entryTime < :end ORDER BY r.entryTime DESC")
     List<ParkingRecord> findByEntryTimeRange(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 

@@ -58,6 +58,8 @@ Remove-Variable newPlain, new, cred, login
 
 **Yol B (isteğe bağlı): betiğe BCrypt hash vermek.** Betiği çalıştırmadan önce aynı oturumda `SET bilpark.yeni_admin_hash = '<BCrypt hash>';` ver. Betik `admin` şifre hash'ini bu değerle değiştirir ve `password_changed_at` alanını günceller (eski tokenlar geçersiz olur). Düz şifre betiğe ya da komut geçmişine yazılmaz, yalnızca hash. Hash'i güvenli bir yerde üret (ör. yerelde `BCryptPasswordEncoder`). Hash formatı `$2a$`, `$2b$` ya da `$2y$` ile başlamalı, yoksa betik durur.
 
+**Kullanıcı önbelleği (Yol B ve her elle SQL için):** uygulama, oturum doğrulamada kullanıcıyı 30 sn bellekte tutar. Panel/API ile yapılan değişiklikler önbelleği hemen temizler; SQL ile yapılanlar (şifre hash'i, `active`, rol) temizlemez. SQL ile kullanıcı değiştirdiysen uygulamayı yeniden başlat ya da en az 30 sn bekle; o süre içinde eski oturumlar çalışmaya devam edebilir. (Betik uygulama durdurulmuşken çalıştırıldığı için normal akışta sorun yoktur.)
+
 Her iki yolda da yeni şifreyi müşteriye güvenli kanaldan ilet ve ilk girişte `POST /api/me/password` ile kendisinin değiştirmesini iste.
 
 ## Adımlar

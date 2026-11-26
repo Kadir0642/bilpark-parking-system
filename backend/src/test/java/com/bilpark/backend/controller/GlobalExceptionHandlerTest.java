@@ -53,4 +53,46 @@ class GlobalExceptionHandlerTest {
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         verify(errorLog).record(ex, "INTERNAL_ERROR");
     }
+
+    // ---- overload: no connection in time -> 503 + Retry-After, not 500 / 400, not stored ----
+
+    private static final java.sql.SQLTransientConnectionException POOL_TIMEOUT =
+            new java.sql.SQLTransientConnectionException("HikariPool-1 - Connection is not available, request timed out after 5000ms.");
+
+    private void assertUnavailable(org.springframework.http.ResponseEntity<java.util.Map<String, String>> r) {
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(r.getHeaders().getFirst("Retry-After")).isEqualTo("5");
+        assertThat(r.getBody()).containsEntry("code", "SERVICE_UNAVAILABLE");
+    }
+
+    @Test
+    void poolTimeoutOutsideDataAccessHierarchyIs503() {
+        // JpaTransactionManager: CannotCreateTransactionException is not a DataAccessException (was 400 via RuntimeException)
+        assertUnavailable(handler.handleRuntime(
+                new org.springframework.transaction.CannotCreateTransactionException("Could not open JPA EntityManager", POOL_TIMEOUT)));
+        verify(errorLog, never()).record(any(), anyString());
+    }
+
+    @Test
+    void poolTimeoutInsideDataAccessIs503() {
+        assertUnavailable(handler.handleDataAccess(
+                new org.springframework.dao.DataAccessResourceFailureException("Unable to acquire JDBC Connection", POOL_TIMEOUT)));
+        assertUnavailable(handler.handleGeneric(new Exception("wrapped", POOL_TIMEOUT)));
+        verify(errorLog, never()).record(any(), anyString());
+    }
+
+    @Test
+    void reportBusyIs503WithRetryAfter() {
+        var r = handler.handleApi(com.bilpark.backend.common.RetryLaterException.reportBusy(10));
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(r.getHeaders().getFirst("Retry-After")).isEqualTo("10");
+        assertThat(r.getBody()).containsEntry("code", "REPORT_BUSY");
+    }
+
+    @Test
+    void otherDatabaseErrorStays500AndRecorded() {
+        var ex = new org.springframework.dao.InvalidDataAccessResourceUsageException("bad sql");
+        assertThat(handler.handleDataAccess(ex).getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        verify(errorLog).record(ex, "INTERNAL_ERROR");
+    }
 }

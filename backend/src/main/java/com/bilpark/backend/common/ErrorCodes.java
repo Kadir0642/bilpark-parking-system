@@ -43,4 +43,8 @@ public final class ErrorCodes {
 
     // Plaka sorgu hız sınırı (429)
     public static final String RATE_LIMITED = "RATE_LIMITED";
+
+    // Aşırı yük (503 + Retry-After): istemci oturumu korur, verilen saniye sonra tekrar dener
+    public static final String SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE"; // veritabanına zamanında ulaşılamadı
+    public static final String REPORT_BUSY = "REPORT_BUSY";                 // başka bir rapor hazırlanıyor
 }

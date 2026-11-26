@@ -3,6 +3,7 @@ package com.bilpark.backend.controller;
 import com.bilpark.backend.audit.ErrorLogService;
 import com.bilpark.backend.common.ApiException;
 import com.bilpark.backend.common.ErrorCodes;
+import com.bilpark.backend.common.Overload;
 import jakarta.persistence.OptimisticLockException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolationException;
@@ -57,9 +58,24 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(m);
     }
 
+    /**
+     * Database not reachable in time (pool timeout, connection refused): 503 + Retry-After, not 500/400.
+     * Not stored in the error log (that write would wait for a connection too) and logged at most every 10 s.
+     */
+    static ResponseEntity<Map<String, String>> unavailable(Throwable ex) {
+        if (Overload.shouldLog()) {
+            log.warn("Veritabanına zamanında ulaşılamadı, 503: {}", ex.toString());
+        }
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("error", Overload.MESSAGE);
+        m.put("code", ErrorCodes.SERVICE_UNAVAILABLE);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header("Retry-After", String.valueOf(Overload.RETRY_AFTER_SECONDS)).body(m);
+    }
+
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<Map<String, String>> handleApi(ApiException ex) {
-        if (ex instanceof com.bilpark.backend.common.RateLimitedException rl) {
+        if (ex instanceof com.bilpark.backend.common.RetryLaterException rl) {
             Map<String, String> m = new LinkedHashMap<>();
             m.put("error", rl.getMessage());
             m.put("code", rl.getCode());
@@ -151,6 +167,7 @@ public class GlobalExceptionHandler {
             jakarta.persistence.PersistenceException.class,
             org.hibernate.HibernateException.class})
     public ResponseEntity<Map<String, String>> handleDataAccess(Exception ex) {
+        if (Overload.isDatabaseUnavailable(ex)) return unavailable(ex);
         log.error("Database error", ex);
         errorLogService.record(ex, ErrorCodes.INTERNAL_ERROR);
         return body(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCodes.INTERNAL_ERROR,
@@ -160,6 +177,8 @@ public class GlobalExceptionHandler {
     // Legacy business errors thrown as plain RuntimeException
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntime(RuntimeException ex) {
+        // e.g. CannotCreateTransactionException (not a DataAccessException) when the pool times out
+        if (Overload.isDatabaseUnavailable(ex)) return unavailable(ex);
         String m = ex.getMessage();
         return body(HttpStatus.BAD_REQUEST, ErrorCodes.BAD_REQUEST, m == null || m.isBlank() ? "Geçersiz istek." : m);
     }
@@ -190,6 +209,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGeneric(Exception ex) {
+        if (Overload.isDatabaseUnavailable(ex)) return unavailable(ex);
         log.error("Unexpected error", ex);
         errorLogService.record(ex, ErrorCodes.INTERNAL_ERROR);
         return body(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCodes.INTERNAL_ERROR,

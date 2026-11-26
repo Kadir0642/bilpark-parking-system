@@ -78,6 +78,11 @@ public class JwtUtil {
         return claimsResolver.apply(claims);
     }
 
+    /** Verifies signature and expiry once; throws io.jsonwebtoken.JwtException / IllegalArgumentException. */
+    public Claims parseClaims(String token) {
+        return extractAllClaims(token);
+    }
+
     private Claims extractAllClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
