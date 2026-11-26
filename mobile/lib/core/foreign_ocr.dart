@@ -96,7 +96,7 @@ const foreignCountryCodes = {
 };
 
 /// Yalnızca A-Z0-9 bırakır: Türkçe i/ı/İ ve küçük harfler büyür, Ä/Ö/Ü harf karşılığına iner.
-String foreignAlnum(String raw) => cleanPlate(raw)
+String foreignAlnum(String raw) => cleanForeignPlate(raw)
     .replaceAll('Ä', 'A')
     .replaceAll('Ö', 'O')
     .replaceAll('Ü', 'U')

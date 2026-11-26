@@ -71,12 +71,24 @@ void main() {
     });
 
     test('Kiril plaka harfleri Latin eşine iner (А В Е К М Н О Р С Т У Х)', () {
-      expect(cleanPlate('А 123 ВС 77'), 'A123BC77');
-      expect(cleanPlate('х456км199'), 'X456KM199');
+      expect(cleanForeignPlate('А 123 ВС 77'), 'A123BC77');
+      expect(cleanForeignPlate('х456км199'), 'X456KM199');
       expect(latinizeCyrillic('М 001 РУ'), 'M 001 PY');
       expect(latinizeCyrillic('34 ABC 123'), '34 ABC 123');
       expect(isValidForeignPlateInput('А123ВС77'), isTrue);
       expect(foreignAlnum('Е777КХ'), 'E777KX');
+    });
+  });
+
+  group('TR yolu değişmedi', () {
+    test('TR modunda Kiril giriş dönüştürülmez ve kabul edilmez', () {
+      expect(cleanPlate('34 АВС 123'), '34АВС123'); // Kiril harfler olduğu gibi kalır
+      expect(isValidTrPlate('34 АВС 123'), isFalse);
+      expect(isValidPlateFor('34 АВС 123', foreign: false), isFalse);
+      expect(plateHint('34 АВС 123'), 'Yalnızca A-Z harfleri ve rakam kullanın');
+      expect(isValidTrPlate('34 ABC 123'), isTrue);
+      // yabancı modda aynı girdi Latin eşine iner
+      expect(isValidPlateFor('34 АВС 123', foreign: true), isTrue);
     });
   });
 

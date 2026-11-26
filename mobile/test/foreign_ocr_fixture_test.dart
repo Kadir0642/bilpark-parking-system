@@ -71,11 +71,12 @@ List<Sample> loadSamples() {
   ];
 }
 
-/// Tarayıcının yabancı mod onayı: canlı kareler (ve fotoğraf karesi) sırayla, iki tur, [ForeignVotes]'a
-/// verilir (harf+rakam olmayan aday oy değildir). İlk onaylanan plaka ya da null.
-String? simulateScanner(Sample s) {
+/// Tarayıcının yabancı mod onayı: örneğin 4 karesi (3 canlı + fotoğraf) sırayla [passes] tur
+/// [ForeignVotes]'a verilir (harf+rakam olmayan aday oy değildir). İlk onaylanan plaka ya da null.
+/// Asıl ölçüt tek turdur (her kare bir kez); iki tur, aynı kareleri tekrar oynatır (daha gevşek).
+String? simulateScanner(Sample s, {int passes = 1}) {
   final votes = ForeignVotes();
-  final frames = [...s.frames, ...s.frames];
+  final frames = [for (var i = 0; i < passes; i++) ...s.frames];
   for (final f in frames) {
     final p = readForeignPlate(f.boxes, frameWidth: f.w, frameHeight: f.h)?.plate;
     final c = votes.add(p != null && isMixedPlate(p) ? p : null);
@@ -91,6 +92,8 @@ Sample _byName(List<Sample> all, String name) => all.firstWhere((s) => s.name ==
 const _sealMisread = {'de_muhur_1', 'de_muhur_2', 'ab_d', 'ab_slo', 'ab_cz', 'ab2_tn'};
 // Onaylanmaz: ML Kit plakayı yanlış okuyor (sıkışık yazı), plaka yalnız rakam (Suriye) ya da örnek anlamsız.
 const _noConfirmOk = {'ge_2', 's_SY', 'ab2_dz'};
+// Tek turda (4 kare) 3 oy toplanamayanlar: kare kare bir karakter oynuyor; iki turda doğru onaylanıyor.
+const _needMoreFrames = {'ab_hr', 'ab_irl', 's_AM', 's_RU'};
 // Rakamsız (özel / tanıtım) ya da Latin olmayan plakalar: hiçbir karede onaylanmamalı.
 const _mustNotConfirm = {'ab2_a', 'ab2_b', 'ab2_ch', 'ab2_d', 'ab2_ro', 'ab2_s', 'ab2_uk', 'ab2_ma', 'ozel_1', 's_IR'};
 
@@ -102,20 +105,36 @@ void main() {
     expect(samples.where((s) => s.expected != null).length, 49);
   });
 
-  test('tek plakalık örnekler: tarayıcı doğru plakayı onaylar', () {
+  test('tek plakalık örnekler, her kare bir kez: tarayıcı doğru plakayı onaylar', () {
     var correct = 0;
     for (final s in samples.where((s) => s.expected != null)) {
       final c = simulateScanner(s);
       if (c == s.expected) {
         correct++;
-      } else if (_sealMisread.contains(s.name)) {
-        expect(c, isNotNull, reason: '${s.name}: mühürlü plaka yine de bir aday onaylamalı');
       } else {
-        expect(_noConfirmOk.contains(s.name), isTrue, reason: '${s.name}: beklenen ${s.expected}, onay $c');
+        // 4 karede 3 oy toplanamadı (kare kare oynuyor) ya da mühür harfi: telefonda daha çok kare gelir
+        expect({..._sealMisread, ..._noConfirmOk, ..._needMoreFrames}, contains(s.name),
+            reason: '${s.name}: beklenen ${s.expected}, onay $c');
+        if (c != null) expect(_sealMisread, contains(s.name), reason: '${s.name}: yanlış onay $c');
       }
     }
-    // Gerçek ML Kit çıktısında eski kural (üst üste 3 kare, uzun aday atılır) 32/49 onaylıyordu
-    expect(correct, greaterThanOrEqualTo(40));
+    // Aynı dökümde eski kural (üst üste 3 kare, uzun aday atılır) tek turda 30/49 onaylıyordu
+    expect(correct, greaterThanOrEqualTo(36));
+  });
+
+  test('aynı kareler iki tur oynatılınca (daha uzun bekleme) mühürlü plakalar da bir aday onaylar', () {
+    var correct = 0;
+    for (final s in samples.where((s) => s.expected != null)) {
+      final c = simulateScanner(s, passes: 2);
+      if (c == s.expected) {
+        correct++;
+      } else if (_sealMisread.contains(s.name)) {
+        expect(c, isNotNull, reason: s.name);
+      } else {
+        expect(_noConfirmOk, contains(s.name), reason: '${s.name}: beklenen ${s.expected}, onay $c');
+      }
+    }
+    expect(correct, greaterThanOrEqualTo(40)); // eski kural iki turda 32/49
   });
 
   test('rakamsız ya da Latin olmayan plaka onaylanmaz', () {
@@ -145,21 +164,23 @@ void main() {
 
   test('tanı tablosu (OCR_TABLE=1 ile yazdırır)', () {
     if (Platform.environment['OCR_TABLE'] == null) return;
-    var ok = 0, conf = 0, total = 0;
+    var ok = 0, conf = 0, conf2 = 0, total = 0;
     for (final s in samples) {
       final reads = [
         for (final f in s.frames) readForeignPlate(f.boxes, frameWidth: f.w, frameHeight: f.h),
       ];
       final c = simulateScanner(s);
+      final c2 = simulateScanner(s, passes: 2);
       if (s.expected != null) {
         total++;
         if (reads.every((r) => r?.plate == s.expected)) ok++;
         if (c == s.expected) conf++;
+        if (c2 == s.expected) conf2++;
       }
       // ignore: avoid_print
-      print('${s.name.padRight(10)} exp=${s.expected} onay=$c | ${reads.map((r) => '${r?.plate}/${r?.countryCode}').join('  ')}');
+      print('${s.name.padRight(10)} exp=${s.expected} onay=$c onay2=$c2 | ${reads.map((r) => '${r?.plate}/${r?.countryCode}').join('  ')}');
     }
     // ignore: avoid_print
-    print('TOPLAM: $total örnek, tüm karelerde doğru $ok, tarayıcı onayı doğru $conf');
+    print('TOPLAM: $total örnek, tüm karelerde doğru $ok, onay tek tur $conf, iki tur $conf2');
   });
 }
