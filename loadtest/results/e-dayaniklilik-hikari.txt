@@ -1,0 +1,274 @@
+2026-11-26T14:24:49.409+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=2/5, idle=0/0, active=2, waiting=0)
+2026-11-26T14:24:49.409+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=2/5, idle=0/0, active=2, waiting=0)
+2026-11-26T14:25:19.488+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=7)
+2026-11-26T14:25:19.488+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=7)
+2026-11-26T14:25:49.590+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=15)
+2026-11-26T14:25:49.590+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=15)
+2026-11-26T14:26:19.691+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=2/0, active=3, waiting=0)
+2026-11-26T14:26:19.692+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=2/0, active=3, waiting=0)
+2026-11-26T14:26:49.692+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=32)
+2026-11-26T14:26:49.693+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=32)
+2026-11-26T14:27:19.693+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=11)
+2026-11-26T14:27:19.693+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=11)
+2026-11-26T14:27:49.693+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:27:49.694+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:28:19.694+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:28:19.694+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:28:49.694+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=9)
+2026-11-26T14:28:49.695+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=9)
+2026-11-26T14:29:19.695+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=2/0, active=3, waiting=0)
+2026-11-26T14:29:19.695+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=2/0, active=3, waiting=0)
+2026-11-26T14:29:49.695+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=6)
+2026-11-26T14:29:49.696+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=6)
+2026-11-26T14:30:19.696+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=0)
+2026-11-26T14:30:19.696+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=0)
+2026-11-26T14:30:49.697+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=2/0, active=3, waiting=0)
+2026-11-26T14:30:49.697+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=2/0, active=3, waiting=0)
+2026-11-26T14:31:19.697+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T14:31:19.698+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T14:31:49.788+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T14:31:49.789+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T14:32:19.790+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:32:19.790+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:32:49.790+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:32:49.790+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:33:19.791+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:33:19.791+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:33:49.791+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=13)
+2026-11-26T14:33:49.791+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=13)
+2026-11-26T14:34:19.792+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=4/5, idle=4/0, active=0, waiting=0)
+2026-11-26T14:34:19.792+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=4/5, idle=4/0, active=0, waiting=0)
+2026-11-26T14:34:49.792+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:34:49.792+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:35:19.793+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:35:19.793+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:35:49.793+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:35:49.793+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:36:19.794+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:36:19.794+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:36:49.795+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:36:49.795+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:37:19.795+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:37:19.795+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:37:49.796+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:37:49.796+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:38:19.796+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:38:19.797+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:38:49.797+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:38:49.797+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:39:19.798+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:39:19.798+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:39:49.798+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T14:39:49.798+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T14:40:19.799+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:40:19.799+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:40:49.799+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:40:49.799+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:41:19.800+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=2)
+2026-11-26T14:41:19.800+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=2)
+2026-11-26T14:41:49.800+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T14:41:49.800+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T14:42:19.889+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:42:19.889+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:42:49.890+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=17)
+2026-11-26T14:42:49.890+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=17)
+2026-11-26T14:43:19.890+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:43:19.890+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:43:49.890+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:43:49.890+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:44:19.891+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:44:19.891+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:44:49.891+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:44:49.891+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:45:19.891+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=1/0, active=4, waiting=0)
+2026-11-26T14:45:19.891+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=1/0, active=4, waiting=0)
+2026-11-26T14:45:49.892+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:45:49.892+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:46:19.892+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:46:19.893+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:46:49.893+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:46:49.893+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:47:19.893+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T14:47:19.893+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T14:47:49.893+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:47:49.894+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:48:19.894+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T14:48:19.894+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T14:48:49.894+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T14:48:49.895+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=4/0, active=1, waiting=0)
+2026-11-26T14:49:19.895+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:49:19.895+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:49:49.896+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=16)
+2026-11-26T14:49:49.896+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=16)
+2026-11-26T14:50:19.896+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=2)
+2026-11-26T14:50:19.896+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=2)
+2026-11-26T14:50:49.896+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:50:49.896+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:51:19.897+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:51:19.897+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:51:49.897+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:51:49.897+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:52:19.898+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:52:19.898+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:52:49.988+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=0/0, active=5, waiting=21)
+2026-11-26T14:52:49.989+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=0/0, active=5, waiting=21)
+2026-11-26T14:53:19.990+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:53:19.991+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:53:49.991+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:53:49.991+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:54:19.992+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:54:19.993+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:54:49.993+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:54:49.993+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:55:05.390+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-37] .m.m.a.ExceptionHandlerExceptionResolver : Failure in @ExceptionHandler com.bilpark.backend.controller.GlobalExceptionHandler#handleRuntime(RuntimeException)
+org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class java.util.LinkedHashMap] with preset Content-Type 'text/event-stream'
+	at org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver.doResolveHandlerMethodException(ExceptionHandlerExceptionResolver.java:460) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodExceptionResolver.doResolveException(AbstractHandlerMethodExceptionResolver.java:72) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerExceptionResolver.resolveException(AbstractHandlerExceptionResolver.java:176) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.HandlerExceptionResolverComposite.resolveException(HandlerExceptionResolverComposite.java:78) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.DispatcherServlet.processHandlerException(DispatcherServlet.java:1227) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+2026-11-26T14:55:05.590+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-37] .w.s.m.s.DefaultHandlerExceptionResolver : Ignoring exception, response committed already: org.springframework.web.context.request.async.AsyncRequestTimeoutException
+2026-11-26T14:55:05.689+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-37] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.context.request.async.AsyncRequestTimeoutException]
+2026-11-26T14:55:19.993+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=2/0, active=3, waiting=0)
+2026-11-26T14:55:19.993+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=2/0, active=3, waiting=0)
+2026-11-26T14:55:25.494+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-34] .m.m.a.ExceptionHandlerExceptionResolver : Failure in @ExceptionHandler com.bilpark.backend.controller.GlobalExceptionHandler#handleRuntime(RuntimeException)
+org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class java.util.LinkedHashMap] with preset Content-Type 'text/event-stream'
+	at org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver.doResolveHandlerMethodException(ExceptionHandlerExceptionResolver.java:460) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodExceptionResolver.doResolveException(AbstractHandlerMethodExceptionResolver.java:72) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerExceptionResolver.resolveException(AbstractHandlerExceptionResolver.java:176) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.HandlerExceptionResolverComposite.resolveException(HandlerExceptionResolverComposite.java:78) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.DispatcherServlet.processHandlerException(DispatcherServlet.java:1227) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+2026-11-26T14:55:25.494+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-34] .w.s.m.s.DefaultHandlerExceptionResolver : Ignoring exception, response committed already: org.springframework.web.context.request.async.AsyncRequestTimeoutException
+2026-11-26T14:55:25.495+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-34] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.context.request.async.AsyncRequestTimeoutException]
+2026-11-26T14:55:25.494+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-12] .m.m.a.ExceptionHandlerExceptionResolver : Failure in @ExceptionHandler com.bilpark.backend.controller.GlobalExceptionHandler#handleRuntime(RuntimeException)
+org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class java.util.LinkedHashMap] with preset Content-Type 'text/event-stream'
+	at org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver.doResolveHandlerMethodException(ExceptionHandlerExceptionResolver.java:460) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodExceptionResolver.doResolveException(AbstractHandlerMethodExceptionResolver.java:72) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerExceptionResolver.resolveException(AbstractHandlerExceptionResolver.java:176) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.HandlerExceptionResolverComposite.resolveException(HandlerExceptionResolverComposite.java:78) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.DispatcherServlet.processHandlerException(DispatcherServlet.java:1227) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+2026-11-26T14:55:25.789+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-12] .w.s.m.s.DefaultHandlerExceptionResolver : Ignoring exception, response committed already: org.springframework.web.context.request.async.AsyncRequestTimeoutException
+2026-11-26T14:55:25.789+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-12] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.context.request.async.AsyncRequestTimeoutException]
+2026-11-26T14:55:31.496+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-32] .m.m.a.ExceptionHandlerExceptionResolver : Failure in @ExceptionHandler com.bilpark.backend.controller.GlobalExceptionHandler#handleRuntime(RuntimeException)
+org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class java.util.LinkedHashMap] with preset Content-Type 'text/event-stream'
+	at org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver.doResolveHandlerMethodException(ExceptionHandlerExceptionResolver.java:460) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodExceptionResolver.doResolveException(AbstractHandlerMethodExceptionResolver.java:72) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerExceptionResolver.resolveException(AbstractHandlerExceptionResolver.java:176) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.HandlerExceptionResolverComposite.resolveException(HandlerExceptionResolverComposite.java:78) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.DispatcherServlet.processHandlerException(DispatcherServlet.java:1227) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+2026-11-26T14:55:31.497+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-32] .w.s.m.s.DefaultHandlerExceptionResolver : Ignoring exception, response committed already: org.springframework.web.context.request.async.AsyncRequestTimeoutException
+2026-11-26T14:55:31.498+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-32] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.context.request.async.AsyncRequestTimeoutException]
+2026-11-26T14:55:32.494+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-24] .m.m.a.ExceptionHandlerExceptionResolver : Failure in @ExceptionHandler com.bilpark.backend.controller.GlobalExceptionHandler#handleRuntime(RuntimeException)
+org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class java.util.LinkedHashMap] with preset Content-Type 'text/event-stream'
+	at org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver.doResolveHandlerMethodException(ExceptionHandlerExceptionResolver.java:460) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodExceptionResolver.doResolveException(AbstractHandlerMethodExceptionResolver.java:72) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerExceptionResolver.resolveException(AbstractHandlerExceptionResolver.java:176) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.HandlerExceptionResolverComposite.resolveException(HandlerExceptionResolverComposite.java:78) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.DispatcherServlet.processHandlerException(DispatcherServlet.java:1227) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+2026-11-26T14:55:32.495+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-24] .w.s.m.s.DefaultHandlerExceptionResolver : Ignoring exception, response committed already: org.springframework.web.context.request.async.AsyncRequestTimeoutException
+2026-11-26T14:55:32.495+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-24] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.context.request.async.AsyncRequestTimeoutException]
+2026-11-26T14:55:33.495+03:00  WARN 1 --- [bilpark-backend] [0.0-8080-exec-4] .m.m.a.ExceptionHandlerExceptionResolver : Failure in @ExceptionHandler com.bilpark.backend.controller.GlobalExceptionHandler#handleRuntime(RuntimeException)
+org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class java.util.LinkedHashMap] with preset Content-Type 'text/event-stream'
+	at org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver.doResolveHandlerMethodException(ExceptionHandlerExceptionResolver.java:460) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodExceptionResolver.doResolveException(AbstractHandlerMethodExceptionResolver.java:72) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerExceptionResolver.resolveException(AbstractHandlerExceptionResolver.java:176) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.HandlerExceptionResolverComposite.resolveException(HandlerExceptionResolverComposite.java:78) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.DispatcherServlet.processHandlerException(DispatcherServlet.java:1227) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+2026-11-26T14:55:33.496+03:00  WARN 1 --- [bilpark-backend] [0.0-8080-exec-4] .w.s.m.s.DefaultHandlerExceptionResolver : Ignoring exception, response committed already: org.springframework.web.context.request.async.AsyncRequestTimeoutException
+2026-11-26T14:55:33.496+03:00  WARN 1 --- [bilpark-backend] [0.0-8080-exec-4] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.context.request.async.AsyncRequestTimeoutException]
+2026-11-26T14:55:34.495+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-38] .m.m.a.ExceptionHandlerExceptionResolver : Failure in @ExceptionHandler com.bilpark.backend.controller.GlobalExceptionHandler#handleRuntime(RuntimeException)
+org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class java.util.LinkedHashMap] with preset Content-Type 'text/event-stream'
+	at org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver.doResolveHandlerMethodException(ExceptionHandlerExceptionResolver.java:460) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodExceptionResolver.doResolveException(AbstractHandlerMethodExceptionResolver.java:72) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerExceptionResolver.resolveException(AbstractHandlerExceptionResolver.java:176) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.HandlerExceptionResolverComposite.resolveException(HandlerExceptionResolverComposite.java:78) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.DispatcherServlet.processHandlerException(DispatcherServlet.java:1227) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+2026-11-26T14:55:34.496+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-38] .w.s.m.s.DefaultHandlerExceptionResolver : Ignoring exception, response committed already: org.springframework.web.context.request.async.AsyncRequestTimeoutException
+2026-11-26T14:55:34.496+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-38] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.context.request.async.AsyncRequestTimeoutException]
+2026-11-26T14:55:34.495+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-34] .m.m.a.ExceptionHandlerExceptionResolver : Failure in @ExceptionHandler com.bilpark.backend.controller.GlobalExceptionHandler#handleRuntime(RuntimeException)
+org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class java.util.LinkedHashMap] with preset Content-Type 'text/event-stream'
+	at org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver.doResolveHandlerMethodException(ExceptionHandlerExceptionResolver.java:460) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodExceptionResolver.doResolveException(AbstractHandlerMethodExceptionResolver.java:72) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerExceptionResolver.resolveException(AbstractHandlerExceptionResolver.java:176) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.HandlerExceptionResolverComposite.resolveException(HandlerExceptionResolverComposite.java:78) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.DispatcherServlet.processHandlerException(DispatcherServlet.java:1227) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+2026-11-26T14:55:34.497+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-34] .w.s.m.s.DefaultHandlerExceptionResolver : Ignoring exception, response committed already: org.springframework.web.context.request.async.AsyncRequestTimeoutException
+2026-11-26T14:55:34.497+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-34] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.context.request.async.AsyncRequestTimeoutException]
+2026-11-26T14:55:41.495+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-31] .m.m.a.ExceptionHandlerExceptionResolver : Failure in @ExceptionHandler com.bilpark.backend.controller.GlobalExceptionHandler#handleRuntime(RuntimeException)
+org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class java.util.LinkedHashMap] with preset Content-Type 'text/event-stream'
+	at org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver.doResolveHandlerMethodException(ExceptionHandlerExceptionResolver.java:460) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodExceptionResolver.doResolveException(AbstractHandlerMethodExceptionResolver.java:72) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerExceptionResolver.resolveException(AbstractHandlerExceptionResolver.java:176) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.HandlerExceptionResolverComposite.resolveException(HandlerExceptionResolverComposite.java:78) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.DispatcherServlet.processHandlerException(DispatcherServlet.java:1227) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+2026-11-26T14:55:41.496+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-31] .w.s.m.s.DefaultHandlerExceptionResolver : Ignoring exception, response committed already: org.springframework.web.context.request.async.AsyncRequestTimeoutException
+2026-11-26T14:55:41.496+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-31] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.context.request.async.AsyncRequestTimeoutException]
+2026-11-26T14:55:49.993+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:55:49.994+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:55:50.493+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-29] .m.m.a.ExceptionHandlerExceptionResolver : Failure in @ExceptionHandler com.bilpark.backend.controller.GlobalExceptionHandler#handleRuntime(RuntimeException)
+org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class java.util.LinkedHashMap] with preset Content-Type 'text/event-stream'
+	at org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver.doResolveHandlerMethodException(ExceptionHandlerExceptionResolver.java:460) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodExceptionResolver.doResolveException(AbstractHandlerMethodExceptionResolver.java:72) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerExceptionResolver.resolveException(AbstractHandlerExceptionResolver.java:176) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.HandlerExceptionResolverComposite.resolveException(HandlerExceptionResolverComposite.java:78) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.DispatcherServlet.processHandlerException(DispatcherServlet.java:1227) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+2026-11-26T14:55:50.494+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-29] .w.s.m.s.DefaultHandlerExceptionResolver : Ignoring exception, response committed already: org.springframework.web.context.request.async.AsyncRequestTimeoutException
+2026-11-26T14:55:50.494+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-29] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.context.request.async.AsyncRequestTimeoutException]
+2026-11-26T14:56:01.494+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-37] .m.m.a.ExceptionHandlerExceptionResolver : Failure in @ExceptionHandler com.bilpark.backend.controller.GlobalExceptionHandler#handleRuntime(RuntimeException)
+org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class java.util.LinkedHashMap] with preset Content-Type 'text/event-stream'
+	at org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver.doResolveHandlerMethodException(ExceptionHandlerExceptionResolver.java:460) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodExceptionResolver.doResolveException(AbstractHandlerMethodExceptionResolver.java:72) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerExceptionResolver.resolveException(AbstractHandlerExceptionResolver.java:176) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.HandlerExceptionResolverComposite.resolveException(HandlerExceptionResolverComposite.java:78) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.DispatcherServlet.processHandlerException(DispatcherServlet.java:1227) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+2026-11-26T14:56:01.496+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-37] .w.s.m.s.DefaultHandlerExceptionResolver : Ignoring exception, response committed already: org.springframework.web.context.request.async.AsyncRequestTimeoutException
+2026-11-26T14:56:01.496+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-37] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.context.request.async.AsyncRequestTimeoutException]
+2026-11-26T14:56:05.493+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-21] .m.m.a.ExceptionHandlerExceptionResolver : Failure in @ExceptionHandler com.bilpark.backend.controller.GlobalExceptionHandler#handleRuntime(RuntimeException)
+org.springframework.http.converter.HttpMessageNotWritableException: No converter for [class java.util.LinkedHashMap] with preset Content-Type 'text/event-stream'
+	at org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver.doResolveHandlerMethodException(ExceptionHandlerExceptionResolver.java:460) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodExceptionResolver.doResolveException(AbstractHandlerMethodExceptionResolver.java:72) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.AbstractHandlerExceptionResolver.resolveException(AbstractHandlerExceptionResolver.java:176) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.handler.HandlerExceptionResolverComposite.resolveException(HandlerExceptionResolverComposite.java:78) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.web.servlet.DispatcherServlet.processHandlerException(DispatcherServlet.java:1227) ~[spring-webmvc-7.0.3.jar!/:7.0.3]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:126) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:120) ~[spring-security-web-7.0.2.jar!/:7.0.2]
+2026-11-26T14:56:05.591+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-21] .w.s.m.s.DefaultHandlerExceptionResolver : Ignoring exception, response committed already: org.springframework.web.context.request.async.AsyncRequestTimeoutException
+2026-11-26T14:56:05.591+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-21] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.context.request.async.AsyncRequestTimeoutException]
+2026-11-26T14:56:19.994+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:56:19.994+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:56:49.994+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:56:49.994+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:57:19.995+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:57:19.995+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:57:49.995+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:57:49.995+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:58:19.996+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=1/0, active=4, waiting=0)
+2026-11-26T14:58:19.996+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=1/0, active=4, waiting=0)
+2026-11-26T14:58:49.996+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=4/5, idle=4/0, active=0, waiting=0)
+2026-11-26T14:58:49.996+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=4/5, idle=4/0, active=0, waiting=0)
+2026-11-26T14:59:19.996+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:59:19.996+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=3/0, active=2, waiting=0)
+2026-11-26T14:59:49.997+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)
+2026-11-26T14:59:49.997+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=5/5, idle=5/0, active=0, waiting=0)

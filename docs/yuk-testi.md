@@ -86,17 +86,17 @@ bağlantısı alamayıp hata dönen istek sayısı. Kaynak: `python -I loadtest/
 <!--EK-SATIRLAR-->
 
 ⚠ Ana makinede başka işler kısa süreli %90-99 CPU'ya çıktı (emülatör yoktu). Konteyner payları sabit olduğundan
-ortalamaları etkilemedi ama tek tük uç değerleri büyütmüş olabilir. ¹ Hepsi koşunun ilk 50 sn'sinde, önceki
-kırılma koşusundan kalan birikim ve 10 kişinin aynı anda girişi yüzünden; dalgaların kendisinde hata yok.
+ortalamaları etkilemedi ama tek tük uç değerleri büyütmüş olabilir. ¹ Hataların hepsi koşunun ilk 50 sn'sinde: 10
+kişi aynı anda girdi ve büyük olasılıkla önceki kırılma koşusunun birikimi de sürüyordu. Dalgaların kendisinde hata yok.
 ² Hataların tamamı beklenen 429 (IP başına 120/dk sınırı).
 
 ### 3.1 Gerçekçi yük (10 görevli): dayanıyor, ama riskli
 
 - Sıcak JVM'de sonuç: hata %0, p95 2,5 sn, p99 6,8 sn. Bir araç olayı, bölgedeki bütün görevlilere ve yöneticilere
-  ortalama 0,2 sn'de ulaştı (en kötü 0,4 sn). 86 olayın 85'i beklenen herkese ulaştı. Kalan bir olay koşunun son
-  saniyesine denk geldi.
-- Uygulama CPU'su ortalamada sınırın yarısında. Ama her araç olayı 10-15 okumayı tetiklediği için olaylarda 0.1
-  CPU sınırına dayanıyor. Havuzda anlık 13 bekleyen istek görüldü.
+  p95 0,2 sn'de ulaştı (en kötü 0,4 sn). 86 olayın 85'i beklenen herkese ulaştı. Eksik kalan tek olay büyük
+  olasılıkla koşu kapanırken yolda kaldı; bu doğrulanmadı.
+- Uygulama CPU'su ortalamada sınırın yarısında. Ama her araç olayı yaklaşık 15 okumayı tetikliyor (bölgedeki 1-2
+  görevli × 4, artı 2 panel × 5) ve olaylarda 0.1 CPU sınırına dayanıyor. Havuzda anlık 13 bekleyen istek görüldü.
 - **Yeniden başlatma ya da deploy sonrası ilk 3-4 dakika asıl risk.** JVM soğukken 10 görevli aynı anda girip
   akış açınca 10 sn'lik pencerelerde p95 15-37 sn'ye, hata oranı %44'e çıktı. 17 istek DB bağlantısını 20 sn
   içinde alamadı. Girişlerin %45'i 15 sn'de bitmedi. Dördüncü dakikadan sonra p95 ~2,4 sn'ye indi ve hata
@@ -121,8 +121,8 @@ bağlantı görüldü. Çöküş şu zincirle ilerliyor:
 2. OSIV ve `DELAYED_ACQUISITION_AND_HOLD` yüzünden her istek DB bağlantısını yanıt bitene kadar tutuyor; 5'lik
    havuz doluyor ve 190'dan fazla istek bekliyor.
 3. Bağlantı 20 sn'de alınamıyor ve `CannotCreateTransactionException` oluşuyor.
-4. Bekleyen istekler 128 MB'lık yığını dolduruyor. Kırılma koşusunda 37 tam GC oldu, her biri 0.1 CPU'da 2-4 sn
-   sürdü ve dünyayı durdurdu.
+4. Bekleyen istekler 128 MB'lık yığını dolduruyor. Kırılma koşusunda 37 tam GC oldu. Her biri dünyayı durdurdu;
+   en uzunu 2,5 sn sürdü, 100 görevli koşusunda 4,0 sn.
 5. Bu arada `JwtAuthFilter` kullanıcıyı DB'den okuyamayınca token'ı geçersiz sayıyor ve **geçerli oturumlara 401
    dönüyor.** Uygulama 401'de görevliyi giriş ekranına atıyor, yönetim paneli de oturumu kapatıyor. Yeniden giriş
    bcrypt demek, 0.1 CPU'da tek giriş 1-15 sn sürüyor. Yani aşırı yük kendini büyütüyor.
@@ -166,7 +166,26 @@ Sistem çökmediği sürece olaylar beklenen alıcıların hepsine 0,1-0,3 sn'de
 dışında. Aşırı yükte sorun teslimde değil, akışı açmakta: bilet, `/sync` ve kullanıcı sorgusu havuz bekliyor,
 `hello` süresi 30-56 sn'ye çıktı.
 
-<!--SOAK-->
+### 3.7 Dayanıklılık (35 dk, 10 görevli, yeniden başlatılmış JVM ile)
+
+Toplam hata %0,17, p95 5,0 sn. Bu p95 ilk 5 dakikanın soğuk JVM'ini de içeriyor; 10. dakikadan sonra 5 dk'lık
+dilimlerin p95 medyanı 2,6-2,8 sn.
+
+| 5 dk'lık dilim | 0-5 | 5-10 | 10-15 | 15-20 | 20-25 | 25-30 | 30-35 |
+|---|---|---|---|---|---|---|---|
+| RSS (MB, ortalama) | 365 | 399 | 415 | 421 | 423 | 424 | 425 |
+| JVM iş parçacığı | 65 | 65 | 66 | 66 | 65 | 67 | 67 |
+| 10 sn'lik p95 medyanı | 7,5 sn | 3,3 sn | 2,7 sn | 2,7 sn | 2,6 sn | 2,8 sn | 2,7 sn |
+
+- **Sızıntı belirtisi yok.** İş parçacığı sayısı sabit kaldı, DB bağlantısı 6-7'de durdu. RSS ilk 15 dk'da ısındı
+  ve ~425 MB'ta düzleşti. GC sonrası yığın 55-75 MB arasında gidip geldi, artış eğilimi göstermedi.
+- SSE akışları 30. dakikada sunucunun `EMITTER_TIMEOUT_MS` süresiyle kapandı ve hepsi yeniden bağlandı (12
+  kopma, 0 RESET).
+- **Yığın iki kez tükendi.** 1490-1513. ve 1675-1696. saniyelerde 8'er tam GC arka arkaya geldi
+  (`123M->117M(123M)`, her biri 1-2 sn). Uygulama ~20 sn boyunca herkes için durdu; o 10 sn'lik pencerelerde hata
+  %8-24 oldu. Bu iki an, ~10 dk'da bir indirilen xlsx raporlarıyla (kayıt ve personel raporu 12-24 sn sürdü)
+  aynı döneme düşüyor. Ancak istek zaman damgasıyla birebir eşleştirme yapılmadı, bu yüzden "olası neden" olarak
+  okunmalı.
 
 <!--SOGUK-->
 

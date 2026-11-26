@@ -1,1 +1,2 @@
 ilk-acilis-bos-db-flyway: health=434.5s ilk_giris=+19.7s ilk_db_okuma=+2.5s (spots 200) | Started BackendApplication in 403.5 seconds
+soguk-0.1cpu-gocmus-db-1: JVM 14:12:06 -> Started 14:16:28 (Spring 244.5 s, surec 261.7 s), ilk /api/health 14:16:29 (~263 s, betik hatasi yuzunden gunlukten); ilk giris (8 dk bosta sonra) 11.2s, ilk spots 7.1s (200)
