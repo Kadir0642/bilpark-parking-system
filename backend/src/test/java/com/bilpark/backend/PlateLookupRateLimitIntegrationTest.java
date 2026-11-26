@@ -53,6 +53,10 @@ class PlateLookupRateLimitIntegrationTest {
         // another citizen behind the same proxy is not held back
         mvc.perform(get("/api/parking/debt").param("plate", "34ZZZ993").header("X-Forwarded-For", "198.51.100.11"))
                 .andExpect(status().isNotFound());
+        // a self-made X-Forwarded-For does not help: the proxy-appended (rightmost) address is counted
+        mvc.perform(get("/api/parking/debt").param("plate", "34ZZZ993")
+                        .header("X-Forwarded-For", "1.2.3.4, 198.51.100.10"))
+                .andExpect(status().isTooManyRequests());
     }
 
     @Test
