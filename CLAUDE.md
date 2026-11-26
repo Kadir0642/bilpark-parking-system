@@ -2,7 +2,7 @@
 
 Bu dosya, repoda çalışan her yapay zeka agent'ının tek kaynağıdır (Claude Code okur; diğer agent'lar için bkz. AGENTS.md). Yöntem (orkestrasyon) agent'ın skill'indedir; bu dosya yalnızca BilPark'a özgü bilgiyi taşır. Kısa tutulur.
 
-**Durum (26 Kasım 2026):** canlıda; main `0b017c8`; Flyway canlıda V9, main'de V10.
+**Durum (26 Kasım 2026):** canlıda; main `0b017c8`; Flyway canlıda V9, main'de V11.
 
 ## 1. Ürün ve parçalar
 Açık hava otopark takip sistemi (plaka girişi/çıkışı, tarife, tahsilat, vardiya, abonelik, borç sorgusu).
@@ -50,8 +50,8 @@ Açık hava otopark takip sistemi (plaka girişi/çıkışı, tarife, tahsilat, 
 İlk geçiş ayrıntıları: `docs/1-kasim-canliya-gecis.md`. Mobil değişiklikler APK ile gider, deploy gerektirmez.
 
 ## 6. Numara kaydı
-- Main'de uygulanmış son Flyway migration: V10 (yabancı plaka). Canlıda uygulanmış: V9.
-- Sıradaki boş numara: V11 (yabancı plakada ülke kodu için AYRILDI). Numaralar brief'te önceden dağıtılır; kullanılmazsa sıradaki iş alır.
+- Main'de uygulanmış son Flyway migration: V11 (yabancı plaka ülke kodu). Canlıda uygulanmış: V9.
+- Sıradaki boş numara: V12. Numaralar brief'te önceden dağıtılır; kullanılmazsa sıradaki iş alır.
 - Yeni migration eklenince bu bölüm ve Durum satırı aynı PR'da güncellenir.
 
 ## 7. Herkese açıklık kuralları
