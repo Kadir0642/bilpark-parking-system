@@ -23,12 +23,23 @@ class PlateLookupRateLimiterTest {
 
     // window 60 s, 6 lookups per IP, 2 different short plates (<= 5 chars) per IP, 4 different short plates for all
     private PlateLookupRateLimiter limiter(boolean enabled) {
-        return new PlateLookupRateLimiter(enabled, 60, 6, 2, 5, 4, 10000, clock);
+        return limiter(enabled, 4, 10000);
+    }
+
+    private PlateLookupRateLimiter limiter(boolean enabled, int shortGlobal, int maxClients) {
+        return new PlateLookupRateLimiter(enabled, 60, 6, 2, 5, shortGlobal, maxClients, new ClientIp(1), clock);
     }
 
     private static MockHttpServletRequest from(String ip) {
         MockHttpServletRequest r = new MockHttpServletRequest();
         r.setRemoteAddr(ip);
+        return r;
+    }
+
+    /** Behind the platform proxy: the client may send its own header, the proxy appends the real address. */
+    private static MockHttpServletRequest viaProxy(String clientSent, String real) {
+        MockHttpServletRequest r = from("10.9.9.9");
+        r.addHeader("X-Forwarded-For", clientSent == null ? real : clientSent + ", " + real);
         return r;
     }
 
@@ -85,19 +96,40 @@ class PlateLookupRateLimiterTest {
     }
 
     @Test
-    void forwardedForFirstEntryIsTheClient() {
+    void plateRefusedByTheSharedCeilingIsNotRecordedForTheClient() {
+        PlateLookupRateLimiter l = limiter(true, 1, 10000);
+        l.check(PlateLookupRateLimiter.DEBT, from("10.0.2.1"), "AB1");
+        // refused by the shared ceiling: must not use up 10.0.2.2's own allowance of 2 different short plates
+        assertThrows(RateLimitedException.class, () -> l.check(PlateLookupRateLimiter.DEBT, from("10.0.2.2"), "AB2"));
+        assertThrows(RateLimitedException.class, () -> l.check(PlateLookupRateLimiter.DEBT, from("10.0.2.2"), "AB3"));
+        // with AB2/AB3 wrongly recorded this would be refused by the per-IP limit of 2 different short plates
+        l.check(PlateLookupRateLimiter.DEBT, from("10.0.2.2"), "AB1");
+    }
+
+    @Test
+    void proxyAppendedAddressIsTheClient() {
         PlateLookupRateLimiter l = limiter(true);
-        for (int i = 0; i < 6; i++) {
-            MockHttpServletRequest r = from("10.9.9.9"); // proxy
-            r.addHeader("X-Forwarded-For", "203.0.113.7, 10.9.9.9");
-            l.check(PlateLookupRateLimiter.DEBT, r, "34ABC123");
-        }
-        MockHttpServletRequest same = from("10.9.9.9");
-        same.addHeader("X-Forwarded-For", "203.0.113.7");
-        assertThrows(RateLimitedException.class, () -> l.check(PlateLookupRateLimiter.DEBT, same, "34ABC123"));
-        MockHttpServletRequest other = from("10.9.9.9");
-        other.addHeader("X-Forwarded-For", "203.0.113.8");
-        l.check(PlateLookupRateLimiter.DEBT, other, "34ABC123");
+        for (int i = 0; i < 6; i++) l.check(PlateLookupRateLimiter.DEBT, viaProxy(null, "203.0.113.7"), "34ABC123");
+        assertThrows(RateLimitedException.class,
+                () -> l.check(PlateLookupRateLimiter.DEBT, viaProxy(null, "203.0.113.7"), "34ABC123"));
+        l.check(PlateLookupRateLimiter.DEBT, viaProxy(null, "203.0.113.8"), "34ABC123");
+    }
+
+    @Test
+    void spoofedForwardedForCannotEscapeTheLimit() {
+        PlateLookupRateLimiter l = limiter(true);
+        // a new fake address on every request: still counted under the real address the proxy appended
+        for (int i = 0; i < 6; i++) l.check(PlateLookupRateLimiter.DEBT, viaProxy("1.2.3." + i, "203.0.113.7"), "34ABC123");
+        assertThrows(RateLimitedException.class,
+                () -> l.check(PlateLookupRateLimiter.DEBT, viaProxy("1.2.3.99", "203.0.113.7"), "34ABC123"));
+    }
+
+    @Test
+    void spoofedForwardedForCannotBurnSomeoneElsesQuota() {
+        PlateLookupRateLimiter l = limiter(true);
+        for (int i = 0; i < 6; i++) l.check(PlateLookupRateLimiter.DEBT, viaProxy("1.2.3.4", "198.51.100.66"), "34ABC123");
+        // the real 1.2.3.4 is untouched
+        l.check(PlateLookupRateLimiter.DEBT, viaProxy(null, "1.2.3.4"), "34ABC123");
     }
 
     @Test
@@ -107,10 +139,51 @@ class PlateLookupRateLimiterTest {
     }
 
     @Test
-    void manyClientsStayBoundedAndShortCeilingSurvivesEviction() {
-        PlateLookupRateLimiter l = new PlateLookupRateLimiter(true, 60, 6, 2, 5, 4, 100, clock);
+    void capCountsClientsNotKeys() {
+        PlateLookupRateLimiter l = limiter(true, 1000, 3);
+        for (int i = 1; i <= 3; i++) {
+            l.check(PlateLookupRateLimiter.DEBT, from("10.4.0." + i), "AB" + i);       // two windows per client
+            l.check(PlateLookupRateLimiter.DEVELOPER_SEARCH, from("10.4.0." + i), "34ABC123");
+        }
+        assertEquals(3, l.trackedClients());
+    }
+
+    @Test
+    void whenFullNewClientsShareAnOverflowBucketAndTrackedClientsKeepTheirCounters() {
+        PlateLookupRateLimiter l = limiter(true, 1000, 2);
+        for (int i = 0; i < 5; i++) l.check(PlateLookupRateLimiter.DEBT, from("10.5.0.1"), "34ABC123");
+        l.check(PlateLookupRateLimiter.DEBT, from("10.5.0.2"), "34ABC123");
+
+        // full: two new clients share one bucket of 6
+        for (int i = 0; i < 3; i++) {
+            l.check(PlateLookupRateLimiter.DEBT, from("10.5.0.3"), "34ABC123");
+            l.check(PlateLookupRateLimiter.DEBT, from("10.5.0.4"), "34ABC123");
+        }
+        assertThrows(RateLimitedException.class, () -> l.check(PlateLookupRateLimiter.DEBT, from("10.5.0.5"), "34ABC123"));
+        assertEquals(2, l.trackedClients());
+
+        // the tracked client was not reset: one lookup left, then refused
+        l.check(PlateLookupRateLimiter.DEBT, from("10.5.0.1"), "34ABC123");
+        assertThrows(RateLimitedException.class, () -> l.check(PlateLookupRateLimiter.DEBT, from("10.5.0.1"), "34ABC123"));
+
+        // after the window, expired clients are dropped and new ones get their own counters again
+        clock.plusSeconds(60);
+        l.check(PlateLookupRateLimiter.DEBT, from("10.5.0.6"), "34ABC123");
+        assertTrue(l.trackedClients() <= 2);
+        for (int i = 0; i < 5; i++) l.check(PlateLookupRateLimiter.DEBT, from("10.5.0.6"), "34ABC123");
+    }
+
+    @Test
+    void sharedShortCeilingIsNotAffectedByTheClientCap() {
+        PlateLookupRateLimiter l = limiter(true, 4, 100);
         for (int i = 0; i < 4; i++) l.check(PlateLookupRateLimiter.DEBT, from("10.1.0." + i), "AB" + i);
-        for (int i = 0; i < 300; i++) l.check(PlateLookupRateLimiter.DEBT, from("10.2." + (i / 250) + "." + (i % 250)), "34ABC123");
+        for (int i = 0; i < 300; i++) {
+            try {
+                l.check(PlateLookupRateLimiter.DEBT, from("10.2." + (i / 250) + "." + (i % 250)), "34ABC12" + (i % 10));
+            } catch (RateLimitedException ignored) {
+                // past the cap new clients share the overflow bucket
+            }
+        }
         assertThrows(RateLimitedException.class, () -> l.check(PlateLookupRateLimiter.DEBT, from("10.3.0.1"), "AB9"));
     }
 }
