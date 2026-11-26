@@ -46,7 +46,7 @@ class ForeignPlateRead {
   final double height; // adaydaki en büyük karakter yüksekliği
   final double centerDistance; // çerçeve merkezine uzaklık (0 = tam ortada, 1 = köşe)
   /// Plakanın solundaki ülke kodu (D, NL, GB ...; 1-3 harf), plakaya katılmaz; bulunamadıysa null.
-  /// Şimdilik yalnızca tarama sonucunda taşınır; giriş formu / API alanı sonraki işte gelecek.
+  /// Tarama sonucuyla giriş formundaki "Ülke kodu" alanına ön doldurulur.
   final String? countryCode;
   /// Adayda küçük harf ya da Türkçeye özgü harf (Ç Ş Ğ) var: tabela, manşet, ülke adı yazısı.
   /// Plakalar büyük harftir; böyle aday temiz bir adaya karşı seçilmez.

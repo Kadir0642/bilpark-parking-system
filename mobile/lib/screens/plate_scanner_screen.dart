@@ -409,8 +409,9 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
             Align(
               alignment: Alignment.center,
               child: Padding(
-                // çerçeve yüksekliği: ekran eninin %90'ı / 4.5; satır onun hemen altına
-                padding: EdgeInsets.only(top: MediaQuery.sizeOf(context).width * 0.9 / 4.5 + 28),
+                // Align dolgu + metni birlikte ortalar: üst dolgu = çerçeve boyu (en x 0.9 / 4.5) + 40 olunca
+                // metin çerçevenin alt kenarının ~12 px altına düşer
+                padding: EdgeInsets.only(top: MediaQuery.sizeOf(context).width * 0.9 / 4.5 + 40),
                 child: Text(
                   foreignDebugLine(_foreignRead, votes: _foreignVotesNow, needed: readsNeeded(foreign: true)),
                   key: const Key('scanForeignDebug'),

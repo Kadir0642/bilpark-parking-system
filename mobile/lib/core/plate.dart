@@ -15,7 +15,7 @@ const _cyrillicToLatin = {
 
 /// Rus plakası Kiril harflerini (büyük / küçük) Latin büyük eşine çevirir; gerisine dokunmaz.
 String latinizeCyrillic(String raw) {
-  if (!RegExp('[Ѐ-ӿ]').hasMatch(raw)) return raw;
+  if (!RegExp('[\u0400-\u04FF]').hasMatch(raw)) return raw;
   return raw.split('').map((c) => _cyrillicToLatin[c.toUpperCase()] ?? c).join();
 }
 
