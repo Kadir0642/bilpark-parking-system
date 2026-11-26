@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../core/api_client.dart';
 import '../core/format.dart';
+import '../core/plate.dart';
 import '../core/tariff.dart';
 import '../core/theme.dart';
 import '../core/vehicle_types.dart';
@@ -49,6 +50,12 @@ class VehicleDetailScreen extends StatefulWidget {
 
 class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
   late final String _plate = widget.vehicle['currentPlate'].toString();
+  bool get _foreign => widget.vehicle['foreignPlate'] == true;
+  // "Yabancı" rozeti; ülke kodu varsa "Yabancı · D"
+  String get _foreignLabel {
+    final code = parseCountryCode(widget.vehicle['foreignCountryCode']);
+    return code == null ? 'Yabancı' : 'Yabancı · $code';
+  }
   late final String _type = (widget.vehicle['currentType'] ?? 'SMALL').toString();
   late final DateTime _entry = DateTime.parse(widget.vehicle['entryTime']).toLocal();
   bool? _hasSub;
@@ -261,7 +268,10 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Align(alignment: Alignment.centerLeft, child: PlateBadge(_plate, size: PlateSize.large, foreign: widget.vehicle['foreignPlate'] == true)),
+                  Align(alignment: Alignment.centerLeft, child: PlateBadge(_plate,
+                          size: PlateSize.large,
+                          foreign: widget.vehicle['foreignPlate'] == true,
+                          countryCode: parseCountryCode(widget.vehicle['foreignCountryCode']))),
                   const SizedBox(height: 6),
                   Row(
                     children: [
@@ -275,9 +285,10 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                       ),
                     ],
                   ),
-                  if (_hasSub == true || (debt is num && debt > 0)) ...[
+                  if (_foreign || _hasSub == true || (debt is num && debt > 0)) ...[
                     const SizedBox(height: 8),
                     Wrap(spacing: 8, runSpacing: 4, children: [
+                      if (_foreign) StatusBadge(_foreignLabel, tone: BadgeTone.primary),
                       if (_hasSub == true) const StatusBadge('Abone', tone: BadgeTone.sub),
                       if (debt is num && debt > 0) StatusBadge('Eski borç ${formatMoney(debt)}', tone: BadgeTone.danger),
                     ]),

@@ -168,3 +168,32 @@ String? extractRawPlate(String ocrText) {
   }
   return best;
 }
+
+// --- Yabancı plaka ülke kodu (isteğe bağlı, V11) ---
+// Backend PlateNormalizer.normalizeCountryCode ile aynı kural: kırpılır, büyük harfe çevrilir
+// (Türkçe i/ı/İ -> I), yalnızca A-Z, 1-3 karakter. Boş = kod yok.
+const countryCodeMax = 3;
+const countryCodeExample = 'D, NL, GB';
+
+final _countryCode = RegExp('^[A-Z]{1,$countryCodeMax}\$');
+
+String _cleanCountryCode(String raw) => raw.trim().replaceAll('İ', 'I').replaceAll('ı', 'I').replaceAll('i', 'I').toUpperCase();
+
+/// Ülke kodunu sunucuya gidecek biçime getirir; boş ya da geçersizse null.
+String? normalizeCountryCode(String? raw) {
+  if (raw == null) return null;
+  final c = _cleanCountryCode(raw);
+  return _countryCode.hasMatch(c) ? c : null;
+}
+
+/// Ülke kodu için kısa Türkçe neden; boş (isteğe bağlı) ya da geçerliyse null.
+String? countryCodeHint(String raw) {
+  final c = _cleanCountryCode(raw);
+  if (c.isEmpty) return null;
+  if (RegExp(r'[^A-Z]').hasMatch(c)) return 'Ülke kodu yalnızca harf olabilir. Örnek: $countryCodeExample';
+  if (c.length > countryCodeMax) return 'Ülke kodu en fazla $countryCodeMax harf. Örnek: $countryCodeExample';
+  return null;
+}
+
+/// API / SSE yanıtındaki foreignCountryCode alanı (eski sunucuda yok, null olabilir) -> güvenli kod ya da null.
+String? parseCountryCode(dynamic v) => v is String ? normalizeCountryCode(v) : null;

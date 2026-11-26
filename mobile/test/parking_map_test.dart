@@ -185,4 +185,38 @@ void main() {
       await _teardown(tester);
     }, fake.client);
   });
+
+  testWidgets('D) yabancı giriş foreignCountryCode gönderir; TR girişte alan yok; kuyrukta da korunur', (tester) async {
+    _setup(tester);
+    final fake = _Fake();
+    await http.runWithClient(() async {
+      await tester.pumpWidget(_host());
+      await _pumpFor(tester);
+      final state = tester.state<ParkingMapScreenState>(find.byType(ParkingMapScreen));
+      state.checkInVehicle('M AB 1234', 'SMALL', 'LEFT', foreign: true, countryCode: 'd');
+      await _pumpFor(tester, 600);
+      expect(fake.checkIns.last['foreignPlate'], 'true');
+      expect(fake.checkIns.last['foreignCountryCode'], 'D');
+
+      state.checkInVehicle('NL1234', 'SMALL', 'LEFT', foreign: true);
+      await _pumpFor(tester, 600);
+      expect(fake.checkIns.last['foreignPlate'], 'true');
+      expect(fake.checkIns.last.containsKey('foreignCountryCode'), isFalse);
+
+      // TR plakasında (kod verilse bile) alan gönderilmez
+      state.checkInVehicle('34ABC123', 'SMALL', 'LEFT', countryCode: 'D');
+      await _pumpFor(tester, 600);
+      expect(fake.checkIns.last.containsKey('foreignCountryCode'), isFalse);
+      expect(fake.checkIns.last.containsKey('foreignPlate'), isFalse);
+
+      // Çevrimdışı: kuyruk kodu taşır, kartta şeritte görünür
+      fake.online = false;
+      liveSync.status.value = LiveStatus.offline;
+      state.checkInVehicle('GB 99', 'SMALL', 'RIGHT', foreign: true, countryCode: 'gb');
+      await _pumpFor(tester, 600);
+      expect(entryQueue.items.value.single.foreignCountryCode, 'GB');
+      expect(find.byKey(const Key('plateCountryCode')), findsOneWidget);
+      await _teardown(tester);
+    }, fake.client);
+  });
 }

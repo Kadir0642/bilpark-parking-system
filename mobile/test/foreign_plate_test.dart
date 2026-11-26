@@ -114,15 +114,15 @@ void main() {
       expect(enabled(t, 'Sola park'), isTrue);
 
       // yabancı kuralı da geçersiz karakteri reddeder; ipucu metni değişir
-      await t.enterText(find.byType(TextField), 'M.AB');
+      await t.enterText(find.byKey(const Key('plateField')), 'M.AB');
       await t.pump();
       expect(find.text('Yalnızca A-Z harfleri ve rakam kullanın'), findsOneWidget);
       expect(enabled(t, 'Sola park'), isFalse);
-      await t.enterText(find.byType(TextField), '');
+      await t.enterText(find.byKey(const Key('plateField')), '');
       await t.pump();
       expect(find.textContaining(foreignPlateExample), findsWidgets);
 
-      await t.enterText(find.byType(TextField), 'cd 1234');
+      await t.enterText(find.byKey(const Key('plateField')), 'cd 1234');
       await t.pump();
       await t.tap(find.text('Sağa park'));
       await t.pumpAndSettle();
@@ -139,7 +139,7 @@ void main() {
       await t.tap(sw);
       await t.pump();
       expect(enabled(t, 'Sola park'), isFalse);
-      await t.enterText(find.byType(TextField), '34 abc 123');
+      await t.enterText(find.byKey(const Key('plateField')), '34 abc 123');
       await t.pump();
       await t.tap(find.text('Sola park'));
       await t.pumpAndSettle();

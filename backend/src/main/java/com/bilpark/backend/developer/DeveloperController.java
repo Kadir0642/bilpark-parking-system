@@ -2,6 +2,8 @@ package com.bilpark.backend.developer;
 
 import com.bilpark.backend.common.ApiException;
 import com.bilpark.backend.common.ErrorCodes;
+import com.bilpark.backend.common.PlateLookupRateLimiter;
+import jakarta.servlet.http.HttpServletRequest;
 import com.bilpark.backend.license.LicenseService;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,9 +25,12 @@ public class DeveloperController {
     private final DeveloperAuditService auditService;
     private final DeveloperActivityService activityService;
     private final AnnouncementService announcementService;
+    private final PlateLookupRateLimiter plateLookupLimiter;
 
     public DeveloperController(DeveloperService developerService, DeveloperAuditService auditService,
-                               DeveloperActivityService activityService, AnnouncementService announcementService) {
+                               DeveloperActivityService activityService, AnnouncementService announcementService,
+                               PlateLookupRateLimiter plateLookupLimiter) {
+        this.plateLookupLimiter = plateLookupLimiter;
         this.announcementService = announcementService;
         this.auditService = auditService;
         this.activityService = activityService;
@@ -66,7 +71,13 @@ public class DeveloperController {
                                      @RequestParam(required = false) String entityType,
                                      @RequestParam(required = false) String q,
                                      @RequestParam(defaultValue = "0") int page,
-                                     @RequestParam(defaultValue = "50") int size) {
+                                     @RequestParam(defaultValue = "50") int size,
+                                     HttpServletRequest request) {
+        // Plaka araması (tam plaka) hız sınırına tabidir; geçersiz q yine 400 döner
+        DeveloperAuditService.Search search = DeveloperAuditService.resolveSearch(q);
+        if (search != null && search.plate() != null) {
+            plateLookupLimiter.check(PlateLookupRateLimiter.DEVELOPER_SEARCH, request, search.plate());
+        }
         return auditService.list(new DeveloperAuditService.Query(from, to, action, actor, actorRole, entityType, q),
                 page, size);
     }

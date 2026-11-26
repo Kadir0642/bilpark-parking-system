@@ -51,7 +51,7 @@ InputImageRotation? mlkitRotation({
 
 /// Tarama sonucu: [plate] '' ise "Elle yaz". [foreign]: yabancı / özel plaka modunda okundu
 /// (TR düzeltmesi yapılmadı; giriş formunda anahtar açık gelir). [countryCode]: yabancı modda
-/// plakanın solunda okunan ülke kodu (D, NL ...); şimdilik formda kullanılmaz, sonraki iş doldurur.
+/// plakanın solunda okunan ülke kodu (D, NL ...); giriş formunda "Ülke kodu" alanına ön doldurulur.
 class PlateScan {
   final String plate;
   final bool foreign;

@@ -31,6 +31,7 @@ Yöneticinin `GET /api/admin/audit` uç noktasıyla aynı filtreler ve aynı say
   - Diğer her girdi (`ABC`, `AB` gibi kısa harf grupları, `34 ABC 123 giriş`, `1500.50`, 12 karakterden uzun değerler) `400` döner.
   - Arama, tarih penceresinin en yeni 5000 satırını süzer; sınıra ulaşılırsa yanıtta `searchLimited: true` olur (tarih aralığını daraltın). `q` yokken liste eskisi gibi doğrudan veritabanından sayfalanır.
   - `DEV_AUDIT_VIEWED` kaydındaki `q` da maskelenerek yazılır.
+  - Tam plaka araması vatandaş borç sorgusuyla aynı hız sınırına tabidir (ayrı sayaçlar; bkz. `api-asama3.md` "Hız sınırı"). Aşılırsa `429 RATE_LIMITED`. `q` olmadan liste, serbest metin ve reddedilen `q` (400) sayılmaz.
 - `entityId` filtresi yoktur.
 
 `GET /api/developer/audit/actions`: yöneticideki gibi eylem listesi.

@@ -152,6 +152,8 @@ Kullanıcı nesnesi (eski alanlar korunuyor, yenileri: `fullName`, `createdAt`, 
   "page": 0, "size": 50, "totalElements": 1, "totalPages": 1 }
 ```
 
+`autoClosed: true`: bitişi sistem belirledi. Başka cihazdan giriş, gece işi (22:30) ve gün sınırından sonra yapılan çıkış böyledir. Sınır, başlangıç gününün 22:00'si (22:00 ve sonrası başlayan vardiyada 23:59:59); çıkış ya da hesap değişikliği (rol değişimi, pasife alma) bu sınırdan sonra gelirse bitiş sınıra kırpılır, vardiya `autoClosed: true` olur ve `SHIFT_AUTO_CLOSED` denetim kaydı yazılır. Sınırdan önceki çıkış normal kapanıştır (`autoClosed: false`, bitiş = çıkış anı).
+
 ---
 
 ## 5. Kayıt iptali
