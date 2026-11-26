@@ -62,6 +62,7 @@ class DashboardScreenState extends State<DashboardScreen> {
 
   /// Son bilinen içerideki araçlar (sayılar buradan hesaplanır; canlı olaylar buna doğrudan uygulanır).
   List<dynamic> _spots = const [];
+  final SpotFetchGuard _guard = SpotFetchGuard();
 
   /// [spots]: araç sayıları (GET /parking/filter), [summary]: vardiya özeti (GET /parking/history),
   /// [vehicleTypes]: araç tipi listesi. Canlı olay tazelemeleri yalnızca gerekeni ister; ekrana dönüşte
@@ -76,6 +77,7 @@ class DashboardScreenState extends State<DashboardScreen> {
 
   /// Canlı araç olayını sayılara doğrudan uygular (ağ yok). Değişiklik olduysa true.
   bool applyEvent(SyncEvent e) {
+    _guard.record(e); // uçuştaki GET /parking/filter yanıtına da uygulanır
     final next = applyVehicleEvent(_spots, e);
     if (identical(next, _spots)) return false;
     if (mounted) setState(() => _setSpots(next));
@@ -91,17 +93,24 @@ class DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _fetchStats() async {
+    final id = _guard.begin();
     try {
       final spots = await ApiClient.get('/parking/filter', query: {'street': widget.streetCode});
-      if (!mounted) return;
+      if (!mounted) {
+        _guard.cancel(id);
+        return;
+      }
       var list = spots is List ? spots : [];
       // Görevli yalnızca kendi bölgesini görür (harita ekranıyla aynı süzme)
       if (widget.zoneId != null) {
         list = list.where((s) => s['zone'] != null && s['zone']['id'] == widget.zoneId).toList();
       }
+      list = _guard.finish(id, list); // çekme sırasında gelen çıkış/giriş olayları yanıta yeniden uygulanır
       setState(() => _setSpots(list));
     } on ApiException {
       // Bağlantı durumunu canlı senkron bandı gösterir; sayılar son değerde kalır
+    } finally {
+      _guard.cancel(id); // finish çağrıldıysa etkisiz; hata yolunda kayıt birikmesin
     }
   }
 

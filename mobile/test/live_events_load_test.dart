@@ -1,5 +1,6 @@
 // Canlı olay (SSE) yağmuru altında ana kabuk: olaylar yerelde uygulanır, sunucudan okuma birleştirilir,
 // yalnızca görünen sekme için ve yalnızca uygulama öndeyken yapılır.
+import 'dart:async';
 import 'dart:convert';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -49,6 +50,7 @@ Map<String, dynamic> _spot(int n) => {
 void main() {
   late List<String> paths;
   List<Map<String, dynamic>> serverSpots = [];
+  Completer<http.Response>? hold; // bir sonraki /parking/filter yanıtını bekletir
 
   int count(String p) => paths.where((x) => x == p).length;
 
@@ -62,6 +64,7 @@ void main() {
     entryQueue.items.value = [];
     paths = [];
     serverSpots = [];
+    hold = null;
     final prev = FlutterError.onError;
     FlutterError.onError = (d) {
       if (!d.exceptionAsString().contains('overflowed')) prev?.call(d);
@@ -83,6 +86,11 @@ void main() {
       await tester.pump(const Duration(seconds: 3));
     }, () => MockClient((req) async {
           paths.add(req.url.path.replaceFirst('/api', '')); // sahte sunucu: yalnızca yol sayılır
+          if (req.url.path.endsWith('/parking/filter') && hold != null) {
+            final h = hold!;
+            hold = null;
+            return h.future;
+          }
           final list = req.url.path.endsWith('/parking/filter') || req.url.path.endsWith('/parking/history');
           final body = req.url.path.endsWith('/parking/filter') ? jsonEncode(serverSpots) : (list ? '[]' : '{}');
           return http.Response(body, 200, headers: {'content-type': 'application/json; charset=utf-8'});
@@ -179,6 +187,36 @@ void main() {
       await tester.tap(find.text('Ana sayfa'));
       await tester.pump(const Duration(seconds: 1));
       expect(count('/parking/filter'), 1);
+    });
+  });
+
+  testWidgets('atlanan yenileme kaybolmaz: uçuştaki çekme varken gelen giriş olayı için bir kez daha zamanlanır', (tester) async {
+    await boot(tester, () async {
+      await tester.tap(find.text('Cadde'));
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 3));
+      final map = tester.state<ParkingMapScreenState>(find.byType(ParkingMapScreen, skipOffstage: false));
+      paths.clear();
+
+      // Kendi işlemimizin çekmesi uçuşta (yanıt bekliyor)
+      final gate = Completer<http.Response>();
+      hold = gate;
+      final inflight = map.fetchActiveVehicles();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(count('/parking/filter'), 1);
+
+      // Olay geldi: birleştirici ~0,4 sn sonra çalışır ama minAge (2 sn) yüzünden istek atlanır
+      liveSync.debugDeliver(_entered(1));
+      await tester.pump(const Duration(milliseconds: 700));
+      expect(count('/parking/filter'), 1);
+
+      // Uçuştaki çekme (olaydan ÖNCEki görüntü) döner; olayın yenilemesi kaybolmamış olmalı
+      gate.complete(http.Response('[]', 200, headers: {'content-type': 'application/json; charset=utf-8'}));
+      await inflight;
+      // minAge gerçek saatle ölçülür (DateTime.now sahte saatle ilerlemez): 2 sn gerçek süre geçsin
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 2100)));
+      await tester.pump(const Duration(seconds: 6));
+      expect(count('/parking/filter'), 2);
     });
   });
 

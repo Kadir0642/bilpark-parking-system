@@ -233,7 +233,13 @@ class _MainContainerState extends State<MainContainer> with WidgetsBindingObserv
         );
       case _street:
         // Kendi işlemimizin yenilemesi az önce çektiyse yinelenen istek atlanır
-        _mapKey.currentState?.fetchActiveVehicles(minAge: const Duration(seconds: 2));
+        // Atlandıysa (az önce başlamış bir çekme olay öncesini görmüş olabilir) bir kez daha zamanlanır
+        _mapKey.currentState?.fetchActiveVehicles(minAge: const Duration(seconds: 2)).then((ran) {
+          if (!ran && mounted) {
+            _dirty.add(RefreshTarget.map);
+            _gate.request();
+          }
+        });
       case _history:
         _historyKey.currentState?.refresh();
       case _runaways:

@@ -151,6 +151,40 @@ void main() {
       expect(await ApiClient.getToken(), 'test-secret-token');
     });
 
+    test('yazma (POST) + 401: istek YENİDEN GÖNDERİLMEZ, oturum GET /me ile teyit edilir; geçerliyse çıkış yok', () async {
+      await expectLater(
+        run([() => _json(401, '{}'), () => _json(200, '{}')], () => ApiClient.post('/parking/check-in', query: {'plate': 'X'})),
+        throwsA(isA<ApiException>().having((e) => e.isBusy, 'busy', isTrue)),
+      );
+      expect(requests.map((r) => '${r.method} ${r.url.path.split('/').last}'), ['POST check-in', 'GET me']);
+      expect(await ApiClient.getToken(), 'test-secret-token');
+    });
+
+    test('yazma + 401 ve /me de 401: çıkış yapılır, yazma yine tek kez gönderilmiştir', () async {
+      await expectLater(
+        run([() => _json(401, '{}')], () => ApiClient.put('/admin/x', body: {'a': 1})),
+        throwsA(isA<ApiException>().having((e) => e.isUnauthorized, 'isUnauthorized', isTrue)),
+      );
+      expect(requests.where((r) => r.method == 'PUT'), hasLength(1));
+      expect(await ApiClient.getToken(), isNull);
+    });
+
+    test('yazma + 401 sonra /me ağ hatası: oturum korunur', () async {
+      var n = 0;
+      await expectLater(
+        http.runWithClient(
+            () => ApiClient.post('/parking/check-in'),
+            () => MockClient((req) async {
+                  requests.add(req);
+                  if (n++ == 0) return _json(401, '{}');
+                  throw http.ClientException('kesik');
+                })),
+        throwsA(isA<ApiException>().having((e) => e.statusCode, 'statusCode', isNull)),
+      );
+      expect(requests.where((r) => r.method == 'POST'), hasLength(1));
+      expect(await ApiClient.getToken(), 'test-secret-token');
+    });
+
     test('401 sonra yine 401 (gerçekten geçersiz oturum): token silinir, 401 atılır', () async {
       await expectLater(
         run([() => _json(401, '{"error":"x"}')], () => ApiClient.get('/me')),

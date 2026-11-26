@@ -171,6 +171,13 @@ class EntryQueue {
     });
   }
 
+  /// Doğrudan bir gönderim az önce başarısız oldu (ör. 503): kuyruk anında yeniden denemez, üstel bekleme +
+  /// [retryAfter] ile zamanlar. Zaten zamanlanmış bir başlangıç/yeniden deneme ya da süren gönderim varsa onu bozmaz.
+  void retryLater({Duration? retryAfter}) {
+    if (items.value.isEmpty || hasScheduledFlush || _flushing != null) return;
+    _scheduleRetry(retryAfter);
+  }
+
   void _scheduleRetry(Duration? retryAfter) {
     _failStreak++;
     _retryTimer?.cancel();

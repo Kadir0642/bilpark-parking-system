@@ -88,6 +88,7 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
   // aralıkla tek GET /parking/filter olur (kuyruk boşalırken her kayıt için ayrı istek gitmez).
   late final RefreshCoalescer _refresher = RefreshCoalescer(
       action: fetchActiveVehicles, lead: const Duration(milliseconds: 300), window: const Duration(milliseconds: 1500));
+  final SpotFetchGuard _guard = SpotFetchGuard();
   DateTime? _lastFetch; // son GET /parking/filter başlangıcı (aynı anda gelen yinelenen yenilemeyi atlamak için)
   StreamSubscription<EntrySendResult>? _queueSub;
   final GlobalKey _actionsKey = GlobalKey(); // alttaki düğme sütunu: bildirimler bunun üstünde kalır
@@ -132,6 +133,7 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
   bool applyEvent(SyncEvent e) {
     final mine = widget.zoneId != null ? e.zoneId == widget.zoneId : e.street == widget.streetCode;
     if (!mine) return false;
+    _guard.record(e); // uçuştaki GET /parking/filter yanıtına da uygulanır
     final next = applyVehicleEvent(activeVehicles, e);
     if (identical(next, activeVehicles)) return false;
     if (mounted) setState(() => activeVehicles = next);
@@ -166,24 +168,31 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
 
   // --- API İŞLEMLERİ ---
   /// [minAge]: son çekme bundan yeniyse sunucuya gitmez (kendi işlemimizin yenilemesi ile olay yenilemesi çakışınca).
-  Future<void> fetchActiveVehicles({bool userTriggered = false, Duration? minAge}) async {
+  /// Dönüş: istek gerçekten yapıldı mı (false: [minAge] yüzünden atlandı; çağıran isterse yeniden zamanlar).
+  Future<bool> fetchActiveVehicles({bool userTriggered = false, Duration? minAge}) async {
     final last = _lastFetch;
-    if (minAge != null && last != null && DateTime.now().difference(last) < minAge) return;
+    if (minAge != null && last != null && DateTime.now().difference(last) < minAge) return false;
     _lastFetch = DateTime.now();
+    final id = _guard.begin();
     try {
       final data = await ApiClient.get('/parking/filter', query: {'street': _backendStreetEnum});
-      if (!mounted) return;
+      if (!mounted) return true;
       var list = data is List ? data : <dynamic>[];
       if (widget.zoneId != null) {
         list = list.where((spot) => spot['zone'] != null && spot['zone']['id'] == widget.zoneId).toList();
       }
-      setState(() => activeVehicles = list);
+      // Çekme sırasında gelen çıkış/giriş olayları yanıta yeniden uygulanır (çıkan araç canlanmasın)
+      final reconciled = _guard.finish(id, list);
+      setState(() => activeVehicles = reconciled);
     } on ApiException catch (e) {
       // Bağlantı durumunu canlı senkron bandı gösterir; yalnızca kullanıcı işleminden sonraki hata bildirilir
       if (userTriggered && mounted && !e.isUnauthorized) {
         _showSnack('Liste yenilenemedi: ${e.message}', tone: BadgeTone.danger);
       }
+    } finally {
+      _guard.cancel(id);
     }
+    return true;
   }
 
   void _showSnack(String msg, {BadgeTone? tone, Duration duration = const Duration(seconds: 4), SnackBarAction? action}) {
@@ -235,7 +244,7 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
       // Ağ/zaman aşımı ya da sunucu yoğun (503/429): AYNI requestId ile kuyruğa; istek ulaşmışsa sunucu tekrarı
       // çift kayıt yapmaz. Kuyruk bekleyip (üstel bekleme + Retry-After) kendiliğinden yeniden dener.
       if (e.statusCode == null || e.isBusy) {
-        await _queueEntry(entry);
+        await _queueEntry(entry, failure: e);
         return;
       }
       // 409 ALREADY_PARKED / 400 INVALID_PLATE: sunucunun mesajı olduğu gibi gösterilir
@@ -246,14 +255,21 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
     }
   }
 
-  Future<void> _queueEntry(PendingEntry entry) async {
+  /// [failure]: doğrudan gönderimin az önce aldığı hata (ağ/503/429). Verilmişse kuyruk hemen yeniden denemez;
+  /// üstel bekleme ve Retry-After'a göre zamanlar. Verilmemişse (çevrimdışı / önde kayıt var) zamanlanmış bir
+  /// bekleme varsa ona uyulur, yoksa hemen başlanır. Zamanlanmış beklemeyi bozan flush() kullanılmaz.
+  Future<void> _queueEntry(PendingEntry entry, {ApiException? failure}) async {
     final ok = await entryQueue.enqueue(entry);
     if (!ok) {
       _showSnack('${entry.plate} zaten beklemede.', tone: BadgeTone.danger);
       return;
     }
     _showSnack('${entry.plate} bağlantı gelince gönderilecek (beklemede).');
-    unawaited(entryQueue.flush());
+    if (failure != null) {
+      entryQueue.retryLater(retryAfter: failure.retryAfter);
+    } else {
+      entryQueue.flushLater(maxJitter: Duration.zero);
+    }
   }
 
   /// Giriş yapıldıktan sonra: ödenmemiş kaçak borcu varsa engellemeyen uyarı.

@@ -68,3 +68,39 @@ List<dynamic> applyVehicleEvent(List<dynamic> spots, SyncEvent e) {
       return spots;
   }
 }
+
+/// Uçuştaki GET /parking/filter ile canlı olay yarışını çözer. Çekme BAŞLADIKTAN sonra gelen olaylar
+/// (ör. VEHICLE_EXITED) yanıta yansımamış olabilir; yanıt gelince bu olaylar yanıta yeniden uygulanır,
+/// böylece çıkan araç listede yeniden canlanmaz ve ek istek de gerekmez.
+class SpotFetchGuard {
+  int _seq = 0;
+  final Map<int, List<SyncEvent>> _inflight = {};
+
+  /// Çekme başlarken çağrılır; dönen kimlik [finish]/[cancel] için kullanılır.
+  int begin() {
+    final id = ++_seq;
+    _inflight[id] = [];
+    return id;
+  }
+
+  /// Ekrana uygulanan her araç olayı kaydedilir (uçuştaki çekmeler için).
+  void record(SyncEvent e) {
+    for (final l in _inflight.values) {
+      l.add(e);
+    }
+  }
+
+  /// Yanıtı, çekme sırasında gelen olaylarla uzlaştırıp döndürür.
+  List<dynamic> finish(int id, List<dynamic> response) {
+    final evs = _inflight.remove(id);
+    if (evs == null) return response;
+    var out = response;
+    for (final e in evs) {
+      out = applyVehicleEvent(out, e);
+    }
+    return out;
+  }
+
+  /// Hata/iptal: kayıtlar atılır.
+  void cancel(int id) => _inflight.remove(id);
+}

@@ -238,7 +238,19 @@ class ApiClient {
         if (!unauthorizedConfirmed) {
           unauthorizedConfirmed = true;
           await sleeper(backoffDelay(1, base: unauthorizedConfirmDelay, cap: unauthorizedConfirmDelay, rng: random));
-          continue;
+          if (method == 'GET') continue; // okuma: aynı istek yeniden gönderilir
+          // Yazma (POST/PUT) YENİDEN GÖNDERİLMEZ: oturum GET /me ile teyit edilir.
+          final me = Uri.parse('${AppConstants.apiBase}/me');
+          // (ağ hatası burada ApiException olarak yayılır: oturum durumu bilinmiyor, çıkış yok)
+          final check = await _once('GET', me, null, true, limit);
+          if (check.statusCode == 401) {
+            await handleUnauthorized();
+            throw ApiException(401, 'UNAUTHORIZED', sessionExpiredMessage);
+          }
+          // Oturum geçerli (ya da sunucu yoğun): yazma sunucuda işlenmedi, çıkış yok. Çağıran (kuyruk/ekran)
+          // geçici hata olarak ele alır ve kendi kuralıyla (aynı requestId ile) tekrar dener.
+          serverBusy.value = true;
+          throw ApiException(503, 'SERVER_BUSY', busyMessage);
         }
         final err = parseError(status, text);
         await handleUnauthorized();
