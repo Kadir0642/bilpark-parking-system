@@ -1,2 +1,5 @@
+ilk-acilis-flyway-bos-db (1. oturum, o oturumun konsol ciktisindan aktarildi): health=226.7s ilk_giris=+18.1s ilk_db_okuma=+2.9s (spots 200) | Started BackendApplication in 199.199 seconds
 ilk-acilis-bos-db-flyway: health=434.5s ilk_giris=+19.7s ilk_db_okuma=+2.5s (spots 200) | Started BackendApplication in 403.5 seconds
 soguk-0.1cpu-gocmus-db-1: JVM 14:12:06 -> Started 14:16:28 (Spring 244.5 s, surec 261.7 s), ilk /api/health 14:16:29 (~263 s, betik hatasi yuzunden gunlukten); ilk giris (8 dk bosta sonra) 11.2s, ilk spots 7.1s (200)
+soguk-0.1cpu-gocmus-db-2: health=260.5s ilk_giris=+11.9s ilk_db_okuma=+7.4s (spots 200) | Started BackendApplication in 237.098 seconds
+soguk-0.5cpu-gocmus-db: health=36.2s ilk_giris=+1.6s ilk_db_okuma=+1.0s (spots 200) | Started BackendApplication in 32.398 seconds

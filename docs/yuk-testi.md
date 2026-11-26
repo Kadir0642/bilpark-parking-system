@@ -9,7 +9,32 @@ kopyaya karşı koşuldu. **Canlı sisteme hiçbir istek gönderilmedi.** Komutl
 
 ## Kısa sonuç
 
-<!--OZET-->
+**Gerçekçi yük (10 görevli + 2 yönetici + vatandaşlar): dayanıyor ama riskli.** Sıcak JVM'de hata %0, p95 2,5 sn.
+Risk üç durumda ortaya çıkıyor:
+- deploy ya da yeniden başlatmadan sonraki ilk 3-4 dakika: p95 15 sn'yi aşıyor, istek hatası ~%3;
+- xlsx raporlarıyla aynı döneme düşen yığın tükenmesi: ~20 sn duruş;
+- ağ kesintisinden sonra kuyrukların boşaltılması: 10 görevliyle bile çöküyor.
+
+| | 10 görevli (gerçekçi) | 30 görevli (3 kat) | 100 görevli (10 kat) |
+|---|---|---|---|
+| p95 | 2,5 sn | 5,7 sn | 18,6 sn (çoğu 15 sn zaman aşımı) |
+| hata | %0 | %0 | %87 |
+| RSS (512 MB sınır) | 424 MB | 447 MB | 484 MB |
+
+- **Kırılma noktası 30 ile 40 eşzamanlı görevli arasında.** 40 görevlide hata %59. İlk bozulan, uygulamanın
+  0.1 CPU'su. Ardından 5'lik DB havuzu doluyor (190+ bekleyen), 128 MB yığın tam GC'ye giriyor ve DB'ye
+  ulaşamayan istekler **geçerli oturumlara 401** dönüyor. Bu 401'ler görevliyi uygulamadan atıyor ve yeniden
+  giriş (bcrypt) yükü daha da artırıyor.
+- **0.5 CPU tek başına çözmüyor.** 30 görevlide p95 aynı kaldı (5,8 sn), kırılma yine 30-50 arasında; darboğaz
+  havuza, DB'ye ve yığına kaydı. Açılışı ise 260 sn'den 36 sn'ye indirdi.
+- **400 eşzamanlı vatandaş sorunsuz.** 60 sn'lik dalgada `/parking/debt` p95 1,0 sn, hata %0. Farklı IP'lerle hız
+  sınırı devreye girmedi; tek IP'den 200 kişide 120/dk sınırının üstü 429 aldı.
+- **Veri doğruluğu her koşuda tam.** Çift aktif plaka, çift istek kimliği ve tutarsız kayıt sıfır. Aşırı yük ve
+  zaman aşımı altında da `checkInRequestId` idempotentliği tuttu.
+- **Asıl çarpan okuma çoğaltması.** Yazma başına ~36 okuma var: her araç olayında bölgedeki her görevli 4 uç,
+  her panel 5 BI ucu çekiyor. En etkili ücretsiz düzeltmeler bu çoğaltmayı azaltmak ve aşırı yükte 401 yerine
+  503 dönmek (§5).
+- **Hızlı okuma için:** tablolar §3'te, darboğazlar §4'te, öneriler §5'te, simüle edilmeyenler §7'de.
 
 ## 1. Ortam (üretime benzetme)
 
@@ -83,7 +108,8 @@ bağlantısı alamayıp hata dönen istek sayısı. Kaynak: `python -I loadtest/
 | v vatandaş dalgaları 100/200/300/400 + 10 görevli + 2 yönetici | 5.8 | 0.2 | 0.1 sn | 1.8 sn | 7.2 sn | 0.8 sn | 0.1 sn | 3.5 / 10.3 | 456 | 8 | 196¹ | 174¹ | 17 / 74 |
 | v2 200 vatandaş tek IP'den (NAT) | 5.2 | 6.5² | 0.1 sn | 1.3 sn | 1.8 sn | 0.7 sn | 0.1 sn | 2.5 / 9.5 | 450 | 0 | 0 | 0 | 11 / 69 |
 | d kesinti sonrası kuyruk: 30 görevli × ~22 giriş | 7.7 | 38.6 | 13.0 sn | 31.0 sn | 45.0 sn | 15.0 sn | 0.2 sn | 5.7 / 11.5 | 462 | 8 | 195 | 637 | 15 / 70 |
-<!--EK-SATIRLAR-->
+| d2 kesinti sonrası kuyruk: 10 görevli × ~22 giriş | 4.9 | 26.8 | 13.0 sn | 25.4 sn | 33.5 sn | 15.0 sn | 0.3 sn | 4.8 / 10.4 | 449 | 10 | 188 | 236 | 13 / 77 |
+| e dayanıklılık: 10 görevli, 35 dk (JVM yeniden başlatılmış) | 3.4 | 0.17 | 0.5 sn | 5.0 sn | 12.3 sn | 4.5 sn | 0.2 sn | 4.6 / 12.1 | 441 | 20 | 32 | 0 | 17 / 82 |
 
 ⚠ Ana makinede başka işler kısa süreli %90-99 CPU'ya çıktı (emülatör yoktu). Konteyner payları sabit olduğundan
 ortalamaları etkilemedi ama tek tük uç değerleri büyütmüş olabilir. ¹ Hataların hepsi koşunun ilk 50 sn'sinde: 10
@@ -115,8 +141,8 @@ Basamak koşusunda (`k`), her basamağın ilk 30 sn'si oturma süresi sayılıp 
 | **40** | 16.5 | **24 / 31 sn** | **%59 / %78** |
 | 50 | 11.4 | 48 / 60 sn | %85 / %93 |
 
-**İlk bozulan uygulamanın 0.1 CPU'su.** DB değil: DB CPU'su sınırının yarısının altında kaldı ve en çok 8
-bağlantı görüldü. Çöküş şu zincirle ilerliyor:
+**İlk bozulan uygulamanın 0.1 CPU'su.** DB değil. Bu koşuda DB CPU'su ortalama %8,3'te kaldı (sınır %25; anlık
+tepe %28) ve en çok 7 bağlantı görüldü. Uygulama ise sürekli kotasının sınırındaydı. Çöküş şu zincirle ilerliyor:
 1. CPU doyuyor ve istekler yavaşlıyor.
 2. OSIV ve `DELAYED_ACQUISITION_AND_HOLD` yüzünden her istek DB bağlantısını yanıt bitene kadar tutuyor; 5'lik
    havuz doluyor ve 190'dan fazla istek bekliyor.
@@ -146,7 +172,7 @@ bitmedi ve görevlilerin çoğu akışa hiç bağlanamadı.
 farklı IP'lerle hiç devreye girmedi. Tek bir operatör NAT'ı arkasından dakikada 120'den fazla vatandaş gelirse
 fazlası 429 alır. Bu, sınırın bilinçli bir sonucu.
 
-### 3.4 Kesinti sonrası kuyruk boşaltma (30 görevli × ~22 giriş): dayanmıyor
+### 3.4 Kesinti sonrası kuyruk boşaltma: dayanmıyor (30 ve 10 görevliyle)
 
 - 2 dk'lık kesintide 30 görevlinin kuyruğunda toplam 656 giriş birikti. Ağ geri gelince hepsi 0-2 sn içinde
   akışı açtı ve kuyruklarını sırayla göndermeye başladı.
@@ -157,7 +183,14 @@ fazlası 429 alır. Bu, sınırın bilinçli bir sonucu.
   kimliği 0, girişten önce çıkış 0 (`results/*-dogruluk.txt`). İstemcinin zaman aşımına düşüp aynı kimlikle
   yeniden gönderdiği istekler sunucuda tek kayıt üretti. Yani `checkInRequestId` idempotentliği aşırı yükte de
   tuttu.
-<!--D2-->
+- **Gerçekçi ölçekte de dayanmıyor (`d2`, 10 görevli × ~22 = 219 giriş).** Ağ geri geldikten sonraki 10 sn'de
+  hata %75'e çıktı. Sonraki 220 sn boyunca 10 sn'lik p95 çoğunlukla 15-39 sn arasındaydı, hata çoğu pencerede %30-85 oldu.
+Arada birkaç pencere toparlandı (hata %0-7). Koşu bitene
+  kadar (218 sn) kuyruğun ancak üçte biri onaylandı (78 + 1 yarış). Burada da çift kayıt 0. Aynı istek kimliğiyle
+  aynı anda gönderilen iki istekte (yanıt kaybı yarışı) tek kayıt oluştu ve ikinci isteğe aynı kayıt ya da 409
+  döndü (`raceSame=1`, `raceWrong=0`). Neden: her kuyruk girişi bölgedeki görevlilerde ve iki panelde okuma
+  dalgası yaratıyor. Bir de 15 sn'de zaman aşımına düşen girişler sunucuda yine de işleniyor, istemci onları
+  sonra yeniden gönderiyor; yani iş iki kez yapılıyor.
 
 ### 3.5 SSE teslimi
 
@@ -166,7 +199,7 @@ Sistem çökmediği sürece olaylar beklenen alıcıların hepsine 0,1-0,3 sn'de
 dışında. Aşırı yükte sorun teslimde değil, akışı açmakta: bilet, `/sync` ve kullanıcı sorgusu havuz bekliyor,
 `hello` süresi 30-56 sn'ye çıktı.
 
-### 3.7 Dayanıklılık (35 dk, 10 görevli, yeniden başlatılmış JVM ile)
+### 3.6 Dayanıklılık (35 dk, 10 görevli, yeniden başlatılmış JVM ile)
 
 Toplam hata %0,17, p95 5,0 sn. Bu p95 ilk 5 dakikanın soğuk JVM'ini de içeriyor; 10. dakikadan sonra 5 dk'lık
 dilimlerin p95 medyanı 2,6-2,8 sn.
@@ -187,11 +220,53 @@ dilimlerin p95 medyanı 2,6-2,8 sn.
   aynı döneme düşüyor. Ancak istek zaman damgasıyla birebir eşleştirme yapılmadı, bu yüzden "olası neden" olarak
   okunmalı.
 
-<!--SOGUK-->
+### 3.7 Soğuk başlatma
 
-<!--CPU05-->
+`coldstart.sh`: konteyner başlatılır, ilk `/api/health` 200'e kadar geçen süre ölçülür, ardından ilk giriş (admin)
+ve ilk DB'li okuma (`/parking/spots`). Ham satırlar `results/f-soguk.txt`'te.
 
-### 3.6 Veritabanı
+| ölçüm | app CPU | DB | Spring "Started" | ilk `/api/health` | ilk giriş | ilk DB okuması |
+|---|---|---|---|---|---|---|
+| 1. oturum, ilk açılış | 0.1 | boş, Flyway V1-V11 | 199 sn | 227 sn | +18 sn | +3 sn |
+| 2. oturum, ilk açılış ⚠ | 0.1 | boş, Flyway V1-V11 | 404 sn | 435 sn | +20 sn | +3 sn |
+| göçü yapılmış DB (1) | 0.1 | V11, 65 bin kayıt | 245 sn | ~263 sn¹ | +11 sn | +7 sn |
+| göçü yapılmış DB (2) | 0.1 | V11 | 237 sn | 261 sn | +12 sn | +7 sn |
+| göçü yapılmış DB | **0.5** | V11 | **32 sn** | **36 sn** | +1,6 sn | +1,0 sn |
+
+⚠ Docker Desktop yeni açılmıştı ve başka projelerin 10 konteyneri aynı anda kalkıyordu; ölçüm kirli.
+¹ Betik hatası yüzünden süre `app` günlüğündeki zaman damgalarından okundu. Bu ölçümdeki giriş, uygulama 8 dk
+boşta kaldıktan sonra yapıldı.
+
+0.1 CPU'da uygulama **~4,5 dakikada** isteklere cevap vermeye başlıyor. Açıldıktan sonra da ilk giriş 11-20 sn,
+ilk DB okuması 3-7 sn sürüyor. Render'ın sağlık denetimi bu sürede zaman aşımına uğruyorsa deploy başarısız
+sayılabilir. 0.5 CPU'da açılış 7 kat kısa: CPU kotası ve JIT ısınması doğrusal ölçeklenmiyor.
+
+### 3.8 CPU duyarlılığı: 0.5 CPU
+
+`docker compose` içinde `APP_CPUS=0.5` ile; DB, ağ ve senaryo aynı.
+
+| koşu | istek/sn | hata % | p50 | p95 | p99 | app CPU ort/max (%, sınır 50) | DB CPU ort/max (%, sınır 25) | full GC | havuz bekleyen max | havuz zaman aşımı | ana makine CPU ort/max |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 30 görevli, 3 yönetici, 0.1 CPU (`b`) | 15.3 | 0 | 1,2 sn | 5,7 sn | 7,6 sn | 7,8 / 11,2 (sınır 10) | 11,7 / 25,9 | 2 | 94 | 0 | 19 / 82 |
+| 30 görevli, 3 yönetici, **0.5 CPU** (`b05`) | 14.5 | 0 | 1,3 sn | 5,8 sn | 10,1 sn | 12,9 / 48,3 | 15,5 / 28,0 | 8 | 73 | 0 | 16 / 77 |
+| basamak 30→50→75→100, 0.5 CPU (`k05`) | 15.2 | 64.2 | 15,0 sn | 60,0 sn | 60,0 sn | 24,3 / 50,5 | 8,9 / 25,1 | 883 | 197 | 493 | 17 / 79 |
+
+`k05` basamakları (her basamağın ilk 30 sn'si hariç): 30 görevli p95 medyanı 7,2 sn ve hata %0; **50 görevli hata
+%84**; 75 ve 100 görevli hata ~%100.
+
+**5 kat CPU ne gecikmeyi ne de kırılma noktasını değiştirdi.** 30 görevlide p95 aynı (5,7 → 5,8 sn) ve uygulama
+CPU'su sınırının dörtte birinde kaldı. Çöküş yine 30 ile 50 görevli arasında. Bu durumda darboğaz şunlara kaydı:
+- **5 bağlantılık havuz ve ~20 ms'lik DB gidiş-dönüşleri:** 73-197 istek bağlantı bekledi. Her istek birkaç sorgu
+  ve OSIV yüzünden yanıt bitene kadar bağlantıyı tutuyor.
+- **0.25 CPU'luk DB:** 30 görevlide DB CPU'su %28'e kadar çıktı; sınırı %25.
+- **128 MB'lık yığın:** kırılma koşusunda 883 tam GC oldu. CPU arttığı için her biri kısa sürdü (en uzunu 0,3 sn),
+  ama sürekli GC yapıldı.
+
+Sonuç: ücretli bir CPU artışı tek başına bir şey kazandırmıyor. Önce olay başına okuma sayısı (öneri 1-3),
+bağlantının tutulma süresi (öneri 5) ve yığın (öneri 6) ele alınmalı. Ardından havuz büyütülebilir: Neon ~104
+bağlantıya izin veriyor; `maximum-pool-size` 10-15 ücretsiz bir deneme.
+
+### 3.9 Veritabanı
 
 - 30 görevlide DB CPU'su ortalama %11,7, tepe %26; sınır %25. DB çalışma süresinin çoğunu 4 sorgu alıyor
   (`*-sorgular.txt`):
@@ -208,11 +283,15 @@ dilimlerin p95 medyanı 2,6-2,8 sn.
 - `bi/shifts` her açık vardiya için ayrı bir ciro sorgusu atıyor (N+1). Sorgu dizinli olduğu için tek başına ucuz
   (0,06 ms), ama 30 görevlide yönetici yenilemesi başına 30 ek gidiş-dönüş demek. Her biri ~20 ms Neon gecikmesi
   taşıyor ve bağlantıyı tutuyor.
-- Kullanıcı (`users`) ve bölge (`zones`) sorguları en çok çağrılanlar: 30 görevlide 10 dk'da 24 bin ve 16 bin
-  çağrı. Her kimlikli istekte kullanıcı 2 kez okunuyor, kayıt listelerinde bölge tek tek yükleniyor. Tek tek
-  ucuzlar ama her biri bir Neon gidiş-dönüşü.
+- En çok çağrılan sorgular ucuz ama sayıca çok (30 görevli, 10 dk, 9.164 HTTP isteği):
+  - `zones` id ile 24.273 kez: kayıt ve araç listelerinde bölge satır satır yükleniyor (N+1);
+  - vardiya cirosu 16.102 kez: `bi/shifts` N+1'i, yenileme başına ~30;
+  - `users` 8.852 kez: kimlikli her istekte `JwtAuthFilter` bir kez okuyor, işlem uçlarında `currentUser` bir
+    kez daha.
 
-### 3.7 İstek dağılımı (30 görevli, 10 dk)
+  Her biri ayrı bir Neon gidiş-dönüşü (~20 ms) ve bu süre boyunca bağlantı tutuluyor.
+
+### 3.10 İstek dağılımı (30 görevli, 10 dk)
 
 9.164 isteğin yalnızca 251'i yazma (giriş/çıkış/iptal/kaçak), yani **yazma başına ~36 okuma** var. Okumaların
 dağılımı:
@@ -222,9 +301,10 @@ dağılımı:
 
 Yük, görevli sayısıyla değil "görevli sayısı × bölgedeki görevli sayısı" ile büyüyor: aynı 6 sahada 10 görevli
 3,5 istek/sn üretirken 30 görevli 15,3 istek/sn üretti (3 kat görevli, ~4,3 kat istek).
+
 ## 4. Darboğazlar (önem sırasıyla)
 
-1. **Uygulamanın 0.1 CPU'su.** Ölçülen her senaryoda ilk doyan kaynak bu. Sorun dört şeyin üst üste binmesi:
+1. **Uygulamanın 0.1 CPU'su.** 0.1 CPU'daki her senaryoda ilk doyan kaynak bu. 0.5 CPU'da sıra havuza, DB'ye ve yığına geçiyor (§3.8). Sorun dört şeyin üst üste binmesi:
    olay başına çok sayıda okuma, JSON serileştirme, bcrypt ve SerialGC'nin CFS kısıtında 10 kat uzayan
    duraklamaları.
 2. **Olay çoğaltması.** Tek bir yazma, bölgedeki her görevlide 4 okuma ve her yönetici panelinde 5 BI okuması
@@ -235,7 +315,7 @@ Yük, görevli sayısıyla değil "görevli sayısı × bölgedeki görevli say�
 4. **Aşırı yükte 401, oturum düşmesi ve giriş fırtınası.** `JwtAuthFilter` DB hatasını "geçersiz token" sayıyor.
    İstemci de 401'de oturumu kapatıp yeniden girişe (bcrypt) zorluyor. Aşırı yük böylece kendini büyütüyor. Vardiya
    başı ya da deploy sonrası toplu giriş de aynı yolu kullanıyor.
-5. **Soğuk başlangıç ve soğuk JVM.** 0.1 CPU'da açılış dakikalar sürüyor (§3.8). Açılıştan sonraki ilk 3-4 dk'da
+5. **Soğuk başlangıç ve soğuk JVM.** 0.1 CPU'da açılış dakikalar sürüyor (§3.7). Açılıştan sonraki ilk 3-4 dk'da
    p95 15 sn'yi aşıyor.
 6. **Küçük yığın (128 MB) ve SerialGC.** Yük altında yığın dolup tam GC'ye giriyor (2-4 sn duraklama). RSS
    420-480 MB ile 512 MB sınırına yakın.
@@ -252,13 +332,13 @@ Hiçbiri bu PR'da uygulanmadı. "Etki" sütunu ölçümden çıkarılan beklenti
 | 1 | **Panelin olay başına yenilemesini seyrelt:** 800 ms kısma yerine 5-10 sn'lik debounce. `bi/income-*` ve `bi/shifts`'i olayda değil 30-60 sn'de bir ya da sekme görünürken çek. Olay yükünü kullan (`spots` listesine eklemek/çıkarmak için yeniden çekme gerekmez). | `web/admin-panel.html` (`scheduleVehicleRefresh`) | İsteklerin ~%29'u ve DB süresinin büyük kısmı (en ağır 4 sorgunun 3'ü) panelden geliyor; bunun çoğu kalkar | ücretsiz |
 | 2 | **Görevli tepkisini incelt:** gösterge ve harita aynı `/parking/filter`'ı iki kez çekiyor, birleştir. `/vehicle-types`'ı her olayda değil yalnızca `VEHICLE_TYPES_UPDATED`'ta yükle. `/parking/history`'yi olayda değil gösterge görünürken ve debounce ile çek. Daha iyisi: `VEHICLE_ENTERED/EXITED` yükündeki plaka/yer bilgisiyle listeyi istemcide güncelle. | `mobile/lib/main.dart`, `screens/dashboard_screen.dart`, `screens/parking_map_screen.dart` | Olay başına görevli okuması 4'ten 0-1'e iner; isteklerin ~%60'ı olay tepkisi | ücretsiz (APK) |
 | 3 | **HEARTBEAT'te bölge sürümü:** HEARTBEAT görevliye "kendi görebildiği son sürümü" taşısın ya da istemci yalnızca görünür olay kaçırdığında catch-up yapsın. | `sync/SyncService.java` (heartbeat), `mobile/lib/core/live_sync.dart` | Her görevlinin 25 sn'de bir yaptığı `/sync?since` çağrısı biter (30 görevlide 548/10 dk) | ücretsiz |
-| 4 | **Aşırı yükte oturum düşürme:** `JwtAuthFilter`'da DB/havuz hatasını "geçersiz token"dan ayır ve 503 dön. İstemci 401'de oturumu kapatsın, 503/zaman aşımında beklesin. Kullanıcı ayrıntılarını kısa süre (ör. 30-60 sn) önbelleğe al: istek başına 2 kullanıcı sorgusu 1'e ya da 0'a iner. | `auth/JwtAuthFilter.java`, `auth/CustomUserDetailsService.java`, `controller/*` (`currentUser`), `mobile/lib/core/api_client.dart` | Çöküşteki kendini büyüten döngü (401 → yeniden giriş → bcrypt) kırılır | ücretsiz |
-| 5 | **Bağlantıyı istek boyunca tutma:** `spring.jpa.open-in-view` zaten kapalı; elle eklenen `OpenEntityManagerInViewInterceptor`'ı kaldır ve tembel ilişkileri sorguda `join fetch` ile çöz. Ya da `HibernateJpaVendorAdapter`'da bağlantıyı işlem sonunda bırak (`DELAYED_ACQUISITION_AND_RELEASE_AFTER_TRANSACTION`). | `config/OpenEntityManagerInViewConfig.java`, ilgili repository sorguları | Havuz bağlantısı JSON serileştirme ve xlsx üretimi boyunca tutulmaz; 5'lik havuz çok daha geç dolar | ücretsiz |
-| 6 | **JVM bayrakları:** `-XX:+UseSerialGC -Xss512k -XX:MaxRAMPercentage=40 -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=48m -XX:TieredStopAtLevel=1` (açılış ve 0.1 CPU için C1). Spring Boot'un CDS/AOT önbelleğiyle (`-XX:SharedArchiveFile`, eğitim koşusu Dockerfile'da) açılışı kısalt. Bayraklar 512 MB'ta RSS'i ölçerek ayarlanmalı. | `backend/Dockerfile` | Daha az tam GC, daha kısa açılış (CDS ile tipik olarak %30-50), sınıra yakın RSS kontrol altında | ücretsiz |
+| 4 | **Aşırı yükte oturum düşürme:** `JwtAuthFilter`'da DB/havuz hatasını "geçersiz token"dan ayır ve 503 dön. İstemci 401'de oturumu kapatsın, 503/zaman aşımında beklesin. Kullanıcı ayrıntılarını kısa süre (ör. 30-60 sn) önbelleğe al: istek başına 1-2 kullanıcı sorgusu çoğunlukla 0.a iner. | `auth/JwtAuthFilter.java`, `auth/CustomUserDetailsService.java`, `controller/*` (`currentUser`), `mobile/lib/core/api_client.dart` | Çöküşteki kendini büyüten döngü (401 → yeniden giriş → bcrypt) kırılır | ücretsiz |
+| 5 | **Bağlantıyı istek boyunca tutma:** `spring.jpa.open-in-view` zaten kapalı; elle eklenen `OpenEntityManagerInViewInterceptor`'ı kaldır ve tembel ilişkileri sorguda `join fetch` ile çöz. Ya da `HibernateJpaVendorAdapter`'da bağlantıyı işlem sonunda bırak (`DELAYED_ACQUISITION_AND_RELEASE_AFTER_TRANSACTION`). Ardından `maximum-pool-size`'ı 10-15'e çıkarmayı dene (Neon ~104'e izin veriyor). | `config/OpenEntityManagerInViewConfig.java`, ilgili repository sorguları, `application.properties` | Havuz bağlantısı JSON serileştirme ve xlsx üretimi boyunca tutulmaz; 5'lik havuz çok daha geç dolar | ücretsiz |
+| 6 | **JVM bayrakları:** `-XX:+UseSerialGC -Xss512k -XX:MaxRAMPercentage=40 -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=48m -XX:TieredStopAtLevel=1` (açılış ve 0.1 CPU için C1). Spring Boot'un CDS/AOT önbelleğiyle (`-XX:SharedArchiveFile`, eğitim koşusu Dockerfile'da) açılışı kısalt. Bayraklar 512 MB'ta RSS'i ölçerek ayarlanmalı. | `backend/Dockerfile` | Daha az tam GC (dayanıklılık koşusunda iki kez 8'er tam GC ile ~20 sn duruş görüldü), daha kısa açılış (CDS'nin etkisi burada ölçülmedi), sınıra yakın RSS kontrol altında. xlsx raporlarında satırları listeye toplamak yerine akışla yazmak (`Stream`/sayfalı sorgu) yığın baskısını da azaltır | ücretsiz |
 | 7 | **Eksik dizinler ve BI sorguları:** yeni migration (V12+) ile `parking_records (street, entry_time DESC)` ve `parking_records (entry_time DESC)`, ciro için `(status, exit_time) INCLUDE (fee)`. `bi/shifts` N+1'ini tek `GROUP BY collected_by_id, device_id` sorgusuna çevir. Tipe göre ciroyu kısa süre önbelleğe al. | `backend/src/main/resources/db/migration/V12__...sql`, `repository/ParkingRecordRepository.java`, `controller/ParkingController.java` | `history` ve son 100 kayıt Seq Scan'den dizin taramasına iner (90-100 ms → birkaç ms); büyüyen tabloda doğrusal artış durur | ücretsiz |
-| 8 | **Yeniden bağlanmaya jitter:** üstel beklemeye ±%50 rastgele sapma ekle. Kesinti sonrası kuyruğu tek seferde değil aralıklı (ör. 0,5-1 sn) ve rastgele gecikmeyle başlat. | `mobile/lib/core/live_sync.dart`, `mobile/lib/core/entry_queue.dart`, `web/admin-panel.html` (`liveFail`) | Deploy veya kesinti sonrası herkesin aynı saniyede bağlanması ve kuyruk boşaltması dağılır | ücretsiz |
+| 8 | **Kuyruk boşaltmayı ve yeniden bağlanmayı yumuşat:** kuyruk gönderiminde girişler arasına 0,5-1 sn bekleme koy, başlangıca 0-10 sn rastgele gecikme ekle. Kuyruk kaynaklı girişler için olayları sunucuda toplu yayınla (ya da istemci kuyruk boşalırken olay başına değil sonunda bir kez yenilesin). Kuyruk isteğinin zaman aşımını uzat (ör. 30 sn): 15 sn'de vazgeçilen istek sunucuda yine de işleniyor ve sonra yeniden gönderiliyor. Üstel beklemeye ±%50 jitter ekle. | `mobile/lib/core/entry_queue.dart`, `mobile/lib/core/live_sync.dart`, `mobile/lib/screens/parking_map_screen.dart`, `web/admin-panel.html` (`liveFail`) | Gerçekçi ölçekte bile (10 görevli × 20 giriş) çöken kesinti sonrası boşaltma dağılır; aynı işin iki kez yapılması azalır | ücretsiz |
 | 9 | **Giriş fırtınası:** bcrypt maliyeti 10 kalsın; ama token süresi (24 sa) vardiyayı kapsıyor, gereksiz yeniden girişe yol açan 401'leri (öneri 4) kes. Vardiya başında uygulama girişleri birkaç saniyeye yaysın. | `mobile/lib/screens/auth_screen.dart`, öneri 4 | 0.1 CPU'da tek giriş 1-5 sn sürüyor, toplu girişte 15 sn'yi aşıyor | ücretsiz |
-| 10 | **Daha fazla CPU:** 0.5 CPU'da kırılma noktası (§3.9). Render'ın ücretli planı ya da başka bir barındırma. | — | Bkz. §3.9 | **ücretli** (karar kullanıcının) |
+| 10 | **Daha fazla CPU:** Render'ın ücretli planı ya da başka bir barındırma. | — | 0.5 CPU'da açılış 260 sn'den 36 sn'ye indi. Ama 30 görevlide p95 değişmedi (5,7 → 5,8 sn) ve kırılma noktası yine 30-50 görevli arasında kaldı (§3.8). Öneri 1-6 olmadan tek başına yetmez | **ücretli** (karar kullanıcının) |
 
 Öneri 1-4 birlikte, görevli başına okuma yükünü kabaca 3-5 kat düşürür (olay başına okuma 4+5 → 0-1+0,
 `/sync` catch-up yok). Bu, 0.1 CPU'da da kırılma noktasını 30-40 görevlinin epey üstüne taşıyabilir; doğrulamak
@@ -270,16 +350,16 @@ için ölçmek gerekir.
 |---|---|---|
 | Hikari havuzu | `maximum-pool-size=5`, `minimum-idle=0`, `idle-timeout=30s`, `connection-timeout=20s` (`application.properties`). Neon 0.25 CU sınırı ~104 bağlantı; sınırlayan Neon değil, 5'lik havuz. 30 sn boşta kalan bağlantı kapanır, yeniden açmak Neon'da TLS + kimlik doğrulama (+ uyanma) ister. | `application.properties` |
 | Bağlantı istek boyunca tutuluyor | `OpenEntityManagerInViewInterceptor` (SSE hariç her istek) + Spring'in `HibernateJpaVendorAdapter` varsayılanı `hibernate.connection.handling_mode=DELAYED_ACQUISITION_AND_HOLD`: istek DB'ye ilk dokunduğu andan **yanıt bitene kadar** (JSON serileştirme, xlsx üretimi dahil) havuz bağlantısını tutar. 0.1 CPU'da istekler yavaş olduğu için 5 bağlantı çabuk doluyor. | `OpenEntityManagerInViewConfig.java`, spring-orm 7.0.5 sınıf sabitleri, Hikari günlüğü `active=5, waiting>0` |
-| İstek başına kullanıcı sorgusu | Her kimlikli istekte `JwtAuthFilter` `loadUserByUsername` + controller `currentUser` = aynı kullanıcı için 2 sorgu. | `JwtAuthFilter.java`, `ParkingController.currentUser` |
+| İstek başına kullanıcı sorgusu | Her kimlikli istekte `JwtAuthFilter` `loadUserByUsername`; işlem uçlarında controller `currentUser` aynı kullanıcıyı bir kez daha okur (30 görevlide 10 dk'da 8.852 `users` sorgusu). | `JwtAuthFilter.java`, `ParkingController.currentUser` |
 | Görevli olay çoğaltması | Bölgedeki HER araç olayında bölgedeki HER görevli: harita `/parking/filter` (300 ms debounce) + gösterge `/parking/filter` + `/parking/history` + `/vehicle-types` (500 ms debounce). `/parking/filter` caddenin tamamını döner, istemci bölgeye süzer. | `parking_map_screen.dart`, `main.dart`, `dashboard_screen.dart` |
 | HEARTBEAT catch-up | Görevli yalnızca kendi bölgesinin olaylarını alır ama HEARTBEAT (25 sn) en son GLOBAL sürümü taşır; başka bölgede olay olduysa her görevli her 25 sn'de `/sync?since=` çağırır (sunucu 500'lük sayfalarla tarar, görünmeyenleri atar). | `live_sync.dart` `_onFrame`, `SyncService.heartbeat` |
 | Yönetim paneli | Her araç olayında (800 ms kısma) 5 uç: `spots`, `bi/income-by-type/details`, `bi/income-summary` (4 SUM), `bi/last-records` (son 100), `bi/shifts` (açık vardiya BAŞINA ayrı ciro sorgusu, N+1). | `admin-panel.html` `scheduleVehicleRefresh`, `ParkingController.getActiveShifts` |
 | Eksik dizinler | `parking_records(street, entry_time)` yok: `/parking/history` 65 bin satırda Seq Scan ~90 ms (0.25 CPU). `parking_records(entry_time)` yok: son 100 kayıt ~99 ms. Ciro toplamları ve tipe göre ciro tüm tabloyu tarıyor (116-184 ms). Süre tablo büyüdükçe doğrusal artar. | `results/explain.txt` |
-| JVM bayrakları | Dockerfile'da yok: 512 MB'ta varsayılan **128 MB yığın** (MaxRAMPercentage=25), **SerialGC**, C2 JIT. RSS 375-420 MB: yığın dışı (metaspace, kod önbelleği, iş parçacıkları) büyük. Başlangıç 0.1 CPU'da 3-7 dk. | `java -XX:+PrintFlagsFinal`, `coldstart.sh` |
+| JVM bayrakları | Dockerfile'da yok: 512 MB'ta varsayılan **128 MB yığın** (MaxRAMPercentage=25), **SerialGC**, C2 JIT. RSS 330-485 MB (koşulara göre): yığın dışı (metaspace, kod önbelleği, iş parçacıkları) büyük. Başlangıç 0.1 CPU'da 3-7 dk. | `java -XX:+PrintFlagsFinal`, `coldstart.sh` |
 | Tomcat | Ayar yok: 200 iş parçacığı, 8192 bağlantı. SSE `SseEmitter` (async) iş parçacığı tutmaz; DB bağlantısı da tutmaz (SSE yolu OSIV dışı). Akış sayısı sınırlayıcı değil. | `SyncService.connect`, `OpenEntityManagerInViewConfig` |
 | SSE yayını | `broadcast` yazan isteğin iş parçacığında, commit sonrası, bağlı bütün istemcilere sırayla `send` yapar (bağlantı hâlâ tutulurken). Az istemciyle sorun değil; yüzlerce akışta yazma isteğinin süresine eklenir. | `SyncService.broadcast` |
 | İstemci yeniden bağlanma | Mobil ve panel üstel bekleme 1-2-4-8-16-30 sn, **rastgele sapma (jitter) yok**: sunucu yeniden başlayınca bütün akışlar aynı anda kopar ve aynı saniyelerde geri bağlanır (`/sync?since` + `/events`, her biri 2 kullanıcı sorgusu + tekrar oynatma). `ApiClient` tek istekleri yeniden denemez (iyi). Kuyruk görevli başına sırayla gönderilir (iyi). | `live_sync.dart` `_defaultBackoff`, `admin-panel.html` `liveFail` |
-| Ağır iş | xlsx raporları SXSSF ile akışla yazılıyor (bellek iyi) ama satırlar listeye yükleniyor ve 0.1 CPU'da 20+ sn sürüyor; süre boyunca bir havuz bağlantısını tutuyor. PDF yok. | `XlsxWriter.java`, `ReportController` |
+| Ağır iş | xlsx raporları SXSSF ile akışla yazılıyor (bellek iyi) ama satırlar listeye yükleniyor ve 0.1 CPU'da 2,5-30 sn sürüyor (dönem, kayıt ve personel raporu); süre boyunca bir havuz bağlantısını tutuyor. PDF yok. | `XlsxWriter.java`, `ReportController` |
 | Giriş | bcrypt (maliyet 10) 0.1 CPU'da tek giriş ~1-5 sn, soğuk JVM'de ~18 sn; vardiya başında herkes aynı anda girerse sıraya girer. | koşu çıktıları |
 
 ## 7. Simüle edilmeyenler ve sınırlar
@@ -297,7 +377,7 @@ için ölçmek gerekir.
   Pages'ten gelir, backend'e yük değil).
 - **Yük üretecinin konumu.** Tek makineden ve tek IP'den çalıştı. Vatandaşların IP'si X-Forwarded-For ile
   ayrıştırıldı.
-- **Veri büyüklüğü.** 90 günlük ~65 bin kayıt. Bir yıllık veride BI ve geçmiş sorguları ~4 kat yavaşlar (§3.6).
+- **Veri büyüklüğü.** 90 günlük ~65 bin kayıt. Bir yıllık veride BI ve geçmiş sorguları ~4 kat yavaşlar (§3.9).
 - **Ana makine gürültüsü.** Başka projelerin konteynerleri ve başka bir agent'ın derlemeleri aynı makinede çalıştı
   (§1). Android emülatörü hiçbir koşu sırasında açık değildi.
 - **Ölçüm için açılan günlükler.** Hikari DEBUG ve `-Xlog:gc` küçük bir ek yük getiriyor.
