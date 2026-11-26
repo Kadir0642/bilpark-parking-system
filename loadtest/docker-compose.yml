@@ -1,0 +1,96 @@
+# BilPark yük testi yığını (canlıdan tamamen ayrı, yalnızca bu bilgisayarda).
+# Rehber: loadtest/README.md
+#
+# Üretime benzer sınırlar:
+#   app : Render Free  -> 0.1 CPU, 512 MB (APP_CPUS ile değiştirilebilir, ör. 0.5)
+#   db  : Neon Free    -> 0.25 CPU, 1 GB, max_connections=104 (0.25 CU), doğrudan bağlantı (havuzlayıcı yok)
+#   net : app -> toxiproxy -> db, her yönde DB_LATENCY_MS gecikme (varsayılan 10 ms, ~20 ms gidiş-dönüş)
+#
+# Proje adı her zaman bilpark-yuk olmalı:  docker compose -p bilpark-yuk -f loadtest/docker-compose.yml ...
+# Portlar başka yığınlarla çakışmasın diye 8090 / 5440 seçildi ve yalnızca 127.0.0.1'e açılır.
+
+name: bilpark-yuk
+
+services:
+  db:
+    image: postgres:16-alpine
+    cpus: ${DB_CPUS:-0.25}
+    mem_limit: 1g
+    memswap_limit: 1g
+    environment:
+      POSTGRES_DB: bilpark_yuk
+      POSTGRES_USER: bilpark
+      POSTGRES_PASSWORD: test-secret-db
+      PGTZ: Europe/Istanbul
+      TZ: Europe/Istanbul
+    command:
+      - postgres
+      - -c
+      - max_connections=104
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.track=all
+      - -c
+      - log_min_duration_statement=200
+      - -c
+      - track_io_timing=on
+    ports:
+      - "127.0.0.1:5440:5432"
+    volumes:
+      - yuk_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bilpark -d bilpark_yuk"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  # Neon'a giden ağ gecikmesi: app -> toxiproxy:5432 -> db:5432 (gecikme run.sh içinde eklenir)
+  dbproxy:
+    image: ghcr.io/shopify/toxiproxy:2.9.0
+    command: ["-host=0.0.0.0", "-config=/config/toxiproxy.json"]
+    volumes:
+      - ./toxiproxy.json:/config/toxiproxy.json:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    image: bilpark-yuk-backend:latest
+    build: ../backend
+    cpus: ${APP_CPUS:-0.1}
+    mem_limit: 512m
+    memswap_limit: 512m
+    environment:
+      DB_URL: jdbc:postgresql://dbproxy:5432/bilpark_yuk
+      DB_USERNAME: bilpark
+      DB_PASSWORD: test-secret-db
+      JWT_SECRET: test-secret-jwt-yuk-testi-0123456789abcdef0123456789abcdef
+      ADMIN_PASSWORD: test-secret-admin
+      OFFICER_PASSWORD: test-secret-officer
+      DEVELOPER_PASSWORD: test-secret-developer
+      # Üretimdeki Dockerfile ENTRYPOINT'i aynen kalır; yalnızca saat dilimi (demo ile aynı) ve GC günlüğü eklenir.
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Europe/Istanbul -Xlog:gc:stdout:uptime
+      # Hikari havuz istatistikleri her 30 sn'de günlüğe (aktif / boşta / bekleyen)
+      LOGGING_LEVEL_COM_ZAXXER_HIKARI_POOL_HIKARIPOOL: DEBUG
+    depends_on:
+      - dbproxy
+    ports:
+      - "127.0.0.1:8090:8080"
+
+  # Yük üreteci: Node 24, bağımlılık yok (loadtest/gen/yuk.mjs). Yalnızca "run" ile çalıştırılır.
+  gen:
+    image: node:24-alpine
+    profiles: ["gen"]
+    working_dir: /gen
+    volumes:
+      - ./gen:/gen:ro
+      - ./results:/results
+    environment:
+      BASE: http://app:8080
+      TZ: Europe/Istanbul
+
+volumes:
+  yuk_pgdata:
