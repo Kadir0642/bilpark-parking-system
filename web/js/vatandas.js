@@ -420,7 +420,7 @@
                 izin: 'Kamera izni verilmedi. Plakanızı yazarak devam edebilirsiniz.',
                 desteklenmiyor: 'Bu tarayıcıda kamera açılamıyor. Plakanızı yazarak devam edebilirsiniz.',
                 kamera: 'Kamera açılamadı. Plakanızı yazarak devam edebilirsiniz.',
-                motor: 'Okuma aracı yüklenemedi (internet bağlantısını kontrol edin). Plakanızı yazarak devam edebilirsiniz.',
+                motor: 'Okuma aracı yüklenemedi ya da doğrulanamadı. Plakanızı yazarak devam edebilirsiniz.',
                 yukleme: 'Kamera özelliği yüklenemedi. Plakanızı yazarak devam edebilirsiniz.',
             };
             camNotice(msgs[result.reason] || msgs.kamera);

@@ -117,8 +117,14 @@ body.has-result .hero-lead { display: none; }
 .next-text p { font-size: 15px; }
 .next-card .btn-dashed { background: var(--surface); }
 
-#breakdown .breakdown-row { grid-template-columns: minmax(0, 1fr) 5.4em 5.4em; }
-#breakdown .breakdown-row > span:not(:first-child) { text-align: right; white-space: nowrap; }
+/* Döküm 375 px'te tek satırda kalır: sabit genişlikli süre sütunları (satırlar arasında hizalı), tarih kısalırsa üç nokta */
+#breakdown .breakdown-row { grid-template-columns: minmax(0, 1fr) 6.6em 6.6em; gap: var(--s-2); padding: var(--s-2) 10px; font-size: 14px; }
+#breakdown .breakdown-row > span { white-space: nowrap; }
+#breakdown .breakdown-row > span:first-child { overflow: hidden; text-overflow: ellipsis; }
+#breakdown .breakdown-row > span:not(:first-child) { text-align: right; }
+#breakdown .breakdown-head { font-size: 13px; }
+#breakdown .breakdown-ranges { padding: 0 10px var(--s-3); }
+@media (max-width: 420px) { .card-body { padding: var(--s-4); } .card-head { padding: var(--s-4) var(--s-4) 0; } .card-foot { padding: 0 var(--s-4) var(--s-4); } }
 .breakdown-ranges { padding: 0 var(--s-3) var(--s-3); display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; }
 .range { display: inline-flex; gap: 4px; padding: 2px 8px; border-radius: 999px; }
 .range-paid { background: var(--primary-soft); color: var(--on-primary-soft); }

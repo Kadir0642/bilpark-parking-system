@@ -37,7 +37,7 @@ after(async () => {
   if (srv) srv.close();
 });
 
-async function openPage(query, { width = 375, height = 812, b = browser } = {}) {
+async function openPage(query, { width = 375, height = 812, b = browser, tamper = null } = {}) {
   const page = await b.newPage();
   await page.setViewport({ width, height, deviceScaleFactor: 1 });
   const log = { requests: [], blocked: [], cdn: [], nonGet: [] };
@@ -53,7 +53,9 @@ async function openPage(query, { width = 375, height = 812, b = browser } = {}) 
       const file = m[1] + u.slice(m[0].length).split('?')[0];
       const type = file.endsWith('.wasm') ? 'application/wasm' : file.endsWith('.mjs') ? 'text/javascript' : 'application/octet-stream';
       try {
-        return req.respond({ status: 200, contentType: type, headers: { 'Access-Control-Allow-Origin': '*' }, body: await readFile(file) });
+        let body = await readFile(file);
+        if (tamper && u.endsWith(tamper)) { body = Buffer.from(body); body[body.length - 1] ^= 0xff; } // bozulmuş dosya
+        return req.respond({ status: 200, contentType: type, headers: { 'Access-Control-Allow-Origin': '*' }, body });
       } catch {
         return req.respond({ status: 404, body: '' });
       }
@@ -92,6 +94,12 @@ test('sorgu: borçlu plaka sonuç ekranı, tutar, döküm ve tarife', async () =
   assert.equal(rows.length, 3); // başlık + 2 etkin araç tipi (kapalı motosiklet yok)
   assert.match(rows[1], /Otomobil₺30₺15/);
   assert.ok((await page.$$('#breakdown .breakdown-row')).length >= 3);
+  // 375 px'te döküm hücreleri tek satırda kalır ve süre sütunları taşmaz
+  const cells = await page.$$eval('#breakdown .breakdown-row > span', (cs) => cs.map((c) => ({
+    t: c.textContent, h: c.getBoundingClientRect().height, lh: parseFloat(getComputedStyle(c).lineHeight), over: c.scrollWidth > c.clientWidth + 1,
+  })));
+  assert.deepEqual(cells.filter((c) => c.h > c.lh * 1.5).map((c) => c.t), [], 'alt satıra kayan hücre');
+  assert.deepEqual(cells.filter((c) => c.over).map((c) => c.t), [], 'taşan hücre');
   // Yenile: aynı plaka yeniden sorgulanır, sonuç ekranı kalır
   await page.click('#btnRefresh');
   await page.waitForFunction(() => document.getElementById('btnRefresh').getAttribute('aria-busy') === 'false');
@@ -174,7 +182,8 @@ test('geçersiz giriş ve bağlantı hatası', async () => {
 
 // Not: başsız Chrome'un sahte kamera aygıtı (Windows) ara sıra akışı kendiliğinden bitirip aygıtı kaybediyor
 // (sayfadan bağımsız; yalın getUserMedia denemesinde de görüldü). Bu durumda sayfa "Kamera açılamadı" deyip
-// klavyeye döner; test bunu doğrular ve yeni bir tarayıcıyla en fazla 3 kez dener.
+// klavyeye döner; test bunu doğrular ve her seferinde yeni bir tarayıcıyla (taze aygıt) en fazla 5 kez dener.
+// CI bu web testlerini koşmaz (maven.yml / flutter.yml); yerelde npm test ile çalıştırılır.
 async function cameraFlow(b) {
   const { page, log } = await openPage('kamera=1', { b });
   try {
@@ -218,7 +227,7 @@ async function cameraFlow(b) {
 
 test('?kamera=1: düğme görünür, basılana kadar hiçbir şey inmez; katman açılır, model iner, Çek sonrası kamera kapanır', async () => {
   let done = false;
-  for (let attempt = 1; attempt <= 3 && !done; attempt++) {
+  for (let attempt = 1; attempt <= 5 && !done; attempt++) {
     const b = attempt === 1 ? browser : await launch();
     try {
       done = !(await cameraFlow(b)).flaky;
@@ -227,7 +236,19 @@ test('?kamera=1: düğme görünür, basılana kadar hiçbir şey inmez; katman 
       if (b !== browser) await b.close();
     }
   }
-  assert.ok(done, 'kamera akışı 3 denemede tamamlanamadı');
+  assert.ok(done, 'kamera akışı 5 denemede tamamlanamadı');
+});
+
+test('bütünlük: CDN dosyası değişmişse motor yüklenmez, sayfa klavyeye döner', async () => {
+  for (const tamper of ['ort.wasm.min.mjs', 'ort-wasm-simd-threaded.wasm', 'en_PP-OCRv4_rec.onnx']) {
+    const { page } = await openPage('kamera=1', { tamper });
+    const r = await page.evaluate(async () => {
+      const m = await import('./js/kamera/okuyucu.js');
+      try { await m.loadEngine(); return 'yuklendi'; } catch (e) { return 'reddedildi'; }
+    });
+    assert.equal(r, 'reddedildi', tamper);
+    await page.close();
+  }
 });
 
 test('okuma motoru: çizilmiş bir plaka görüntüsü doğru okunur ve onaya gider', async () => {

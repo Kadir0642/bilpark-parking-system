@@ -6,9 +6,16 @@ const ORT_VERSION = '1.31.1';
 const MODEL_PKG = 'paddle-ocr-onnx-models@0.2.0';
 const CDN = 'https://cdn.jsdelivr.net/npm/';
 
+// Her dosya SHA-384 özetiyle doğrulanır (npm paketindeki dosyalarla ve jsDelivr kopyasıyla aynı olduğu denetlendi).
+// ORT kodu fetch(integrity) ile indirilip blob adresinden yüklenir; WASM ikilisi de aynı biçimde doğrulanıp verilir.
+const ORT_DIST = CDN + 'onnxruntime-web@' + ORT_VERSION + '/dist/';
 export const SOURCES = {
-  ortEsm: CDN + 'onnxruntime-web@' + ORT_VERSION + '/dist/ort.wasm.min.mjs',
-  ortWasmDir: CDN + 'onnxruntime-web@' + ORT_VERSION + '/dist/',
+  ortEsm: ORT_DIST + 'ort.wasm.min.mjs',
+  ortEsmSri: 'sha384-Vo83xJ0b4xRW+799QzqOViZ2AdoasAnbfsI9UCyxkEGv/8dtIqcHTZ4EJOlDMcfc',
+  ortGlue: ORT_DIST + 'ort-wasm-simd-threaded.mjs',
+  ortGlueSri: 'sha384-L9olMNCg9w3FaNhr+m7EAeeiUpM5zy2Nlh6APnoogtFXjsL4ZZZRXlYhSVJc1r3j',
+  ortWasm: ORT_DIST + 'ort-wasm-simd-threaded.wasm',
+  ortWasmSri: 'sha384-bQJgW/bZhNOlc9KU45Zu0dyd0EFfNpkOZjfHyH/90dkZQSBBGkFTsAJaabSyYA4Z',
   model: CDN + MODEL_PKG + '/models/en_PP-OCRv4_rec.onnx',
   // npm paketindeki dosyanın SHA-384 özeti; inen dosya bununla karşılaştırılır (bozuk ya da değişmiş dosya kullanılmaz)
   modelSha384: 'lUpTmBEBmu5rozteF7LEA/YPVtHI7eUjdCZbKMsUmePq9zbX+AyNTCTK3JMCOeXv',
@@ -255,6 +262,14 @@ async function fetchModel(onProgress, signal) {
   return out;
 }
 
+/** Dosyayı bütünlük denetimiyle indirir (özet tutmazsa tarayıcı yanıtı reddeder). */
+async function fetchChecked(url, integrity) {
+  const res = await fetch(url, { integrity, credentials: 'omit', referrerPolicy: 'no-referrer' });
+  if (!res.ok) throw new Error('indirilemedi (' + res.status + ')');
+  return res.arrayBuffer();
+}
+const jsBlobUrl = (buf) => URL.createObjectURL(new Blob([buf], { type: 'text/javascript' }));
+
 let enginePromise = null;
 
 /**
@@ -264,8 +279,15 @@ let enginePromise = null;
 export function loadEngine(onProgress) {
   if (!enginePromise) {
     enginePromise = (async () => {
-      const [ort, bytes] = await Promise.all([import(SOURCES.ortEsm), fetchModel(onProgress)]);
-      ort.env.wasm.wasmPaths = SOURCES.ortWasmDir;
+      const [ortJs, glueJs, wasm, bytes] = await Promise.all([
+        fetchChecked(SOURCES.ortEsm, SOURCES.ortEsmSri),
+        fetchChecked(SOURCES.ortGlue, SOURCES.ortGlueSri),
+        fetchChecked(SOURCES.ortWasm, SOURCES.ortWasmSri),
+        fetchModel(onProgress),
+      ]);
+      const ort = await import(jsBlobUrl(ortJs));
+      ort.env.wasm.wasmPaths = { mjs: jsBlobUrl(glueJs) };
+      ort.env.wasm.wasmBinary = wasm;
       ort.env.wasm.numThreads = 1; // GitHub Pages COOP/COEP başlığı vermez: tek iş parçacığı
       const session = await ort.InferenceSession.create(bytes, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
       const dict = enDict();

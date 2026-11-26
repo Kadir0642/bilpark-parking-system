@@ -10,7 +10,7 @@ Görüntü cihazda işlenir, hiçbir sunucuya gönderilmez.
 
 | Bileşen | Sürüm ve adres | Lisans | Kaynak |
 |---|---|---|---|
-| onnxruntime-web (WASM çalışma zamanı) | 1.31.1, `https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/` (`ort.wasm.min.mjs`, `ort-wasm-simd-threaded.*`) | MIT | npm paketindeki `license: MIT`; github.com/microsoft/onnxruntime, LICENSE (MIT, Copyright (c) Microsoft Corporation) |
+| onnxruntime-web (WASM çalışma zamanı) | 1.31.1, `https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/` (`ort.wasm.min.mjs`, `ort-wasm-simd-threaded.mjs`, `ort-wasm-simd-threaded.wasm`; üçü de `fetch(integrity)` ile SHA-384 doğrulanır, kod blob adresinden yüklenir) | MIT | npm paketindeki `license: MIT`; github.com/microsoft/onnxruntime, LICENSE (MIT, Copyright (c) Microsoft Corporation) |
 | PaddleOCR PP-OCRv4 İngilizce tanıma modeli, ONNX biçimi | `paddle-ocr-onnx-models@0.2.0`, `models/en_PP-OCRv4_rec.onnx` (7.666.529 bayt, brotli ile yaklaşık 7,1 MB; SHA-384 sayfada doğrulanır) | Apache-2.0 | Aşağıdaki zincir |
 
 ### Model lisans zinciri
