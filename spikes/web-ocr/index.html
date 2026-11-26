@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plaka okuma denemesi</title>
+<style>
+  :root { --bg: #f6f7f9; --fg: #1b1f24; --muted: #5d6673; --card: #fff; --line: #d9dde3; --accent: #1f5fbf; --ok: #1e7b3a; --bad: #b3261e; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #121417; --fg: #e8eaed; --muted: #9aa3ad; --card: #1c1f24; --line: #333a42; --accent: #7aa7ff; --ok: #5fcf80; --bad: #ff8a80; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.45 system-ui, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 1.25rem; margin: 0 0 4px; }
+  p.note { color: var(--muted); margin: 0 0 12px; font-size: .9rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+  label { display: inline-flex; gap: 6px; align-items: center; margin-right: 12px; }
+  select, button, input[type=text] { font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--fg); }
+  button.primary { background: var(--accent); color: #fff; border-color: transparent; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .cam { position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #000; display: none; }
+  .cam video { width: 100%; display: block; }
+  .frame { position: absolute; left: 7.5%; width: 85%; aspect-ratio: 3.2 / 1; top: 50%; transform: translateY(-50%); border: 3px solid #ffd54a; border-radius: 10px; box-shadow: 0 0 0 9999px rgba(0,0,0,.35); }
+  #crop { max-width: 100%; image-rendering: pixelated; border: 1px solid var(--line); border-radius: 6px; }
+  .big { font-size: 1.6rem; font-weight: 700; letter-spacing: .04em; }
+  .muted { color: var(--muted); font-size: .9rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  td, th { border-bottom: 1px solid var(--line); padding: 4px 6px; text-align: left; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Plaka okuma denemesi</h1>
+  <p class="note">Ölçüm sayfası, ürün değil. Görüntü cihazdan çıkmaz, hiçbir yere gönderilmez ve saklanmaz.
+    OCR kütüphanesi yalnızca "Kamerayla oku" ya da "Fotoğraf seç" ile ilk kez yüklenir.</p>
+
+  <div class="card row">
+    <label>Motor
+      <select id="engine">
+        <option value="paddle-en">PaddleOCR en (ONNX)</option>
+        <option value="tesseract">tesseract.js</option>
+        <option value="paddle-ch">PaddleOCR ch (ONNX, büyük)</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="foreign"> Yabancı / özel plaka</label>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <button class="primary" id="camBtn">Kamerayla oku</button>
+      <button id="shotBtn" disabled>Çek ve oku</button>
+      <label class="muted"><input type="file" id="file" accept="image/*" capture="environment"> Fotoğraf seç</label>
+    </div>
+    <p class="muted" id="status">Hazır.</p>
+    <div class="cam" id="cam"><video id="video" playsinline muted></video><div class="frame"></div></div>
+  </div>
+
+  <div class="card" id="out" hidden>
+    <div class="muted">Plakanız bu mu?</div>
+    <div class="big" id="plate">-</div>
+    <div class="row" style="margin:8px 0">
+      <button id="yes">Evet, doğru</button>
+      <button id="no">Hayır, yanlış</button>
+      <input type="text" id="manual" placeholder="Klavye ile yazın" autocomplete="off" hidden>
+    </div>
+    <div class="muted" id="detail"></div>
+    <img id="crop" alt="OCR'a giden kırpım">
+  </div>
+
+  <div class="card">
+    <div class="muted">Bu oturumdaki denemeler (yalnızca bu sekmede, sayfa kapanınca silinir)</div>
+    <table><thead><tr><th>Motor</th><th>Doğru</th><th>Yanlış</th><th>Okuyamadı</th><th>OCR medyan ms</th></tr></thead><tbody id="stats"></tbody></table>
+  </div>
+</main>
+<script type="module">
+import { preprocess, createTesseract, createPaddle, postprocess } from './ocr.js';
+
+const $ = (id) => document.getElementById(id);
+const local = new URLSearchParams(location.search).get('local') === '1';
+const engines = {};
+const stats = {};
+let last = null;
+
+async function getEngine(name) {
+  if (engines[name]) return engines[name];
+  $('status').textContent = `${name} yükleniyor (ilk sefer birkaç MB indirir)…`;
+  const t = performance.now();
+  const e = name === 'tesseract' ? createTesseract({ local }) : createPaddle({ local, model: name === 'paddle-ch' ? 'ch' : 'en' });
+  await e.init();
+  e.loadMs = performance.now() - t;
+  engines[name] = e;
+  return e;
+}
+
+async function run(source) {
+  const name = $('engine').value;
+  const foreign = $('foreign').checked;
+  try {
+    const e = await getEngine(name);
+    $('status').textContent = 'Okunuyor…';
+    const a = performance.now();
+    const p = preprocess(source, 'band');
+    const b = performance.now();
+    const r = await e.recognize(p.canvas);
+    const c = performance.now();
+    const post = postprocess(r, foreign ? 'foreign' : 'tr');
+    last = { name, plate: post.plate, ms: c - b };
+    $('out').hidden = false;
+    $('manual').hidden = true;
+    $('plate').textContent = post.plate || 'Okunamadı: klavye ile yazın';
+    $('detail').textContent = `ham metin: "${r.text}" · güven: ${(r.minConf ?? r.conf).toFixed(2)} · eğim: ${p.angle}° · ` +
+      `ön işleme ${(b - a).toFixed(0)} ms · OCR ${(c - b).toFixed(0)} ms · ilk yükleme ${(e.loadMs / 1000).toFixed(1)} s`;
+    $('crop').src = p.canvas.toDataURL('image/png');
+    $('status').textContent = 'Bitti. Sonucu işaretleyin.';
+    if (!post.plate) mark('none');
+  } catch (err) {
+    $('status').textContent = 'Hata: ' + err;
+  }
+}
+
+function mark(kind) {
+  if (!last) return;
+  const s = (stats[last.name] ||= { ok: 0, bad: 0, none: 0, ms: [] });
+  s[kind]++;
+  s.ms.push(last.ms);
+  last = null;
+  $('stats').innerHTML = Object.entries(stats).map(([k, v]) => {
+    const m = [...v.ms].sort((x, y) => x - y)[Math.floor((v.ms.length - 1) / 2)] || 0;
+    return `<tr><td>${k}</td><td class="ok">${v.ok}</td><td class="bad">${v.bad}</td><td>${v.none}</td><td>${m.toFixed(0)}</td></tr>`;
+  }).join('');
+}
+$('yes').onclick = () => mark('ok');
+$('no').onclick = () => { mark('bad'); $('manual').hidden = false; $('manual').value = $('plate').textContent; $('manual').focus(); };
+
+// Kamera: yalnızca güvenli bağlamda (https ya da localhost) açılır
+let stream = null;
+$('camBtn').onclick = async () => {
+  if (!window.isSecureContext || !navigator.mediaDevices) {
+    $('status').textContent = 'Kamera için https ya da localhost gerekir. "Fotoğraf seç" her durumda çalışır.';
+    return;
+  }
+  try {
+    getEngine($('engine').value).catch(() => {}); // kamera açılırken modeli arkada yükle
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+    $('video').srcObject = stream;
+    await $('video').play();
+    $('cam').style.display = 'block';
+    $('shotBtn').disabled = false;
+    $('status').textContent = 'Plakayı sarı çerçeveye hizalayın, sonra "Çek ve oku".';
+  } catch (err) {
+    $('status').textContent = 'Kamera açılamadı: ' + err.name;
+  }
+};
+
+// Sarı çerçevenin video karesindeki karşılığını kırp (object-fit yok: video tam genişlikte)
+function frameCrop(video) {
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  const w = vw * 0.85;
+  const h = w / 3.2;
+  const c = document.createElement('canvas');
+  c.width = Math.round(w);
+  c.height = Math.round(h);
+  c.getContext('2d').drawImage(video, vw * 0.075, (vh - h) / 2, w, h, 0, 0, c.width, c.height);
+  return c;
+}
+$('shotBtn').onclick = () => run(frameCrop($('video')));
+
+// Fotoğraf: plakanın fotoğrafın ortasında ve genişçe olduğu varsayılır; ortadaki 3.2:1 bant okunur
+$('file').onchange = async (ev) => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  const bmp = await createImageBitmap(f);
+  const w = bmp.width * 0.85;
+  const h = w / 3.2;
+  const c = document.createElement('canvas');
+  c.width = Math.round(Math.min(w, 1600));
+  c.height = Math.round(c.width / 3.2);
+  c.getContext('2d').drawImage(bmp, bmp.width * 0.075, (bmp.height - h) / 2, w, h, 0, 0, c.width, c.height);
+  bmp.close();
+  run(c);
+};
+</script>
+</body>
+</html>
