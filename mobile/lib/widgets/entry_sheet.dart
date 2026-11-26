@@ -66,7 +66,8 @@ class _EntrySheetState extends State<EntrySheet> {
 
   void _submit(String side) => Navigator.pop(
         context,
-        EntryResult(_plate.text, _type, side,
+        // Yabancı plakada Kiril harfler (Rus plakası) Latin eşine iner: sunucu A-Z ister
+        EntryResult(_foreign ? latinizeCyrillic(_plate.text) : _plate.text, _type, side,
             foreign: _foreign, countryCode: _foreign ? normalizeCountryCode(_country.text) : null),
       );
 

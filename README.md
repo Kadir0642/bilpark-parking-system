@@ -44,6 +44,7 @@ Parking officers on three streets used paper tickets. Fees were worked out by ha
 **Citizen page (mobile web)**
 - A driver scans the QR on the street sign or the officer's phone, enters the plate and sees the current fee.
 - A day-by-day breakdown shows which hours were paid and which were free (the night window is free).
+- Experimental, behind a flag: reading the plate with the phone camera, entirely on the device.
 
 **Backend (Spring Boot)**
 - REST API with JWT auth and three roles (officer, admin, developer), plus a small set of read-only public endpoints for the citizen page.
@@ -69,12 +70,14 @@ Parking officers on three streets used paper tickets. Fees were worked out by ha
 
 **Citizen page**
 
-| | | |
-|---|---|---|
-| ![Citizen QR flow](docs/images/citizen-qr.gif) | ![Plate entry](docs/images/citizen/plate-entry.png) | ![Fee with day-by-day breakdown](docs/images/citizen/fee-breakdown.png) |
-| QR flow | Plate entry | Fee and day-by-day breakdown |
+| | | | |
+|---|---|---|---|
+| ![Plate entry](docs/images/citizen/plate-entry-light.png) | ![Current fee, day-by-day breakdown and tariff](docs/images/citizen/fee-result-light.png) | ![Fee result, dark theme](docs/images/citizen/fee-result-dark.png) | ![Monthly subscription card opened](docs/images/citizen/subscription-card.png) |
+| Plate entry | Fee, breakdown and tariff | Dark theme | Monthly subscription info |
 
-All panel and citizen screenshots come from the local Docker demo with sample data.
+![Citizen page fee result on desktop](docs/images/citizen/fee-result-desktop.png)
+
+Panel screenshots come from the local Docker demo with sample data. Citizen page screenshots use a mock API with made-up data.
 
 ## Architecture
 
@@ -196,6 +199,10 @@ web-admin/      Early React prototype, not used
 | ![Feb 2026 architecture diagram](docs/images/evolution/2026-02-architecture.png) | ![Field area: three streets, T = Tevfik Bey, A = Ali Rıza Özkay, C = Cumhuriyet](docs/images/field-map.jpg) | ![Feb 2026 street grid screen, plates blurred](docs/images/evolution/2026-02-mobile-street.png) | ![October 2026 panel overview](docs/images/evolution/2026-10-panel-overview.png) |
 
 Field area: the three streets the system covers (T = Tevfik Bey, A = Ali Rıza Özkay, C = Cumhuriyet). Satellite imagery: Google Maps.
+
+| Old citizen page (Nov 2026) |
+|---|
+| ![Old citizen page (Nov 2026): plate entry, fee and breakdown before the redesign](docs/images/citizen-qr.gif) |
 
 ## Roadmap
 

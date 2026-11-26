@@ -2,429 +2,217 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>BilPark - Park Ücreti Sorgulama</title>
+    <meta name="description" content="Plakanızı yazın, aracınızın şu anki park ücretini, süresini ve tarifeyi görün.">
+    <meta name="color-scheme" content="light dark">
+    <meta name="referrer" content="no-referrer">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="theme.css">
-    <style>
-        body { min-height: 100vh; overflow-x: hidden; }
-        .app { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
-        .app-header { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-5) var(--s-4); background: var(--surface); border-bottom: 1px solid var(--border); }
-        .brand-mark { width: 40px; height: 40px; flex: none; border-radius: 10px; background: var(--primary); color: var(--on-primary); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; }
-        .brand-name { font-size: 17px; font-weight: 800; }
-        .brand-zone { font-size: 14px; color: var(--text-2); overflow-wrap: anywhere; }
-        main { flex: 1; padding: var(--s-5) var(--s-4); display: flex; flex-direction: column; gap: var(--s-4); }
-        .view { display: none; flex-direction: column; gap: var(--s-4); animation: fadeIn .25s ease; }
-        .view.active { display: flex; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-        .card-body { padding: var(--s-5); display: flex; flex-direction: column; gap: var(--s-4); }
-        h1, h2 { margin: 0; }
-        h1 { font-size: 22px; font-weight: 800; }
-        h2 { font-size: 17px; font-weight: 700; }
-        label.field-label { font-size: 14px; font-weight: 600; color: var(--text-2); }
-
-        .plate-field { display: flex; align-items: stretch; height: 64px; border: 3px solid var(--plate-text); border-radius: 10px; background: var(--plate-bg); overflow: hidden; }
-        .plate-field:focus-within { box-shadow: 0 0 0 4px var(--primary-soft); outline: 3px solid var(--primary); outline-offset: 2px; }
-        .plate-field.invalid { border-color: var(--danger); }
-        .plate-strip { width: 34px; flex: none; background: var(--plate-strip); color: var(--plate-strip-text); font-size: 13px; font-weight: 800; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; }
-        .plate-input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--plate-text); font: 800 28px var(--font); text-align: center; text-transform: uppercase; letter-spacing: 2px; padding: 0 var(--s-2); }
-        .plate-input::placeholder { color: var(--border-strong); }
-
-        .tariff { display: grid; grid-template-columns: 1fr auto auto; gap: var(--s-2) var(--s-4); font-size: 15px; align-items: baseline; }
-        .tariff .th { font-size: 13px; font-weight: 600; color: var(--text-2); }
-        .tariff .num { text-align: right; font-weight: 700; }
-        .tariff-note { font-size: 14px; color: var(--text-2); margin: 0; }
-        #tariffBody { display: flex; flex-direction: column; gap: var(--s-3); }
-        .breakdown-ranges { padding: 0 var(--s-3) var(--s-2); display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-3); font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; }
-        .breakdown-ranges b { color: var(--text); font-weight: 600; }
-
-        .spinner { display: none; width: 20px; height: 20px; border: 3px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
-        [aria-busy="true"] .spinner { display: inline-block; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .summary-top { display: flex; justify-content: space-between; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
-        .amount-label { font-size: 15px; font-weight: 600; color: var(--text-2); }
-        .amount { font-size: 48px; font-weight: 800; line-height: 1.1; color: var(--success); }
-        .amount-sub { font-size: 20px; font-weight: 700; color: var(--sub); display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; padding: var(--s-1) 0; }
-        .summary-meta { font-size: 14px; color: var(--text-2); }
-        .refresh-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); padding-top: var(--s-3); border-top: 1px solid var(--border); font-size: 14px; color: var(--text-2); }
-        .breakdown-row > span:not(:first-child) { text-align: right; }
-        .btn-dashed { border: 2px dashed var(--border-strong); background: var(--surface-2); color: var(--text-2); }
-
-        .app-footer { padding: var(--s-4) var(--s-4) var(--s-8); font-size: 14px; color: var(--text-2); display: flex; flex-direction: column; gap: var(--s-3); }
-        .footer-toggle { background: none; border: 0; padding: 0 var(--s-2); margin-left: calc(-1 * var(--s-2)); min-height: var(--tap); color: var(--primary); font: 600 15px var(--font); text-decoration: underline; cursor: pointer; text-align: left; }
-        .footer-text { margin: 0; }
-    </style>
+    <link rel="stylesheet" href="vatandas.css">
 </head>
 <body>
 
-<div class="app">
-    <header class="app-header">
-        <div class="brand-mark" aria-hidden="true">P</div>
-        <div>
-            <div class="brand-name">BilPark otopark</div>
-            <div class="brand-zone" id="zoneLine">Bilecik Merkez</div>
+<!-- Simge kümesi (satır içi SVG; dış simge kütüphanesi yok) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.6" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-enter" viewBox="0 0 24 24"><path d="M3 12h11m-4-4 4 4-4 4M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.6-4.5M4 4v4h4M4 13a8 8 0 0 0 14.6 4.5M20 20v-4h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 10h18M7 15h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<a class="skip-link" href="#plateInput">Plaka alanına geç</a>
+
+<div class="page">
+    <header class="hero">
+        <div class="hero-inner">
+            <div class="brand">
+                <div class="brand-mark" aria-hidden="true">P</div>
+                <div class="brand-text">
+                    <div class="brand-name">BilPark</div>
+                    <div class="brand-sub">Şehir içi otopark</div>
+                </div>
+            </div>
+            <div class="zone-chip">
+                <svg class="ico" aria-hidden="true"><use href="#i-pin"/></svg>
+                <span class="visually-hidden">Bölge: </span><span id="zoneLine">Bilecik Merkez</span>
+            </div>
+            <h1 class="hero-title" id="heroTitle">Park ücretinizi öğrenin</h1>
+            <p class="hero-lead" id="heroLead">Plakanızı yazın; aracınızın şu anki park ücretini, süresini ve tarifeyi görün. Giriş yapmanız gerekmez.</p>
         </div>
     </header>
 
-    <main>
+    <main class="content">
         <!-- Görünüm 1: plaka girişi -->
-        <section id="view-search" class="view active">
-            <div class="card">
+        <section id="view-search" class="view active" aria-labelledby="heroTitle">
+            <div class="card card-raised">
                 <form class="card-body" id="searchForm" novalidate>
-                    <h1>Park ücretinizi öğrenin</h1>
                     <div class="field">
                         <label class="field-label" for="plateInput">Araç plakası</label>
                         <div class="plate-field" id="plateField">
                             <span class="plate-strip" aria-hidden="true">TR</span>
                             <input type="text" id="plateInput" class="plate-input" placeholder="34 ABC 123"
                                    inputmode="text" autocapitalize="characters" autocomplete="off" autocorrect="off"
-                                   spellcheck="false" maxlength="16" aria-describedby="plateError">
+                                   spellcheck="false" maxlength="16" aria-describedby="plateHint plateError">
                         </div>
+                        <div id="plateHint" class="field-hint">Boşluk bırakmanız gerekmez. Yabancı plakalar da sorgulanabilir.</div>
                         <div id="plateError" class="field-error" role="alert" aria-live="polite" hidden></div>
                     </div>
+
+                    <!-- Kamera okuması sonrası onay (yalnızca ?kamera=1) -->
+                    <div id="camConfirm" class="cam-confirm" role="group" aria-labelledby="camConfirmText" hidden>
+                        <p class="cam-confirm-text" id="camConfirmText">Plakanız <b id="camConfirmPlate"></b> mi?</p>
+                        <div class="cam-confirm-actions">
+                            <button type="button" class="btn btn-primary" id="btnCamYes">
+                                <svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>Evet, sorgula
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="btnCamFix">Düzelt</button>
+                        </div>
+                    </div>
+                    <div id="camNotice" class="alert alert-info" role="status" aria-live="polite" hidden></div>
+
                     <div id="errorMsg" class="alert alert-danger" role="alert" aria-live="polite" hidden></div>
+                    <div id="rateMsg" class="alert alert-warning" role="alert" aria-live="polite" hidden></div>
+
                     <button type="submit" class="btn btn-primary btn-lg btn-block" id="btnQuery">
                         <span class="spinner" aria-hidden="true"></span>
+                        <svg class="ico ico-idle" aria-hidden="true"><use href="#i-search"/></svg>
                         <span id="txtQuery">Ücreti göster</span>
                     </button>
+
+                    <div id="camEntry" class="cam-entry" hidden>
+                        <div class="or-sep" aria-hidden="true"><span>veya</span></div>
+                        <button type="button" class="btn btn-secondary btn-lg btn-block" id="btnCamera">
+                            <svg class="ico" aria-hidden="true"><use href="#i-camera"/></svg>
+                            <span>Kamerayla oku</span>
+                        </button>
+                        <p class="privacy-line">
+                            <svg class="ico ico-sm" aria-hidden="true"><use href="#i-lock"/></svg>
+                            Görüntü telefonunuzda işlenir, hiçbir yere gönderilmez.
+                        </p>
+                    </div>
                 </form>
             </div>
+
+            <!-- Aktif kayıt bulunamadı (404) -->
+            <div class="card state-card" id="notFoundCard" hidden tabindex="-1" aria-labelledby="notFoundTitle">
+                <div class="card-body state-body">
+                    <div class="state-icon" aria-hidden="true"><svg class="ico ico-lg"><use href="#i-search"/></svg></div>
+                    <div>
+                        <h2 id="notFoundTitle">Aktif park kaydı bulunamadı</h2>
+                        <p class="state-text" id="notFoundText"></p>
+                        <p class="state-text">Plakayı doğru yazdığınızdan emin olun. Yardım için sahadaki görevliye başvurabilirsiniz.</p>
+                    </div>
+                </div>
+            </div>
+
+            <ol class="steps" aria-label="Nasıl çalışır">
+                <li class="step"><span class="step-no" aria-hidden="true">1</span><span><b>Plakanızı yazın</b><span class="step-sub">Tabeladaki QR kod sizi buraya getirir</span></span></li>
+                <li class="step"><span class="step-no" aria-hidden="true">2</span><span><b>Tutarı görün</b><span class="step-sub">Süre ve tarife ayrıntısıyla</span></span></li>
+                <li class="step"><span class="step-no" aria-hidden="true">3</span><span><b>Görevliye ödeyin</b><span class="step-sub">Nakit veya kartla</span></span></li>
+            </ol>
         </section>
 
         <!-- Görünüm 2: sonuç -->
-        <section id="view-result" class="view" aria-live="polite">
-            <section class="card" aria-labelledby="amountLabel">
+        <section id="view-result" class="view" aria-labelledby="amountLabel">
+            <section class="card card-raised result-card" aria-live="polite">
                 <div class="card-body">
-                    <div class="summary-top">
-                        <span class="plate"><span id="resPlate"></span></span>
-                        <span class="summary-meta" id="resStreet"></span>
+                    <div class="result-top">
+                        <span class="plate plate-lg"><span id="resPlate"></span></span>
+                        <span class="badge badge-primary" id="resStatus"><span class="dot"></span>Otoparkta</span>
                     </div>
-                    <div>
-                        <div class="amount-label" id="amountLabel">Şu anki tutar</div>
+                    <div class="amount-block">
+                        <h2 class="amount-label" id="amountLabel" tabindex="-1">Şu anki tutar</h2>
                         <div class="amount num" id="resFee"></div>
-                        <div class="amount-sub" id="resSub" hidden><span>Ücretsiz</span><span class="badge badge-sub">Abone</span></div>
-                        <div class="summary-meta" id="resEntry"></div>
+                        <div class="amount-sub" id="resSub" hidden>
+                            <span class="amount-free">Ücretsiz</span><span class="badge badge-sub">Abone</span>
+                        </div>
+                        <p class="amount-note" id="resSubNote" hidden>Aboneliğiniz geçerli; bu park için ödeme yapmanız gerekmez.</p>
                     </div>
+                    <dl class="facts">
+                        <div class="fact" id="factStreetWrap">
+                            <dt><svg class="ico ico-sm" aria-hidden="true"><use href="#i-pin"/></svg>Konum</dt>
+                            <dd id="resStreet"></dd>
+                        </div>
+                        <div class="fact" id="factEntryWrap">
+                            <dt><svg class="ico ico-sm" aria-hidden="true"><use href="#i-enter"/></svg>Giriş</dt>
+                            <dd id="resEntry"></dd>
+                        </div>
+                        <div class="fact">
+                            <dt><svg class="ico ico-sm" aria-hidden="true"><use href="#i-clock"/></svg>Süre</dt>
+                            <dd id="resDuration"></dd>
+                        </div>
+                    </dl>
                     <div class="refresh-row">
                         <span id="resAsOf"></span>
                         <button type="button" class="btn btn-secondary" id="btnRefresh">
                             <span class="spinner" aria-hidden="true"></span>
+                            <svg class="ico ico-idle" aria-hidden="true"><use href="#i-refresh"/></svg>
                             <span id="txtRefresh">Yenile</span>
                         </button>
                     </div>
+                    <div id="refreshError" class="alert alert-danger" role="alert" hidden></div>
+                </div>
+            </section>
+
+            <section class="card next-card" aria-labelledby="nextTitle">
+                <div class="card-body next-body">
+                    <div class="next-icon" aria-hidden="true"><svg class="ico ico-lg"><use href="#i-hand"/></svg></div>
+                    <div class="next-text">
+                        <h2 id="nextTitle">Sonraki adım: ödemeyi görevliye yapın</h2>
+                        <p>Sahadaki görevliye nakit veya kartla ödeyebilirsiniz. Ödeme alınınca kaydınız kapanır.</p>
+                    </div>
+                </div>
+                <div class="card-foot">
+                    <button type="button" class="btn btn-block btn-dashed" disabled>Online ödeme · yakında</button>
                 </div>
             </section>
 
             <section class="card" aria-labelledby="breakdownTitle">
+                <div class="card-head"><h2 id="breakdownTitle">Süre dökümü</h2></div>
                 <div class="card-body">
-                    <h2 id="breakdownTitle">Süre dökümü</h2>
                     <div class="breakdown" id="breakdown"></div>
                     <p class="tariff-note" id="tariffNote" hidden>Tutar önceki tarifeyle hesaplandı.</p>
                 </div>
             </section>
 
             <section class="card" id="tariffCard" aria-labelledby="tariffTitle" hidden>
-                <div class="card-body">
-                    <h2 id="tariffTitle">Tarife</h2>
-                    <div id="tariffBody"></div>
-                </div>
+                <div class="card-head"><h2 id="tariffTitle">Tarife</h2></div>
+                <div class="card-body" id="tariffBody"></div>
             </section>
 
-            <div class="alert alert-warning"><strong>Ödemeyi sahadaki görevliye yapın.</strong> Nakit veya kartla ödeyebilirsiniz.</div>
-            <button type="button" class="btn btn-lg btn-block btn-dashed" disabled>Online ödeme · yakında</button>
-            <button type="button" class="btn btn-secondary btn-lg btn-block" id="btnBack">Başka plaka sorgula</button>
+            <button type="button" class="btn btn-secondary btn-lg btn-block" id="btnBack">
+                <svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Başka plaka sorgula
+            </button>
         </section>
     </main>
 
-    <footer class="app-footer">
-        <div>
-            <button type="button" class="footer-toggle" id="subToggle" aria-expanded="false" aria-controls="subText">Aylık abonelik</button>
-            <p class="footer-text" id="subText" hidden>Aylık abonelik için saha görevlisine veya işletmeye başvurun.</p>
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <div class="card sub-card">
+                <button type="button" class="sub-toggle" id="subToggle" aria-expanded="false" aria-controls="subText">
+                    <span class="sub-icon" aria-hidden="true"><svg class="ico"><use href="#i-calendar"/></svg></span>
+                    <span class="sub-label"><b>Aylık abonelik</b><span class="sub-line">Abonelik nasıl alınır?</span></span>
+                    <svg class="ico sub-chevron" aria-hidden="true"><use href="#i-chevron"/></svg>
+                </button>
+                <p class="footer-text" id="subText" hidden>Aylık abonelik için saha görevlisine veya işletmeye başvurun.</p>
+            </div>
+            <div>[FİRMA ADI] · [TELEFON]</div>
         </div>
-        <div>[FİRMA ADI] · [TELEFON]</div>
     </footer>
 </div>
 
 <script src="config.js"></script>
-<script>
-    const API = CONFIG.BASE_URL + "/api/parking";
-    const $ = (id) => document.getElementById(id);
-    let isProcessing = false;
-    let lastPlate = "";
-
-    function showView(id) {
-        document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-        $(id).classList.add('active');
-        window.scrollTo(0, 0);
-    }
-
-    function setBusy(busy) {
-        isProcessing = busy;
-        [['btnQuery', 'txtQuery'], ['btnRefresh', 'txtRefresh']].forEach(([b]) => {
-            $(b).disabled = busy;
-            $(b).setAttribute('aria-busy', busy ? 'true' : 'false');
-        });
-    }
-
-    function showFieldError(msg) {
-        const el = $('plateError');
-        el.textContent = msg || '';
-        el.hidden = !msg;
-        $('plateField').classList.toggle('invalid', !!msg);
-        $('plateInput').setAttribute('aria-invalid', msg ? 'true' : 'false');
-    }
-    function showError(msg) {
-        const el = $('errorMsg');
-        el.textContent = msg || '';
-        el.hidden = !msg;
-    }
-
-    function fmtDuration(mins) {
-        mins = Math.max(0, Math.round(Number(mins) || 0));
-        const h = Math.floor(mins / 60), m = mins % 60;
-        if (h === 0) return m + ' dk';
-        return m === 0 ? h + ' sa' : h + ' sa ' + m + ' dk';
-    }
-    function fmtMoney(v) {
-        const n = Number(v) || 0;
-        return '₺' + n.toLocaleString('tr-TR', { maximumFractionDigits: 2 });
-    }
-    function fmtEntry(iso) {
-        const d = new Date(iso);
-        if (isNaN(d)) return '';
-        const day = d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
-        const time = d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', hour12: false });
-        return day + ' ' + time;
-    }
-    // 11KM4471 -> 11 KM 4471 (tabeladaki gibi okunur); yabancı / özel plaka (foreign) olduğu gibi kalır
-    function fmtPlate(p, foreign) {
-        const s = String(p || '').replace(/\s+/g, '').toUpperCase();
-        if (foreign) return s;
-        const m = s.match(/^(\d{2})([A-Z]{1,3})(\d{2,4})$/);
-        return m ? m[1] + ' ' + m[2] + ' ' + m[3] : s;
-    }
-
-    function row(cls, cells) {
-        const r = document.createElement('div');
-        r.className = 'breakdown-row ' + cls;
-        cells.forEach(c => { const s = document.createElement('span'); s.textContent = c; r.appendChild(s); });
-        return r;
-    }
-
-    // Sunucu saatleri Europe/Istanbul yerel saatidir (saat dilimi eki yok); dönüşüm yapılmaz, metinden okunur.
-    function hhmm(iso) { return String(iso).slice(11, 16); }
-    function dayOf(iso) { return String(iso).slice(0, 10); }
-    // Ertesi günün 00:00'ı aralık sonunda 24:00 yazılır
-    function endLabel(seg) {
-        const t = hhmm(seg.end);
-        return (t === '00:00' && dayOf(seg.end) > String(seg.date)) ? '24:00' : t;
-    }
-    function fmtDate(iso) {
-        const p = String(iso).split(/[-T:]/).map(Number);
-        const MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
-        return p.length >= 3 && p[1] ? p[2] + ' ' + MONTHS[p[1] - 1] : '';
-    }
-
-    // Gün gün döküm: segments gün (date) bazında gruplanır
-    function renderBreakdown(data) {
-        const box = $('breakdown');
-        box.textContent = '';
-        const segs = Array.isArray(data.segments) ? data.segments : [];
-        if (!segs.length) {
-            const total = row('breakdown-total', ['Toplam süre', fmtDuration(data.durationMinutes)]);
-            total.style.gridTemplateColumns = '1fr auto';
-            box.appendChild(total);
-            return;
-        }
-        const days = [];
-        const byDate = {};
-        segs.forEach(sg => {
-            let d = byDate[sg.date];
-            if (!d) { d = byDate[sg.date] = { date: sg.date, paid: 0, free: 0, list: [] }; days.push(d); }
-            if (sg.paid) d.paid += Number(sg.minutes) || 0; else d.free += Number(sg.minutes) || 0;
-            d.list.push(sg);
-        });
-        box.appendChild(row('breakdown-head', ['Gün', 'Ücretli', 'Ücretsiz']));
-        let paid = 0, free = 0;
-        days.forEach(d => {
-            paid += d.paid; free += d.free;
-            box.appendChild(row('', [fmtDate(d.date), fmtDuration(d.paid), fmtDuration(d.free)]));
-            const rg = document.createElement('div');
-            rg.className = 'breakdown-ranges';
-            d.list.forEach(sg => {
-                const it = document.createElement('span');
-                const b = document.createElement('b');
-                b.textContent = hhmm(sg.start) + '–' + endLabel(sg);
-                it.appendChild(b);
-                it.appendChild(document.createTextNode(sg.paid ? ' ücretli' : ' ücretsiz'));
-                rg.appendChild(it);
-            });
-            box.appendChild(rg);
-        });
-        // Sunucunun toplamları varsa onlar kullanılır
-        if (data.paidMinutes != null) paid = Number(data.paidMinutes);
-        if (data.freeMinutes != null) free = Number(data.freeMinutes);
-        box.appendChild(row('breakdown-total', ['Toplam', fmtDuration(paid), fmtDuration(free)]));
-    }
-
-    // Tarife özeti; hata/eksik veri durumunda kart sessizce gizlenir
-    // Etkin araç tiplerinin ücret satırları; vehicleTypes yoksa (eski sunucu) small/large'a düşülür
-    function tariffRows(t) {
-        if (!t) return [];
-        if (Array.isArray(t.vehicleTypes) && t.vehicleTypes.length) {
-            return t.vehicleTypes.filter(v => v && v.enabled && v.firstHour != null)
-                .slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
-                .map(v => ({ name: v.displayName || v.code, firstHour: v.firstHour, extraHour: v.extraHour }));
-        }
-        const rows = [];
-        if (t.small) rows.push({ name: 'Otomobil', firstHour: t.small.firstHour, extraHour: t.small.extraHour });
-        if (t.large) rows.push({ name: 'Kamyonet', firstHour: t.large.firstHour, extraHour: t.large.extraHour });
-        return rows;
-    }
-    function tariffText(t) {
-        return tariffRows(t).map(r => r.name + ': ilk saat ' + fmtMoney(r.firstHour) + ', sonraki her saat ' + fmtMoney(r.extraHour)).join(' · ');
-    }
-    function renderTariff(t, tariffId) {
-        const card = $('tariffCard'), body = $('tariffBody');
-        body.textContent = '';
-        $('tariffNote').hidden = true;
-        try {
-            if (!t || !tariffRows(t).length) throw new Error('tarife yok');
-            // Tutar farklı bir tarife sürümüyle hesaplandıysa özet gösterilmez
-            if (tariffId != null && t.id != null && tariffId !== t.id) {
-                $('tariffNote').hidden = false;
-                throw new Error('tarife sürümü farklı');
-            }
-            const p1 = document.createElement('p');
-            p1.className = 'tariff-note';
-            p1.textContent = tariffText(t);
-            const p2 = document.createElement('p');
-            p2.className = 'tariff-note';
-            const ps = t.paidStart || '08:00', pe = t.paidEnd || '22:00';
-            p2.textContent = 'İlk ' + (t.freeMinutes != null ? t.freeMinutes : 5) + ' dakika ücretsiz · Ücretli saatler ' + ps + '–' + (pe === '00:00' ? '24:00' : pe) + ', dışında ücretsiz. Aboneler ücret ödemez.';
-            body.appendChild(p1);
-            body.appendChild(p2);
-            const u = t.upcoming;
-            if (u && tariffRows(u).length && u.effectiveFrom) {
-                const p3 = document.createElement('p');
-                p3.className = 'alert alert-info';
-                p3.textContent = fmtDate(u.effectiveFrom) + ' ' + hhmm(u.effectiveFrom) + ' itibarıyla yeni tarife: ' + tariffText(u);
-                body.appendChild(p3);
-            }
-            card.hidden = false;
-        } catch (e) {
-            card.hidden = true;
-        }
-    }
-
-    function renderResult(data, tariff) {
-        // yabancı plakada isteğe bağlı ülke kodu (V11) plakanın yanında: "MAB1234 · D"
-        const foreign = data.foreignPlate === true;
-        const country = foreign && data.foreignCountryCode ? ' · ' + data.foreignCountryCode : '';
-        $('resPlate').textContent = fmtPlate(data.plate || lastPlate, foreign) + country;
-        $('resStreet').textContent = data.streetName || '';
-        const sub = !!data.hasSubscription;
-        $('resFee').hidden = sub;
-        $('resSub').hidden = !sub;
-        if (!sub) $('resFee').textContent = fmtMoney(data.fee);
-        const entry = fmtEntry(data.entryTime);
-        $('resEntry').textContent = (entry ? 'Giriş ' + entry + ' · ' : '') + 'toplam ' + fmtDuration(data.durationMinutes);
-        $('resAsOf').textContent = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' itibarıyla';
-        renderBreakdown(data);
-        renderTariff(tariff, data.tariffId);
-        showView('view-result');
-    }
-
-    // Tarife sayfa ömrü boyunca bir kez başarıyla alınırsa önbellekte tutulur
-    let tariffCache = null;
-    async function fetchTariff() {
-        if (tariffCache) return tariffCache;
-        try {
-            const r = await fetch(CONFIG.BASE_URL + '/api/tariff/current');
-            if (!r.ok) return null;
-            tariffCache = await r.json();
-            return tariffCache;
-        } catch (e) { return null; }
-    }
-    async function fetchDebt(plate) {
-        const response = await fetch(API + '/debt?plate=' + encodeURIComponent(plate));
-        let data = {};
-        const ct = response.headers.get('content-type');
-        if (ct && ct.includes('application/json')) {
-            data = await response.json();
-        } else if (response.ok) {
-            data = { error: 'Beklenmeyen bir sunucu yanıtı alındı.' };
-        }
-        return { ok: response.ok, data };
-    }
-
-    async function queryDebt(fromRefresh) {
-        if (isProcessing) return;
-        // Boşluk ve tire atılır; yabancı / özel plakalar da (A-Z0-9, 2-12 karakter) sorgulanabilir
-        const plate = fromRefresh ? lastPlate : $('plateInput').value.replace(/[\s-]+/g, '').toUpperCase();
-
-        showError('');
-        if (plate.length < 2 || plate.length > 12) {
-            showFieldError('Plaka 2 ile 12 karakter arasında olmalıdır.');
-            $('plateInput').focus();
-            return;
-        }
-        showFieldError('');
-        lastPlate = plate;
-        setBusy(true);
-
-        try {
-            // Borç ve tarife paralel istenir; tarife hatası tutarı etkilemez
-            const [debt, tariff] = await Promise.all([fetchDebt(plate), fetchTariff()]);
-            const data = debt.data;
-            if (debt.ok && !data.error) {
-                // Borç yanıtı kendi tarifesini taşıyorsa o kullanılır
-                renderResult(data, (data.tariff && tariffRows(data.tariff).length) ? data.tariff : tariff);
-            } else {
-                showView('view-search');
-                showError(data.error || 'Bu plakaya ait aktif park kaydı bulunamadı.');
-            }
-        } catch (e) {
-            showView('view-search');
-            showError('Bağlantı kurulamadı. İnternetinizi kontrol edip tekrar deneyin.');
-        } finally {
-            setBusy(false);
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const params = new URLSearchParams(window.location.search);
-        const zone = params.get('zone') || params.get('street');
-        if (zone) $('zoneLine').textContent = zone.slice(0, 80);
-
-        const input = $('plateInput');
-        input.addEventListener('input', () => {
-            input.value = input.value.toUpperCase().replace(/[^A-Z0-9\s-]/g, '');
-            if (!$('plateError').hidden) showFieldError('');
-        });
-        $('searchForm').addEventListener('submit', (e) => { e.preventDefault(); queryDebt(false); });
-        $('btnRefresh').addEventListener('click', () => queryDebt(true));
-        $('btnBack').addEventListener('click', () => {
-            showError(''); showFieldError('');
-            showView('view-search');
-            input.focus();
-        });
-        $('subToggle').addEventListener('click', () => {
-            const t = $('subText');
-            t.hidden = !t.hidden;
-            $('subToggle').setAttribute('aria-expanded', t.hidden ? 'false' : 'true');
-        });
-
-        const plateFromUrl = params.get('plate');
-        if (plateFromUrl) {
-            input.value = plateFromUrl.toUpperCase().replace(/[^A-Z0-9\s-]/g, '').slice(0, 16);
-            setTimeout(() => queryDebt(false), 300);
-        }
-    });
-</script>
-
+<script src="js/vatandas.js"></script>
 </body>
 </html>
