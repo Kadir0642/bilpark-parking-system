@@ -5,7 +5,7 @@
   "description": "Vatandaş sayfası testleri: plaka kuralları (node --test) ve sahte API'ye karşı tarayıcı testi (sistemdeki Chrome).",
   "type": "module",
   "scripts": {
-    "test": "node --test --test-concurrency=1 kurallar.test.mjs sayfa.test.mjs",
+    "test": "node --test --test-concurrency=1 kurallar.test.mjs sayfa.test.mjs panel.test.mjs",
     "test:kurallar": "node --test kurallar.test.mjs",
     "serve": "node sunucu.mjs"
   },
