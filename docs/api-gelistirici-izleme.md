@@ -17,6 +17,8 @@ Bu belge, 1 yıllık bakım döneminde sistem aksaklıklarını uzaktan fark etm
 - araç ve abonelik eylemlerinde (`VEHICLE_*`, `RECORD_CANCELLED`, `SPOT_CANCELLED`, `SUBSCRIPTION_*`) özetin ilk sözcüğü her zaman plakadır ve biçimi ne olursa olsun maskelenir (yalnız harften oluşan yabancı plaka da);
 - JSON'da `plate`, `licensePlate`, `currentPlate` anahtarlarının değeri her zaman maskelenir.
 
+Yabancı plakanın ülke kodu (`foreignCountryCode`, V11, ör. `D`, `NL`) kişisel veri değildir ve maskelenmez; yalnızca harf olduğu ve 1-3 karakter olduğu için yukarıdaki serbest metin kuralı da onu değiştirmez. Yanındaki plaka eskisi gibi maskelenir.
+
 Bilinen sınır: serbest metnin (ör. iptal gerekçesi) içine elle yazılmış, yalnızca harften oluşan ya da küçük harfli yabancı plaka bir sözcükten ayırt edilemediği için maskelenmez.
 
 ## 1. `GET /api/developer/audit?from&to&action&actor&actorRole&entityType&q&page&size`

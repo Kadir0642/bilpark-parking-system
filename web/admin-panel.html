@@ -577,10 +577,17 @@
         const m = s.match(/^(\d{2})([A-Z]{1,3})(\d{2,4})$/);
         return m ? `${m[1]} ${m[2]} ${m[3]}` : s;
     }
-    // foreign: yabancı / özel plaka (V10, kayıttaki foreignPlate); TR gruplaması yapılmaz, "Yabancı" işareti eklenir
-    function plateHtml(p, foreign) {
+    // foreign: yabancı / özel plaka (V10, kayıttaki foreignPlate); TR gruplaması yapılmaz, "Yabancı" işareti eklenir.
+    // country: isteğe bağlı ülke kodu (V11, foreignCountryCode), işarette "Yabancı · D" diye görünür
+    function foreignLabel(foreign, country) {
+        if (!foreign) return '';
+        return country ? `Yabancı · ${country}` : 'Yabancı';
+    }
+    function plateHtml(p, foreign, country) {
         const text = foreign ? String(p == null ? '' : p) : fmtPlate(p);
-        const mark = foreign ? ' <span class="badge badge-neutral" title="Yabancı / özel plaka">Yabancı</span>' : '';
+        const label = foreignLabel(foreign, country);
+        const title = country ? `Yabancı / özel plaka, ülke kodu ${country}` : 'Yabancı / özel plaka';
+        const mark = foreign ? ` <span class="badge badge-neutral" title="${escapeHtml(title)}">${escapeHtml(label)}</span>` : '';
         return `<span class="plate"><span>${escapeHtml(text)}</span></span>${mark}`;
     }
 
@@ -1200,7 +1207,7 @@
             const stateCell = cancelled ? '<span class="badge badge-neutral">İptal edildi</span>'
                 : (r.status === 'RUNAWAY' ? '<span class="badge badge-danger">Kaçak</span>' : methodBadge(r.paymentMethod));
             html += `<tr class="clickable${open ? ' selected' : ''}" data-key="${escapeHtml(key)}" tabindex="0" aria-expanded="${open}">
-                <td>${plateHtml(r.licensePlate, r.foreignPlate === true)}</td>
+                <td>${plateHtml(r.licensePlate, r.foreignPlate === true, r.foreignCountryCode)}</td>
                 <td>${escapeHtml(zoneOf(r))}</td>
                 <td class="col-muted">${vehicleLabel(r.vehicleType)}</td>
                 <td class="col-muted num">${fmtDateTime(r.entryTime)} → ${r.exitTime ? fmtTime(r.exitTime) : '-'}</td>
@@ -1302,7 +1309,7 @@
             const d = await apiJson('GET', `/api/admin/records/cancelled?${q}`);
             const list = (d && d.content) || [];
             $('cancelledBody').innerHTML = list.map(r => `<tr>
-                <td>${plateHtml(r.plate)}</td>
+                <td>${plateHtml(r.plate, r.foreignPlate === true, r.foreignCountryCode)}</td>
                 <td>${escapeHtml(r.zoneName || streetNames[r.street] || r.street || '-')}</td>
                 <td class="col-muted num">${r.entryTime ? fmtDateTime(r.entryTime) : '-'} → ${r.exitTime ? fmtTime(r.exitTime) : '-'}</td>
                 <td>${escapeHtml(STATUS_LABELS[r.previousStatus] || r.previousStatus || '-')}</td>
@@ -1337,7 +1344,7 @@
         const q = $('rPlate').value.trim().replace(/\s+/g, '').toUpperCase();
         const list = all.filter(r => !q || String(r.licensePlate || '').replace(/\s+/g, '').toUpperCase().includes(q));
         $('runawayBody').innerHTML = list.map(r => `<tr>
-            <td>${plateHtml(r.licensePlate, r.foreignPlate === true)}</td>
+            <td>${plateHtml(r.licensePlate, r.foreignPlate === true, r.foreignCountryCode)}</td>
             <td>${escapeHtml(zoneOf(r))}</td>
             <td class="col-muted num">${fmtDateTime(r.entryTime)} → ${r.exitTime ? fmtTime(r.exitTime) : '-'}</td>
             <td>${escapeHtml(r.collectedByUsername || '-')}</td>
@@ -1452,11 +1459,12 @@
             "Tutar (TL)": r.fee || 0,
             "Giriş Zamanı": new Date(r.entryTime).toLocaleString('tr-TR'),
             "Çıkış Zamanı": r.exitTime ? new Date(r.exitTime).toLocaleString('tr-TR') : "-",
-            "Yabancı plaka": r.foreignPlate === true ? 'Evet' : ''
+            "Yabancı plaka": r.foreignPlate === true ? 'Evet' : '',
+            "Ülke kodu": r.foreignPlate === true && r.foreignCountryCode ? r.foreignCountryCode : ''
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(excelData);
-        worksheet['!cols'] = [ {wch:15}, {wch:20}, {wch:20}, {wch:15}, {wch:15}, {wch:15}, {wch:15}, {wch:20}, {wch:20}, {wch:14} ];
+        worksheet['!cols'] = [ {wch:15}, {wch:20}, {wch:20}, {wch:15}, {wch:15}, {wch:15}, {wch:15}, {wch:20}, {wch:20}, {wch:14}, {wch:10} ];
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "BilPark Verileri");
 
