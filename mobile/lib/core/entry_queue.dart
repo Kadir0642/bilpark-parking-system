@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
 import 'constants.dart';
+import 'plate.dart';
 
 /// Rastgele UUID v4 (küçük harf, tireli).
 String newRequestId([Random? rng]) {
@@ -37,6 +38,9 @@ class PendingEntry {
   /// Yabancı / özel plaka (TR biçimine uymayan): sunucuya foreignPlate=true gider (V10).
   final bool foreign;
 
+  /// Yabancı plakanın isteğe bağlı ülke kodu (1-3 harf A-Z, V11); yalnızca [foreign] iken tutulur.
+  final String? foreignCountryCode;
+
   /// Memurun girişi yaptığı an (UTC).
   final DateTime createdAt;
 
@@ -49,8 +53,10 @@ class PendingEntry {
     this.zoneId,
     this.username,
     this.foreign = false,
+    String? foreignCountryCode,
     DateTime? createdAt,
   })  : plate = normalizePlate(plate),
+        foreignCountryCode = foreign ? normalizeCountryCode(foreignCountryCode) : null,
         createdAt = (createdAt ?? DateTime.now()).toUtc();
 
   Map<String, dynamic> toJson() => {
@@ -62,6 +68,7 @@ class PendingEntry {
         if (zoneId != null) 'zoneId': zoneId,
         if (username != null) 'username': username,
         if (foreign) 'foreignPlate': true,
+        if (foreignCountryCode != null) 'foreignCountryCode': foreignCountryCode,
         'createdAt': createdAt.toIso8601String(), // UTC, 'Z' ekli
       };
 
@@ -74,6 +81,7 @@ class PendingEntry {
         zoneId: (j['zoneId'] as num?)?.toInt(),
         username: j['username'] as String?,
         foreign: j['foreignPlate'] == true, // eski sürüm kayıtlarında alan yok: TR plakası
+        foreignCountryCode: parseCountryCode(j['foreignCountryCode']), // eski kayıtlarda yok: kod yok
         createdAt: DateTime.tryParse((j['createdAt'] as String?) ?? ''),
       );
 
@@ -87,6 +95,7 @@ class PendingEntry {
         if (zoneId != null) 'zoneId': zoneId.toString(),
         'checkInRequestId': requestId,
         if (foreign) 'foreignPlate': 'true',
+        'foreignCountryCode': ?foreignCountryCode,
         if (withEntryTime) 'clientEntryTime': createdAt.toIso8601String(),
       };
 }

@@ -59,6 +59,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<Map<String, String>> handleApi(ApiException ex) {
+        if (ex instanceof com.bilpark.backend.common.RateLimitedException rl) {
+            Map<String, String> m = new LinkedHashMap<>();
+            m.put("error", rl.getMessage());
+            m.put("code", rl.getCode());
+            return ResponseEntity.status(rl.getStatus())
+                    .header("Retry-After", String.valueOf(rl.getRetryAfterSeconds())).body(m);
+        }
         return body(ex.getStatus(), ex.getCode(), ex.getMessage());
     }
 

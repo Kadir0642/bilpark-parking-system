@@ -7,6 +7,7 @@ import '../core/entry_queue.dart';
 import '../core/format.dart';
 import '../core/license.dart';
 import '../core/live_sync.dart';
+import '../core/plate.dart';
 import '../core/tariff.dart';
 import '../core/theme.dart';
 import '../core/vehicle_types.dart';
@@ -193,7 +194,8 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
   }
 
   // CHECK-IN "SIDE" (YÖN) İSTER
-  Future<void> checkInVehicle(String plate, String type, String side, {bool foreign = false}) async {
+  Future<void> checkInVehicle(String plate, String type, String side,
+      {bool foreign = false, String? countryCode}) async {
     // Her giriş istemci UUID'si taşır: istek sunucuya ulaşıp yanıt kaybolsa da tekrar gönderim çift kayıt açmaz
     final entry = PendingEntry(
       requestId: newRequestId(),
@@ -204,6 +206,7 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
       zoneId: widget.zoneId,
       username: AppConstants.currentUser,
       foreign: foreign,
+      foreignCountryCode: countryCode,
     );
     if (entryQueue.contains(entry.plate)) {
       _showSnack('${entry.plate} zaten beklemede.', tone: BadgeTone.danger);
@@ -386,14 +389,15 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
   }
 
   // --- ARAÇ GİRİŞİ (alt sayfa) ---
-  Future<void> showEntryForm(String detectedPlate, {bool foreign = false}) async {
+  Future<void> showEntryForm(String detectedPlate, {bool foreign = false, String? countryCode}) async {
     if (LicenseStore.readOnly.value) {
       _showSnack(readOnlyReason, tone: BadgeTone.danger);
       return;
     }
-    final result = await showEntrySheet(context, detectedPlate, foreign: foreign);
+    final result = await showEntrySheet(context, detectedPlate, foreign: foreign, countryCode: countryCode);
     if (result == null || !mounted) return;
-    await checkInVehicle(result.plate, result.type, result.side, foreign: result.foreign);
+    await checkInVehicle(result.plate, result.type, result.side,
+        foreign: result.foreign, countryCode: result.countryCode);
   }
 
   void showSpotDetails(dynamic vehicle) {
@@ -415,7 +419,7 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
     // Canlı kamera: aynı plaka 2 karede okununca kendiliğinden döner ('' = elle yaz, null = vazgeç)
     final scan = await Navigator.push<PlateScan>(context, MaterialPageRoute(builder: (_) => const PlateScannerScreen()));
     if (scan == null || !mounted) return;
-    await showEntryForm(scan.plate, foreign: scan.foreign);
+    await showEntryForm(scan.plate, foreign: scan.foreign, countryCode: scan.countryCode);
   }
 
   // --- GÖRÜNÜM ---
@@ -442,7 +446,7 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: PlateBadge(e.plate, foreign: e.foreign))),
+                      Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: PlateBadge(e.plate, foreign: e.foreign, countryCode: e.foreignCountryCode))),
                       const SizedBox(width: 4),
                       Icon(iconForCode(e.type), size: 20, color: c.text2),
                     ],
@@ -506,7 +510,9 @@ class ParkingMapScreenState extends State<ParkingMapScreen> with AutomaticKeepAl
                       children: [
                         Flexible(
                             child: FittedBox(
-                                fit: BoxFit.scaleDown, child: PlateBadge(plate, foreign: vehicle['foreignPlate'] == true))),
+                                fit: BoxFit.scaleDown, child: PlateBadge(plate,
+                                    foreign: vehicle['foreignPlate'] == true,
+                                    countryCode: parseCountryCode(vehicle['foreignCountryCode'])))),
                         const SizedBox(width: 4),
                         Icon(iconForCode(vehicle['currentType']), size: 20, color: c.text2),
                       ],

@@ -12,23 +12,27 @@ class EntryResult {
   final String type; // vehicle_types kodu (SMALL, LARGE, MOTORCYCLE...)
   final String side; // LEFT | RIGHT
   final bool foreign; // yabancı / özel plaka (TR biçim denetimi yok)
-  const EntryResult(this.plate, this.type, this.side, {this.foreign = false});
+  final String? countryCode; // yalnızca yabancı plakada ve doluysa: normalize (A-Z, 1-3 harf)
+  const EntryResult(this.plate, this.type, this.side, {this.foreign = false, this.countryCode});
 }
 
 /// Araç girişi alt sayfası: plaka, araç türü, park yönü. İptal edilirse null döner.
 /// [foreign]: "Yabancı / özel plaka" anahtarının açılış değeri (yabancı modda taranan plaka için true).
-Future<EntryResult?> showEntrySheet(BuildContext context, String initialPlate, {bool foreign = false}) {
+/// [countryCode]: kameradan okunan ülke kodu; yabancı iken "Ülke kodu" alanına ön doldurulur.
+Future<EntryResult?> showEntrySheet(BuildContext context, String initialPlate,
+    {bool foreign = false, String? countryCode}) {
   return showModalBottomSheet<EntryResult>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => EntrySheet(initialPlate: initialPlate, foreign: foreign),
+    builder: (_) => EntrySheet(initialPlate: initialPlate, foreign: foreign, countryCode: countryCode),
   );
 }
 
 class EntrySheet extends StatefulWidget {
   final String initialPlate;
   final bool foreign;
-  const EntrySheet({super.key, required this.initialPlate, this.foreign = false});
+  final String? countryCode;
+  const EntrySheet({super.key, required this.initialPlate, this.foreign = false, this.countryCode});
 
   @override
   State<EntrySheet> createState() => _EntrySheetState();
@@ -38,6 +42,9 @@ class _EntrySheetState extends State<EntrySheet> {
   late final TextEditingController _plate = TextEditingController(text: widget.initialPlate);
   late String _type = _firstActive();
   late bool _foreign = widget.foreign;
+  // Ön doldurma yalnızca yabancı modda ve geçerli kodla; görevli düzenleyebilir ya da silebilir
+  late final TextEditingController _country =
+      TextEditingController(text: widget.foreign ? normalizeCountryCode(widget.countryCode) ?? '' : '');
 
   static String _firstActive() {
     final l = VehicleTypeStore.active.value;
@@ -47,10 +54,21 @@ class _EntrySheetState extends State<EntrySheet> {
   @override
   void dispose() {
     _plate.dispose();
+    _country.dispose();
     super.dispose();
   }
 
-  void _submit(String side) => Navigator.pop(context, EntryResult(_plate.text, _type, side, foreign: _foreign));
+  // Anahtar kapanınca ülke kodu silinir (TR plakada kod gönderilmez; sunucu 400 verir)
+  void _setForeign(bool on) => setState(() {
+        _foreign = on;
+        if (!on) _country.clear();
+      });
+
+  void _submit(String side) => Navigator.pop(
+        context,
+        EntryResult(_plate.text, _type, side,
+            foreign: _foreign, countryCode: _foreign ? normalizeCountryCode(_country.text) : null),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +94,7 @@ class _EntrySheetState extends State<EntrySheet> {
                 MergeSemantics(
                   child: InkWell(
                     borderRadius: BorderRadius.circular(BpSize.rMd),
-                    onTap: () => setState(() => _foreign = !_foreign),
+                    onTap: () => _setForeign(!_foreign),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -89,7 +107,7 @@ class _EntrySheetState extends State<EntrySheet> {
                             child: Switch(
                               key: const Key('foreignPlateSwitch'),
                               value: _foreign,
-                              onChanged: (on) => setState(() => _foreign = on),
+                              onChanged: _setForeign,
                             ),
                           ),
                         ),
@@ -109,6 +127,7 @@ class _EntrySheetState extends State<EntrySheet> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     TextField(
+                      key: const Key('plateField'),
                       controller: _plate,
                       autofocus: widget.initialPlate.isEmpty,
                       textCapitalization: TextCapitalization.characters,
@@ -143,6 +162,24 @@ class _EntrySheetState extends State<EntrySheet> {
                 );
               },
             ),
+            if (_foreign) ...[
+              SizedBox(height: gap),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _country,
+                builder: (context, v, _) => TextField(
+                  key: const Key('foreignCountryField'),
+                  controller: _country,
+                  textCapitalization: TextCapitalization.characters,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: 2),
+                  decoration: InputDecoration(
+                    labelText: 'Ülke kodu (isteğe bağlı)',
+                    hintText: countryCodeExample,
+                    errorText: countryCodeHint(v.text),
+                    constraints: const BoxConstraints(minHeight: BpSize.tapLg),
+                  ),
+                ),
+              ),
+            ],
             SizedBox(height: gap),
             Text('Araç türü', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: c.text2)),
             const SizedBox(height: 8),
@@ -171,11 +208,13 @@ class _EntrySheetState extends State<EntrySheet> {
             ),
             SizedBox(height: gap + 4),
             ReadOnlyGate(
-              builder: (_, ro) => ValueListenableBuilder<TextEditingValue>(
-                valueListenable: _plate,
-                builder: (_, v, _) {
+              builder: (_, ro) => ListenableBuilder(
+                listenable: Listenable.merge([_plate, _country]),
+                builder: (_, _) {
                   // Geçersiz (boş dahil) plakada giriş düğmeleri kapalı: sunucudan "Geçersiz plaka" dönmesin
-                  final blocked = ro || !isValidPlateFor(v.text, foreign: _foreign);
+                  final blocked = ro ||
+                      !isValidPlateFor(_plate.text, foreign: _foreign) ||
+                      (_foreign && countryCodeHint(_country.text) != null);
                   return Row(
                 children: [
                   Expanded(
