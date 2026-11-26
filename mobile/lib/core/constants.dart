@@ -23,6 +23,6 @@ class AppConstants {
 
   // --- App Info ---
   static const String appName = "BilPark Pro";
-  static const String appVersion = "1.0.0";
+  static const String appVersion = "1.0.1";
   static const String companyName = "BilPark Bilişim A.Ş.";
 }
