@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
+import '../core/foreign_ocr.dart';
 import '../core/plate.dart';
 import '../core/theme.dart';
 import '../widgets/bp_snack.dart';
@@ -57,7 +59,43 @@ class PlateScan {
 /// OCR metninden plaka: TR modunda TR biçimine göre düzeltilmiş aday, yabancı / özel modda ham temiz metin.
 String? plateFromOcr(String text, {required bool foreign}) => foreign ? extractRawPlate(text) : extractPlate(text);
 
-/// Canlı kamerada plaka okur. Aynı plaka art arda 2 karede okununca kendiliğinden kapanıp
+/// Kaç ardışık aynı okuma onaylar: yabancı / özel modda düzeltme kuralı olmadığından 3, TR'de 2.
+int readsNeeded({required bool foreign}) => foreign ? 3 : 2;
+
+/// Yabancı modda onay sayacına giden değer: yalnızca harf+rakam karışık adaylar sayılır,
+/// düz yazı (tabela, bayi çerçevesi) kendiliğinden onaylanmaz; görevli isterse elle yazar.
+String? foreignConfirmKey(String? plate) => plate != null && isMixedPlate(plate) ? plate : null;
+
+/// Yabancı modda bu süre içinde onay çıkmazsa gösterilen ipucu.
+const foreignHintDelay = Duration(seconds: 3);
+const foreignHintText = 'Plakayı çerçevenin ortasına alın ve biraz yaklaşın';
+
+/// ML Kit sonucunu saf [OcrBox] listesine çevirir (kelime düzeyi: blok > satır > kelime).
+List<OcrBox> ocrBoxesFrom(RecognizedText recognized) => [
+  for (final block in recognized.blocks)
+    for (final line in block.lines)
+      for (final e in line.elements)
+        OcrBox(
+          e.text,
+          left: e.boundingBox.left,
+          top: e.boundingBox.top,
+          right: e.boundingBox.right,
+          bottom: e.boundingBox.bottom,
+        ),
+];
+
+/// ML Kit kutuları dik (döndürülmüş) görüntü koordinatındadır: 90/270 derecede en ve boy yer değiştirir.
+Size uprightFrameSize(Size image, InputImageRotation rotation) =>
+    rotation == InputImageRotation.rotation90deg || rotation == InputImageRotation.rotation270deg
+    ? Size(image.height, image.width)
+    : image;
+
+/// ML Kit sonucundan plaka: TR modunda eski metin yolu (değişmedi), yabancı modda kutu konumlu okuma.
+String? plateFromRecognized(RecognizedText recognized, {required bool foreign, Size? frame}) => foreign
+    ? extractForeignPlate(ocrBoxesFrom(recognized), frameWidth: frame?.width, frameHeight: frame?.height)
+    : extractPlate(recognized.text);
+
+/// Canlı kamerada plaka okur. Aynı plaka art arda 2 karede (yabancı modda 3) okununca kendiliğinden kapanıp
 /// plakayı döner. PlateScan('') = "Elle yaz", null = kapat. Kamera açılamazsa fotoğraf çekme akışına düşer.
 class PlateScannerScreen extends StatefulWidget {
   const PlateScannerScreen({super.key});
@@ -71,7 +109,7 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
 
   CameraController? _cam;
   TextRecognizer? _recognizer;
-  final _reads = ConsecutiveReads();
+  var _reads = ConsecutiveReads(needed: readsNeeded(foreign: false));
   bool _busy = false;
   bool _done = false;
   bool _torch = false;
@@ -80,6 +118,9 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
   String? _candidate;
   bool _foreign = false; // yabancı / özel plaka: ham metin, görevli formda onaylar
   String? _error; // kamera / OCR hatası: sessiz yutulmaz, ekranda görünür
+  Timer? _hintTimer; // yabancı modda onay gecikirse ipucu
+  bool _showHint = false;
+  Size? _frame; // son karenin dik tutuş boyutu (merkeze yakınlık için)
 
   @override
   void initState() {
@@ -125,7 +166,7 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
         return;
       }
       final text = await _recognizer!.processImage(InputImage.fromFilePath(photo.path));
-      result = plateFromOcr(text.text, foreign: _foreign) ?? '';
+      result = plateFromRecognized(text, foreign: _foreign) ?? '';
     } catch (e) {
       debugPrint(e.toString());
       if (mounted) {
@@ -161,6 +202,7 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
     if (Platform.isAndroid && format != InputImageFormat.nv21) return null;
     if (Platform.isIOS && format != InputImageFormat.bgra8888) return null;
     final plane = image.planes.first;
+    _frame = uprightFrameSize(Size(image.width.toDouble(), image.height.toDouble()), rotation);
     return InputImage.fromBytes(
       bytes: plane.bytes,
       metadata: InputImageMetadata(
@@ -181,8 +223,8 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
       final input = _toInputImage(image);
       if (input == null) return;
       final text = await _recognizer!.processImage(input);
-      final plate = plateFromOcr(text.text, foreign: _foreign);
-      final confirmed = _reads.add(plate);
+      final plate = plateFromRecognized(text, foreign: _foreign, frame: _frame);
+      final confirmed = _reads.add(_foreign ? foreignConfirmKey(plate) : plate);
       if (mounted && (plate != _candidate || _error != null)) {
         setState(() {
           _candidate = plate;
@@ -201,6 +243,7 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
   void _finish(String? result) {
     if (_done) return;
     _done = true;
+    _hintTimer?.cancel();
     final cam = _cam;
     if (cam != null && cam.value.isStreamingImages) {
       cam.stopImageStream().catchError((_) {});
@@ -209,11 +252,18 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
   }
 
   void _setForeign(bool on) {
+    _hintTimer?.cancel();
     setState(() {
       _foreign = on;
       _candidate = null;
+      _showHint = false;
     });
-    _reads.add(null); // önceki moddaki okuma sayılmaz
+    _reads = ConsecutiveReads(needed: readsNeeded(foreign: on)); // önceki moddaki okuma sayılmaz
+    if (on) {
+      _hintTimer = Timer(foreignHintDelay, () {
+        if (mounted && _foreign && !_done) setState(() => _showHint = true);
+      });
+    }
   }
 
   Future<void> _toggleTorch() async {
@@ -230,6 +280,7 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
   @override
   void dispose() {
     _done = true;
+    _hintTimer?.cancel();
     _cam?.dispose();
     _recognizer?.close();
     SystemChrome.setPreferredOrientations(const []);
@@ -315,6 +366,18 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
                     ),
                   ),
                 ),
+                if (_showHint && _foreign && _error == null)
+                  Container(
+                    key: const Key('scanForeignHint'),
+                    margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(BpSize.rMd)),
+                    child: const Text(
+                      foreignHintText,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.amber, fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
+                  ),
                 const SizedBox(height: 12),
                 FilterChip(
                   key: const Key('scanForeignChip'),
