@@ -189,17 +189,23 @@ void main() {
     testWidgets('geçersiz kodda Türkçe hata görünür ve giriş düğmeleri kapanır', (t) async {
       await open(t, 'MAB1234', foreign: true);
       expect(enabled(t, 'Sola park'), isTrue);
-      await t.enterText(field, 'ABCD');
-      await t.pump();
-      expect(find.textContaining('en fazla 3'), findsOneWidget);
-      expect(enabled(t, 'Sola park'), isFalse);
-      expect(enabled(t, 'Sağa park'), isFalse);
       await t.enterText(field, 'D1');
       await t.pump();
       expect(find.textContaining('yalnızca harf'), findsOneWidget);
       expect(enabled(t, 'Sola park'), isFalse);
       await t.enterText(field, 'GB');
       await t.pump();
+      expect(enabled(t, 'Sola park'), isTrue);
+    });
+
+    testWidgets('ülke kodu alanı en çok 3 harf alır: fazlası yazılamaz, sayaç görünmez', (t) async {
+      await open(t, 'MAB1234', foreign: true);
+      expect(t.widget<TextField>(field).maxLength, 3);
+      await t.enterText(field, 'ABCD'); // dördüncü harf kesilir
+      await t.pump();
+      expect(t.widget<TextField>(field).controller!.text, 'ABC');
+      expect(find.textContaining('en fazla 3'), findsNothing);
+      expect(find.text('3/3'), findsNothing);
       expect(enabled(t, 'Sola park'), isTrue);
     });
 

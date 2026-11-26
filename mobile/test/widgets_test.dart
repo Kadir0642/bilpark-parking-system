@@ -34,6 +34,15 @@ void main() {
     expect(find.text('Yeniden bağlanıyor…'), findsOneWidget);
   });
 
+  testWidgets('ConnectionBanner sunucu yoğunken kısa bir not gösterir; çevrimdışıysa çevrimdışı kalır', (tester) async {
+    await tester.pumpWidget(_host(const ConnectionBanner(status: LiveStatus.online, busy: true)));
+    expect(find.text('Sunucu yoğun, tekrar deneniyor…'), findsOneWidget);
+    expect(find.textContaining('Çevrimiçi'), findsNothing);
+    await tester.pumpWidget(_host(const ConnectionBanner(status: LiveStatus.offline, busy: true)));
+    expect(find.text('Çevrimdışı'), findsOneWidget);
+    expect(find.text('Sunucu yoğun, tekrar deneniyor…'), findsNothing);
+  });
+
   testWidgets('StatusBadge etiketi gösterir', (tester) async {
     await tester.pumpWidget(_host(const StatusBadge('Abone', tone: BadgeTone.sub)));
     expect(find.text('Abone'), findsOneWidget);

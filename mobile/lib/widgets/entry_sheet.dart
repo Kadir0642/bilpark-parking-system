@@ -170,11 +170,14 @@ class _EntrySheetState extends State<EntrySheet> {
                 builder: (context, v, _) => TextField(
                   key: const Key('foreignCountryField'),
                   controller: _country,
+                  // En çok 3 harf: ülke kodu daha uzun yazılamaz (yapıştırma dahil); sayaç gösterilmez
+                  maxLength: countryCodeMax,
                   textCapitalization: TextCapitalization.characters,
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: 2),
                   decoration: InputDecoration(
                     labelText: 'Ülke kodu (isteğe bağlı)',
                     hintText: countryCodeExample,
+                    counterText: '',
                     errorText: countryCodeHint(v.text),
                     constraints: const BoxConstraints(minHeight: BpSize.tapLg),
                   ),

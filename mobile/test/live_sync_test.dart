@@ -42,8 +42,8 @@ class FakeServer {
     return c;
   }
 
-  void failSession(int status) {
-    eventSessions.add(() async => http.StreamedResponse(Stream.value(utf8.encode('{"error":"x"}')), status));
+  void failSession(int status, {Map<String, String> headers = const {}}) {
+    eventSessions.add(() async => http.StreamedResponse(Stream.value(utf8.encode('{"error":"x"}')), status, headers: headers));
   }
 
   http.Client client() => MockClient.streaming((req, body) async {
@@ -75,7 +75,12 @@ void main() {
   late int reloads;
   late List<int> backoffAttempts;
 
-  LiveSync make({Duration heartbeat = const Duration(seconds: 5), int offlineAfter = 3}) {
+  LiveSync make({
+    Duration heartbeat = const Duration(seconds: 5),
+    int offlineAfter = 3,
+    Duration heartbeatCatchUp = Duration.zero,
+    Future<bool> Function()? verify,
+  }) {
     final s = LiveSync(
       apiBase: 'http://test/api',
       token: () async => 'tok',
@@ -87,6 +92,8 @@ void main() {
         return Duration(milliseconds: 10 * a);
       },
       offlineAfterFailures: offlineAfter,
+      heartbeatCatchUpMinInterval: heartbeatCatchUp,
+      verifyUnauthorized: verify,
     );
     s.events.listen(got.add);
     s.reloads.listen((_) => reloads++);
@@ -355,6 +362,80 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 80));
     expect(server.eventReqs.length, 1);
     expect(deact, 1);
+  });
+
+  group('yük altında nazik davranış', () {
+    test('401 alındı ama teyit "oturum geçerli" dedi (sunucu yoğun): onUnauthorized ÇAĞRILMAZ, beklemeyle yeniden bağlanır', () async {
+      var verified = 0;
+      sync = make(verify: () async {
+        verified++;
+        return false; // /me 503 döndü
+      });
+      var called = 0;
+      sync.onUnauthorized = () => called++;
+      server.failSession(401);
+      final c = server.openSession();
+      await sync.start();
+      await waitFor(() => server.eventReqs.length == 2);
+      send(c, frame('HELLO', {'version': 10}));
+      await waitFor(() => sync.status.value == LiveStatus.online);
+      expect(verified, 1);
+      expect(called, 0);
+      expect(backoffAttempts, isNotEmpty); // bekleme uygulandı
+    });
+
+    test('teyit gerçek 401 derse onUnauthorized çağrılır ve yeniden denenmez', () async {
+      sync = make(verify: () async => true);
+      var called = 0;
+      sync.onUnauthorized = () => called++;
+      server.failSession(401);
+      await sync.start();
+      await waitFor(() => called == 1);
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      expect(called, 1);
+      expect(server.eventReqs.length, 1);
+      expect(sync.status.value, LiveStatus.offline);
+    });
+
+    test('baz /sync 401 ve teyit "geçerli": oturum kapanmaz, /sync yeniden denenir', () async {
+      sync = make(verify: () async => false);
+      var called = 0;
+      sync.onUnauthorized = () => called++;
+      server.syncStatus.add(401);
+      server.openSession();
+      await sync.start();
+      await waitFor(() => server.eventReqs.isNotEmpty);
+      expect(called, 0);
+      expect(server.syncReqs.length, 2);
+    });
+
+    test('503 + Retry-After: bir sonraki bağlanma Retry-After süresinden önce denenmez', () async {
+      sync = make();
+      server.failSession(503, headers: {'retry-after': '1'});
+      server.openSession();
+      final sw = Stopwatch()..start();
+      await sync.start();
+      await waitFor(() => server.eventReqs.length == 2, ms: 5000);
+      expect(sw.elapsedMilliseconds, greaterThanOrEqualTo(950)); // backoff 10 ms ama Retry-After 1 sn
+    });
+
+    test('HEARTBEAT catch-up en çok aralıkta bir kez (başka bölge olayları sürümü artırır)', () async {
+      sync = make(heartbeat: const Duration(seconds: 5), heartbeatCatchUp: const Duration(minutes: 2));
+      final c1 = server.openSession();
+      server.syncResponses
+        ..add(syncBody(10))
+        ..add(syncBody(12))
+        ..add(syncBody(14));
+      await sync.start();
+      await waitFor(() => server.eventReqs.isNotEmpty);
+      send(c1, frame('HELLO', {'version': 10}));
+      send(c1, frame('HEARTBEAT', {'version': 12}));
+      await waitFor(() => server.syncReqs.length == 2);
+      send(c1, frame('HEARTBEAT', {'version': 14}));
+      send(c1, frame('HEARTBEAT', {'version': 16}));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      expect(server.syncReqs.length, 2); // ikinci/üçüncü heartbeat catch-up tetiklemedi
+    });
   });
 
   test('stop sonrası yeni istek açılmaz', () async {

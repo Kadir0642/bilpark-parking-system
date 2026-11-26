@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import '../core/api_client.dart';
 import '../core/entry_queue.dart';
 import '../core/format.dart';
 import '../core/live_sync.dart';
@@ -10,15 +11,18 @@ class ConnectionBanner extends StatelessWidget {
   final DateTime? lastSync;
   final int pending;
 
-  const ConnectionBanner({super.key, required this.status, this.lastSync, this.pending = 0});
+  /// true: sunucu 503/429 ile yoğun olduğunu bildirdi; bant "tekrar deneniyor" notunu gösterir (çevrimdışı değilken).
+  final bool busy;
+
+  const ConnectionBanner({super.key, required this.status, this.lastSync, this.pending = 0, this.busy = false});
 
   @override
   Widget build(BuildContext context) {
     final c = context.bp;
-    final Color bg;
-    final Color fg;
-    final Color dot;
-    final String text;
+    Color bg;
+    Color fg;
+    Color dot;
+    String text;
     final sync = lastSync != null ? ' · son senkron ${formatHm(lastSync!)}' : '';
     switch (status) {
       case LiveStatus.connecting:
@@ -41,6 +45,14 @@ class ConnectionBanner extends StatelessWidget {
         fg = c.onDangerSoft;
         dot = c.danger;
         text = 'Çevrimdışı$sync';
+    }
+    // Sunucu yoğunken bağlantı vardır ama istekler yeniden denenir: kısa, sakin bir not (kırmızı alarm değil)
+    final showBusy = busy && status != LiveStatus.offline;
+    if (showBusy) {
+      bg = c.warningSoft;
+      fg = c.onWarningSoft;
+      dot = c.warning;
+      text = ApiClient.busyNote;
     }
     return Semantics(
       liveRegion: true,
@@ -79,7 +91,10 @@ class LiveConnectionBanner extends StatelessWidget {
         // Çevrimdışı giriş kuyruğundaki kayıtlar bekleyen işleme otomatik eklenir
         builder: (_, ls, _) => ValueListenableBuilder<List<PendingEntry>>(
           valueListenable: entryQueue.items,
-          builder: (_, q, _) => ConnectionBanner(status: st, lastSync: ls, pending: pending + q.length),
+          builder: (_, q, _) => ValueListenableBuilder<bool>(
+            valueListenable: ApiClient.serverBusy,
+            builder: (_, busy, _) => ConnectionBanner(status: st, lastSync: ls, pending: pending + q.length, busy: busy),
+          ),
         ),
       ),
     );

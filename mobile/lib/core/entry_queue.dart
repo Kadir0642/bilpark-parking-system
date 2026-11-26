@@ -10,6 +10,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
+import 'backoff.dart';
 import 'constants.dart';
 import 'plate.dart';
 
@@ -113,10 +114,77 @@ class EntrySendResult {
 class EntryQueue {
   static const String prefsKey = 'pending_check_ins_v1';
 
+  /// Kuyruk isteğinin zaman aşımı. 15 sn'de vazgeçilen istek sunucuda yine de işlenip sonra yeniden gönderilirdi.
+  static const Duration sendTimeout = Duration(seconds: 30);
+
   final Future<dynamic> Function(Map<String, String> query) _send;
 
-  EntryQueue({Future<dynamic> Function(Map<String, String> query)? send})
-      : _send = send ?? ((q) => ApiClient.post('/parking/check-in', query: q));
+  /// Art arda iki kayıt gönderimi arasındaki bekleme (jitterli: bu değerin 0,5-1,5 katı). Bir kesintiden sonra
+  /// bütün telefonlar kuyruklarını aynı anda boşaltınca sunucu çökmesin diye gönderim seyrektir.
+  final Duration pacing;
+
+  /// Bağlantı dönünce ilk gönderimden önceki en büyük rastgele gecikme (0 ile bu değer arası).
+  final Duration startJitter;
+
+  /// Hata sonrası yeniden deneme beklemesi: denemeye göre üstel + jitter (taban/tavan).
+  final Duration retryBase;
+  final Duration retryCap;
+
+  final Random _rng;
+
+  EntryQueue({
+    Future<dynamic> Function(Map<String, String> query)? send,
+    this.pacing = const Duration(milliseconds: 800),
+    this.startJitter = const Duration(seconds: 20),
+    this.retryBase = const Duration(seconds: 2),
+    this.retryCap = const Duration(seconds: 60),
+    Random? rng,
+  })  : _send = send ?? ((q) => ApiClient.post('/parking/check-in', query: q, timeout: sendTimeout)),
+        _rng = rng ?? Random();
+
+  Timer? _startTimer; // bağlantı dönünce rastgele gecikmeli başlangıç
+  Timer? _retryTimer; // hata sonrası üstel bekleme
+  int _failStreak = 0;
+
+  /// Başarısız turların üst üste sayısı (başarıda sıfırlanır).
+  int get failStreak => _failStreak;
+
+  /// Zamanlanmış başlangıç ya da yeniden deneme var mı?
+  bool get hasScheduledFlush => _startTimer != null || _retryTimer != null;
+
+  /// Zamanlanmış başlangıcı/yeniden denemeyi iptal eder (kuyruğun içeriği korunur).
+  void cancelScheduled() {
+    _startTimer?.cancel();
+    _startTimer = null;
+    _retryTimer?.cancel();
+    _retryTimer = null;
+  }
+
+  /// Bağlantı döndü / uygulama öne geldi: kuyruk 0-[startJitter] rastgele gecikmeden sonra boşaltılır.
+  /// Zaten zamanlanmış bir başlangıç ya da hata beklemesi varsa onu bozmaz. Kuyruk boşsa hiçbir şey yapmaz.
+  void flushLater({Duration? maxJitter}) {
+    if (items.value.isEmpty || hasScheduledFlush || _flushing != null) return;
+    final delay = randomJitter(maxJitter ?? startJitter, _rng);
+    _startTimer = Timer(delay, () {
+      _startTimer = null;
+      unawaited(flush());
+    });
+  }
+
+  void _scheduleRetry(Duration? retryAfter) {
+    _failStreak++;
+    _retryTimer?.cancel();
+    final wait = backoffDelay(_failStreak, base: retryBase, cap: retryCap, rng: _rng);
+    final delay = retryAfter != null && retryAfter > wait ? retryAfter : wait;
+    lastRetryDelay = delay;
+    _retryTimer = Timer(delay, () {
+      _retryTimer = null;
+      unawaited(flush());
+    });
+  }
+
+  /// En son zamanlanan otomatik yeniden deneme beklemesi (test için).
+  Duration? lastRetryDelay;
 
   final ValueNotifier<List<PendingEntry>> items = ValueNotifier(const []);
   final StreamController<EntrySendResult> _results = StreamController<EntrySendResult>.broadcast();
@@ -168,20 +236,45 @@ class EntryQueue {
     await _persist();
   }
 
-  /// Sırayla gönderir. Eşzamanlı ikinci çağrı süren gönderimi bekler (hiçbir kayıt iki kez gitmez).
-  Future<void> flush() => _flushing ??= _doFlush().whenComplete(() => _flushing = null);
+  /// Sırayla (her seferinde bir kayıt, aralarında [pacing] beklemeyle) gönderir. Eşzamanlı ikinci çağrı süren
+  /// gönderimi bekler (hiçbir kayıt iki kez gitmez). Ağ/5xx/429 hatasında kayıtlar KALIR (hiçbiri düşürülmez);
+  /// tur durur ve üstel bekleme + jitter (503/429'da Retry-After'dan kısa olmamak üzere) sonra kendiliğinden yeniden denenir.
+  Future<void> flush() {
+    _startTimer?.cancel();
+    _startTimer = null;
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    return _flushing ??= _doFlush().whenComplete(() => _flushing = null);
+  }
+
+  /// Tek kaydın sonucu geçici bir hata mı (kayıt kalır, yeniden denenir)?
+  static bool _isTransient(int? s) => s == null || s >= 500 || s == 429 || s == 408;
 
   Future<void> _doFlush() async {
+    var sentAny = false;
     for (final e in List<PendingEntry>.from(items.value)) {
       final user = AppConstants.currentUser;
       if (user != null && e.username != null && e.username != user) continue; // başka kullanıcının kaydı bekler
+      if (!items.value.any((x) => x.requestId == e.requestId)) continue; // bu arada kaldırıldı
+      if (sentAny && pacing > Duration.zero) {
+        // Jitter: 0,5-1,5 x pacing. Bekleme sırasında kayıt kaldırılmış olabilir, o yüzden tekrar denetlenir.
+        await Future<void>.delayed(Duration(milliseconds: (pacing.inMilliseconds * (0.5 + _rng.nextDouble())).round()));
+        if (!items.value.any((x) => x.requestId == e.requestId)) continue;
+      }
       try {
         final body = await _send(e.toQuery(withEntryTime: true));
+        sentAny = true;
+        _failStreak = 0;
         await remove(e.requestId);
         _emit(EntrySendResult(EntryResultKind.sent, e, body: body));
       } on ApiException catch (ex) {
         final s = ex.statusCode;
-        if (s == null || s >= 500 || s == 401) return; // ağ/sunucu/oturum: kayıtlar kalır, sonra denenir
+        if (s == 401) return; // oturum: kayıtlar kalır; giriş yapılınca / öne gelince denenir
+        if (_isTransient(s)) {
+          if (items.value.isNotEmpty) _scheduleRetry(ex.retryAfter);
+          return; // ağ/sunucu yoğun: kayıtlar kalır, bekleyip tekrar denenir
+        }
+        sentAny = true; // sunucuya gitti (reddedildi): sonrakinden önce yine de bekle
         await remove(e.requestId);
         if (s == 409 && ex.code == 'DUPLICATE_REQUEST') {
           _emit(EntrySendResult(EntryResultKind.sent, e)); // zaten işlenmiş
