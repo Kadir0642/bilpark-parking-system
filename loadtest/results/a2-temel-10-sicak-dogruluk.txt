@@ -1,0 +1,13 @@
+                         kontrol                         | sorun 
+---------------------------------------------------------+-------
+ bilgi: aktif arac                                       |    99
+ ayni checkInRequestId birden cok kez                    |     0
+ ayni plakada birden cok aktif arac                      |     0
+ bilgi: sync_events                                      |  5211
+ istek kimligi var ama spot/kayit yok                    |     0
+ bilgi: yuk kosusu kayit (PAID/RUNAWAY/CANCELLED)        |    56
+ PAID kayitta ucret null/negatif                         |     0
+ cikis girişten once                                     |     0
+ ayni plaka ayni anda aktif ve ayni giris saatli 2 kayit |     0
+(9 rows)
+
