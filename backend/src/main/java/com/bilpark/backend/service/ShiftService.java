@@ -115,24 +115,26 @@ public class ShiftService {
                 s.getUsername() + ": " + summary, before, after);
     }
 
-    /** Closes this user's open shift on this device only; no-op when none. */
+    /** Closes this user's open shift on this device only (capped by {@link #closingTimeFor}); no-op when none. */
     @Transactional
     public void closeShift(User user, String deviceId) {
         if (user == null) return;
+        LocalDateTime now = LocalDateTime.now(clock);
         shiftRepository.findFirstByUserAndDeviceIdAndEndTimeIsNullOrderByStartTimeDesc(user, deviceId)
                 .ifPresent(s -> {
-                    s.setEndTime(LocalDateTime.now(clock));
+                    // Ertesi gün çıkış yapılırsa süre şişmesin: aynı sınır (aynı gün sınırdan önce = şimdi)
+                    s.setEndTime(closingTimeFor(s, now));
                     shiftRepository.save(s);
                 });
     }
 
-    /** Closes every open shift of the user (all devices), e.g. when the account is deactivated. */
+    /** Closes every open shift of the user (all devices, capped by {@link #closingTimeFor}), e.g. when the account is deactivated. */
     @Transactional
     public void closeAllOpenShifts(User user) {
         if (user == null) return;
         LocalDateTime now = LocalDateTime.now(clock);
         for (Shift s : shiftRepository.findByUserAndEndTimeIsNull(user)) {
-            s.setEndTime(now);
+            s.setEndTime(closingTimeFor(s, now));
             shiftRepository.save(s);
         }
     }
