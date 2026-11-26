@@ -31,10 +31,19 @@ class ForeignPlateRead {
   final bool mixed; // harf ve rakam birlikte
   final double height; // adaydaki en büyük karakter yüksekliği
   final double centerDistance; // çerçeve merkezine uzaklık (0 = tam ortada, 1 = köşe)
-  const ForeignPlateRead(this.plate, {required this.mixed, required this.height, required this.centerDistance});
+  /// Plakanın solundaki ülke kodu (D, NL, GB ...; 1-3 harf), plakaya katılmaz; bulunamadıysa null.
+  /// Şimdilik yalnızca tarama sonucunda taşınır; giriş formu / API alanı sonraki işte gelecek.
+  final String? countryCode;
+  const ForeignPlateRead(
+    this.plate, {
+    required this.mixed,
+    required this.height,
+    required this.centerDistance,
+    this.countryCode,
+  });
 
   @override
-  String toString() => 'ForeignPlateRead($plate, mixed=$mixed, h=$height, d=$centerDistance)';
+  String toString() => 'ForeignPlateRead($plate, cc=$countryCode, mixed=$mixed, h=$height, d=$centerDistance)';
 }
 
 // Ayar değerleri (oranlar sıradaki en yüksek kutuya göre)
@@ -44,6 +53,8 @@ const _countryRatio = 0.85; // soldaki 1-3 harf bundan küçükse ülke kodu ban
 const _countryRatioKnown = 0.9; // bilinen ülke kodlarında biraz daha esnek
 const _gapSplit = 2.0; // kelimeler arası boşluk (yükseklik katı) bundan büyükse ayrı plaka
 const _heightTie = 0.1; // yükseklik farkı %10'dan azsa eşit sayılır, merkeze yakınlık belirler
+const _countryReach = 2.0; // ülke kodu plakanın en fazla bu kadar (yükseklik katı) solunda aranır
+const _countryMinRatio = 0.25; // bundan küçük kutu ülke kodu sayılmaz (yıldız, nokta)
 
 /// Sık görülen Avrupa ve komşu ülke kodları (mavi bant ya da oval etiket).
 const foreignCountryCodes = {
@@ -124,15 +135,40 @@ Iterable<List<_Word>> _segments(List<_Word> row) sync* {
   }
 }
 
-/// Soldaki ülke kodunu (tek 1-3 harflik kelime, ana yazıdan belirgin küçük) soyar.
+/// Soldaki ülke kodunu (tek 1-3 harflik kelime, ana yazıdan belirgin küçük) soyar; soyulanı da döner.
 /// Boyuta bakılır: Düsseldorf "D AB 123" gibi tam boy ilk harf plakanın parçasıdır, soyulmaz.
-List<_Word> _stripCountryCode(List<_Word> seg) {
-  if (seg.length < 2) return seg;
+(List<_Word>, String?) _stripCountryCode(List<_Word> seg) {
+  if (seg.length < 2) return (seg, null);
   final first = seg.first;
   final a = first.alnum;
-  if (a.length > 3 || _hasDigit(a)) return seg;
+  if (a.length > 3 || _hasDigit(a)) return (seg, null);
   final limit = foreignCountryCodes.contains(a) ? _countryRatioKnown : _countryRatio;
-  return first.box.height < _maxH(seg.skip(1)) * limit ? seg.sublist(1) : seg;
+  return first.box.height < _maxH(seg.skip(1)) * limit ? (seg.sublist(1), a) : (seg, null);
+}
+
+/// Ayrı sıraya düşmüş ya da küçük diye atılmış bant kodu: plakanın hemen solunda, dikeyde plaka
+/// hizasında, ana yazıdan küçük, bilinen ülke kodu olan en yakın kelime.
+String? _nearbyCountryCode(List<_Word> seg, List<_Word> all) {
+  final h = _maxH(seg);
+  final left = seg.first.box.left;
+  final top = seg.map((w) => w.box.top).reduce(math.min) - h * 0.25;
+  final bottom = seg.map((w) => w.box.bottom).reduce(math.max) + h * 0.25;
+  String? best;
+  var bestGap = double.infinity;
+  for (final w in all) {
+    if (seg.contains(w) || !foreignCountryCodes.contains(w.alnum)) continue;
+    final bh = w.box.height;
+    if (bh >= h * _countryRatioKnown || bh < h * _countryMinRatio) continue;
+    final gap = left - w.box.right;
+    if (gap < -h * 0.1 || gap > h * _countryReach) continue;
+    final cy = (w.box.top + w.box.bottom) / 2;
+    if (cy < top || cy > bottom) continue;
+    if (gap < bestGap) {
+      best = w.alnum;
+      bestGap = gap;
+    }
+  }
+  return best;
 }
 
 /// Kelime kutularından yabancı / özel plaka adayını bulur; yoksa null.
@@ -168,7 +204,7 @@ ForeignPlateRead? readForeignPlate(List<OcrBox> boxes, {double? frameWidth, doub
   ForeignPlateRead? best;
   for (final row in _rows(words)) {
     for (final raw in _segments(row)) {
-      final seg = _stripCountryCode(raw);
+      final (seg, stripped) = _stripCountryCode(raw);
       final plate = seg.map((w) => w.alnum).join();
       if (plate.length < foreignPlateMin || plate.length > foreignPlateMax) continue;
       final l = seg.first.box.left, r = seg.last.box.right;
@@ -180,6 +216,7 @@ ForeignPlateRead? readForeignPlate(List<OcrBox> boxes, {double? frameWidth, doub
         mixed: isMixedPlate(plate),
         height: _maxH(seg),
         centerDistance: math.sqrt(dx * dx + dy * dy) / halfDiag,
+        countryCode: stripped ?? _nearbyCountryCode(seg, words),
       );
       if (best == null || _better(c, best)) best = c;
     }

@@ -49,11 +49,13 @@ InputImageRotation? mlkitRotation({
 }
 
 /// Tarama sonucu: [plate] '' ise "Elle yaz". [foreign]: yabancı / özel plaka modunda okundu
-/// (TR düzeltmesi yapılmadı; giriş formunda anahtar açık gelir).
+/// (TR düzeltmesi yapılmadı; giriş formunda anahtar açık gelir). [countryCode]: yabancı modda
+/// plakanın solunda okunan ülke kodu (D, NL ...); şimdilik formda kullanılmaz, sonraki iş doldurur.
 class PlateScan {
   final String plate;
   final bool foreign;
-  const PlateScan(this.plate, {this.foreign = false});
+  final String? countryCode;
+  const PlateScan(this.plate, {this.foreign = false, this.countryCode});
 }
 
 /// OCR metninden plaka: TR modunda TR biçimine göre düzeltilmiş aday, yabancı / özel modda ham temiz metin.
@@ -90,10 +92,13 @@ Size uprightFrameSize(Size image, InputImageRotation rotation) =>
     ? Size(image.height, image.width)
     : image;
 
+/// Yabancı modda ML Kit sonucundan kutu konumlu okuma (plaka + ülke kodu).
+ForeignPlateRead? foreignReadFromRecognized(RecognizedText recognized, {Size? frame}) =>
+    readForeignPlate(ocrBoxesFrom(recognized), frameWidth: frame?.width, frameHeight: frame?.height);
+
 /// ML Kit sonucundan plaka: TR modunda eski metin yolu (değişmedi), yabancı modda kutu konumlu okuma.
-String? plateFromRecognized(RecognizedText recognized, {required bool foreign, Size? frame}) => foreign
-    ? extractForeignPlate(ocrBoxesFrom(recognized), frameWidth: frame?.width, frameHeight: frame?.height)
-    : extractPlate(recognized.text);
+String? plateFromRecognized(RecognizedText recognized, {required bool foreign, Size? frame}) =>
+    foreign ? foreignReadFromRecognized(recognized, frame: frame)?.plate : extractPlate(recognized.text);
 
 /// Canlı kamerada plaka okur. Aynı plaka art arda 2 karede (yabancı modda 3) okununca kendiliğinden kapanıp
 /// plakayı döner. PlateScan('') = "Elle yaz", null = kapat. Kamera açılamazsa fotoğraf çekme akışına düşer.
@@ -121,6 +126,7 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
   Timer? _hintTimer; // yabancı modda onay gecikirse ipucu
   bool _showHint = false;
   Size? _frame; // son karenin dik tutuş boyutu (merkeze yakınlık için)
+  String? _countryCode; // yabancı modda son karede okunan ülke kodu
 
   @override
   void initState() {
@@ -166,7 +172,13 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
         return;
       }
       final text = await _recognizer!.processImage(InputImage.fromFilePath(photo.path));
-      result = plateFromRecognized(text, foreign: _foreign) ?? '';
+      if (_foreign) {
+        final r = foreignReadFromRecognized(text);
+        _countryCode = r?.countryCode;
+        result = r?.plate ?? '';
+      } else {
+        result = extractPlate(text.text) ?? '';
+      }
     } catch (e) {
       debugPrint(e.toString());
       if (mounted) {
@@ -223,7 +235,14 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
       final input = _toInputImage(image);
       if (input == null) return;
       final text = await _recognizer!.processImage(input);
-      final plate = plateFromRecognized(text, foreign: _foreign, frame: _frame);
+      String? plate;
+      if (_foreign) {
+        final r = foreignReadFromRecognized(text, frame: _frame);
+        plate = r?.plate;
+        _countryCode = r?.countryCode;
+      } else {
+        plate = extractPlate(text.text);
+      }
       final confirmed = _reads.add(_foreign ? foreignConfirmKey(plate) : plate);
       if (mounted && (plate != _candidate || _error != null)) {
         setState(() {
@@ -248,7 +267,12 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
     if (cam != null && cam.value.isStreamingImages) {
       cam.stopImageStream().catchError((_) {});
     }
-    if (mounted) Navigator.pop(context, result == null ? null : PlateScan(result, foreign: _foreign));
+    if (mounted) {
+      Navigator.pop(
+        context,
+        result == null ? null : PlateScan(result, foreign: _foreign, countryCode: _foreign && result.isNotEmpty ? _countryCode : null),
+      );
+    }
   }
 
   void _setForeign(bool on) {
@@ -257,6 +281,7 @@ class _PlateScannerScreenState extends State<PlateScannerScreen> {
       _foreign = on;
       _candidate = null;
       _showHint = false;
+      _countryCode = null;
     });
     _reads = ConsecutiveReads(needed: readsNeeded(foreign: on)); // önceki moddaki okuma sayılmaz
     if (on) {

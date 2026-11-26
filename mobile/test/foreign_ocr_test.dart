@@ -15,6 +15,7 @@ OcrBox b(String text, double left, double top, double w, double h) =>
     OcrBox(text, left: left, top: top, right: left + w, bottom: top + h);
 
 String? read(List<OcrBox> boxes) => extractForeignPlate(boxes, frameWidth: fw, frameHeight: fh);
+String? cc(List<OcrBox> boxes) => readForeignPlate(boxes, frameWidth: fw, frameHeight: fh)?.countryCode;
 
 /// Almanya: mavi bantta küçük "D", OHA ile AMK arasında iki mühür (ML Kit bunları "8", "O", "©" okur).
 final germanOha = [
@@ -31,6 +32,7 @@ void main() {
   group('readForeignPlate: kutu konumlu yabancı plaka', () {
     test('Almanya OHA AMK 07: ülke kodu D ve mühür parçaları atılır', () {
       expect(read(germanOha), 'OHAAMK07');
+      expect(cc(germanOha), 'D'); // bant kodu plakaya katılmaz ama sonuçta saklanır
       // Eski düz metin yolu bu karede "D" ve mühürleri karıştırıyordu (kanıt)
       expect(extractRawPlate('D OHA 8 O AMK 07'), isNot('OHAAMK07'));
     });
@@ -55,6 +57,12 @@ void main() {
         ]),
         'MHMT042',
       );
+      expect(
+        cc([b('D', 95, 960, 40, 60), b('MH', 150, 920, 110, 80), b('MT', 320, 920, 110, 80), b('042', 450, 920, 150, 80)]),
+        'D',
+      );
+      // Ülke kodu yoksa null
+      expect(cc([b('MH', 150, 920, 110, 80), b('MT', 320, 920, 110, 80), b('042', 450, 920, 150, 80)]), isNull);
       // Düsseldorf: ilk harf "D" plakanın kendisi, tam boy: soyulmaz
       expect(
         read([
@@ -64,6 +72,10 @@ void main() {
           b('123', 390, 920, 150, 80),
         ]),
         'DAB123',
+      );
+      expect(
+        cc([b('D', 100, 985, 26, 40), b('D', 150, 920, 50, 80), b('AB', 260, 920, 110, 80), b('123', 390, 920, 150, 80)]),
+        'D',
       );
     });
 
@@ -81,6 +93,9 @@ void main() {
 
     test('Hollanda NL MH-MT-42: NL bandı soyulur, tireler atılır (tek ya da parçalı kelime)', () {
       expect(read([b('NL', 90, 940, 45, 55), b('MH-MT-42', 150, 920, 420, 80)]), 'MHMT42');
+      expect(cc([b('NL', 90, 940, 45, 55), b('MH-MT-42', 150, 920, 420, 80)]), 'NL');
+      // Bant kodu küçük okunup ayrı sıraya düşse de bulunur
+      expect(cc([b('NL', 95, 985, 40, 35), b('MH-MT-42', 150, 920, 420, 80)]), 'NL');
       expect(
         read([
           b('NL', 90, 940, 45, 55),
@@ -141,6 +156,8 @@ void main() {
       expect(readsNeeded(foreign: false), 2);
       final r = ConsecutiveReads(needed: readsNeeded(foreign: true));
       final p = read(germanOha);
+      expect(const PlateScan('OHAAMK07', foreign: true, countryCode: 'D').countryCode, 'D');
+      expect(const PlateScan('34ABC123').countryCode, isNull);
       expect(r.add(foreignConfirmKey(p)), isNull);
       expect(r.add(foreignConfirmKey(p)), isNull);
       expect(r.add(foreignConfirmKey(p)), 'OHAAMK07');
@@ -206,6 +223,7 @@ void main() {
       expect(boxes[1].left, 150);
       expect(boxes[1].bottom, 1000);
       expect(plateFromRecognized(rt, foreign: true, frame: const Size(fw, fh)), 'OHAAMK07');
+      expect(foreignReadFromRecognized(rt, frame: const Size(fw, fh))?.countryCode, 'D');
       // TR modu eski metin yolunu kullanır (değişmedi)
       expect(plateFromRecognized(rt, foreign: false), extractPlate('D OHA AMK 07'));
     });
