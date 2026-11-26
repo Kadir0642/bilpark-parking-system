@@ -17,6 +17,7 @@ const pre = q.get('pre') || 'band';
 const local = q.get('local') === '1';
 const limit = Number(q.get('limit') || 1e9);
 const dump = q.get('dump') === '1';
+const set = (q.get('set') || 'testset').replace(/[^a-z0-9-]/gi, '');
 const log = (s) => { document.getElementById('log').textContent += '\n' + s; };
 
 async function loadImage(url) {
@@ -28,17 +29,17 @@ async function loadImage(url) {
 
 window.__done = false;
 try {
-  const labels = (await (await fetch('testset/labels.json')).json()).slice(0, limit);
+  const labels = (await (await fetch(set + '/labels.json')).json()).slice(0, limit);
   const engine = engineName === 'tesseract' ? createTesseract({ local })
     : createPaddle({ local, model: engineName === 'paddle-ch' ? 'ch' : 'en' });
   const t0 = performance.now();
   await engine.init();
   const initMs = performance.now() - t0;
   // Isınma (ilk çağrıda JIT/bellek ayırma olur; ölçüme katılmaz)
-  await engine.recognize(preprocess(await loadImage('testset/' + labels[0].file), pre).canvas);
+  await engine.recognize(preprocess(await loadImage(set + '/' + labels[0].file), pre).canvas);
   const results = [];
   for (const L of labels) {
-    const img = await loadImage('testset/' + L.file);
+    const img = await loadImage(set + '/' + L.file);
     const a = performance.now();
     const p = preprocess(img, pre);
     const b = performance.now();

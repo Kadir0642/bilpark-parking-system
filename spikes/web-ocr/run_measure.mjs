@@ -20,6 +20,7 @@ const only = arg('--only', 'tesseract:band,tesseract:none,paddle-en:band,paddle-
 const local = !process.argv.includes('--cdn');
 const PORT = Number(arg('--port', 8765));
 const dump = process.argv.includes('--dump');
+const SET = arg('--set', 'testset');
 const skipSizes = process.argv.includes('--no-sizes');
 
 const CHROME = [
@@ -144,7 +145,7 @@ async function sizes() {
 
 const mb = (b) => (b / 1048576).toFixed(1);
 await mkdir(join(ROOT, 'results'), { recursive: true });
-if (!existsSync(join(ROOT, 'testset', 'labels.json'))) {
+if (!existsSync(join(ROOT, SET, 'labels.json'))) {
   console.error('testset yok: önce  python gen_plates.py --out testset --n 200');
   process.exit(1);
 }
@@ -156,7 +157,7 @@ try {
     const [engine, pre] = spec.split(':');
     const page = await browser.newPage();
     page.on('pageerror', (e) => console.error('pageerror', e.message));
-    const url = `http://127.0.0.1:${PORT}/harness.html?engine=${engine}&pre=${pre}&limit=${limit}${local ? '&local=1' : ''}${dump ? '&dump=1' : ''}`;
+    const url = `http://127.0.0.1:${PORT}/harness.html?engine=${engine}&pre=${pre}&limit=${limit}${local ? '&local=1' : ''}${dump ? '&dump=1' : ''}&set=${SET}`;
     const t = Date.now();
     await page.goto(url);
     await page.waitForFunction('window.__done === true', { timeout: 60 * 60 * 1000, polling: 1000 });
@@ -171,7 +172,7 @@ try {
         delete r.crop;
       }
     }
-    await writeFile(join(ROOT, 'results', `${engine}_${pre}.json`), JSON.stringify(run, null, 1));
+    await writeFile(join(ROOT, 'results', `${SET}_${engine}_${pre}.json`), JSON.stringify(run, null, 1));
     const m = metrics(run);
     m.textDetector = run.textDetector;
     m.ua = run.ua;
@@ -185,5 +186,5 @@ try {
 }
 const sz = skipSizes ? {} : await sizes();
 for (const [k, v] of Object.entries(sz)) console.log(`boyut ${k}: ham ${mb(v.raw)} MB, gzip ${mb(v.gzip)} MB, brotli ${mb(v.br)} MB`);
-await writeFile(join(ROOT, 'results', 'summary.json'), JSON.stringify({ when: new Date().toISOString(), local, metrics: all, sizes: sz }, null, 1));
-console.log('results/summary.json yazıldı');
+await writeFile(join(ROOT, 'results', SET === 'testset' ? 'summary.json' : `summary-${SET}.json`), JSON.stringify({ when: new Date().toISOString(), set: SET, local, metrics: all, sizes: sz }, null, 1));
+console.log('özet results/ altına yazıldı');

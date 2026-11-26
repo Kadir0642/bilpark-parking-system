@@ -356,6 +356,7 @@ export function createPaddle({ local = false, model = 'en' } = {}) {
       let prev = -1;
       const confs = [];
       const pos = []; // her karakterin başladığı zaman adımı (grup boşluğunu bulmak için)
+      const ends = []; // her karakterin son zaman adımı
       let runMax = 0;
       for (let ti = 0; ti < T; ti++) {
         const row = ti * C;
@@ -379,16 +380,17 @@ export function createPaddle({ local = false, model = 'en' } = {}) {
           pos.push(ti);
           runMax = bv;
         } else if (bk >= 0) runMax = Math.max(runMax, bv);
+        if (bk >= 0) ends[pos.length - 1] = ti;
         prev = bk;
       }
       if (text.length) confs.push(runMax);
       const mean = confs.length ? confs.reduce((a, b) => a + b, 0) / confs.length : 0;
       const min = confs.length ? Math.min(...confs) : 0;
-      // Karakter aralığı medyanın 1.5 katını aşıyorsa araya boşluk koy: "24 OZK 112" grupları korunur
-      const steps = pos.slice(1).map((v, i) => v - pos[i]);
-      const med = steps.length ? [...steps].sort((a, b) => a - b)[Math.floor(steps.length / 2)] : 0;
+      // Karakterler arası boş (blank) adım sayısı belirgin büyükse araya boşluk koy: "24 OZK 112" grupları korunur
+      const gaps = pos.slice(1).map((v, i) => v - ends[i] - 1);
+      const med = gaps.length ? [...gaps].sort((a, b) => a - b)[Math.floor(gaps.length / 2)] : 0;
       let spaced = text[0] || '';
-      for (let i = 1; i < text.length; i++) spaced += (med > 0 && steps[i - 1] > med * 1.5 ? ' ' : '') + text[i];
+      for (let i = 1; i < text.length; i++) spaced += (gaps[i - 1] >= Math.max(2, med * 2 + 1) ? ' ' : '') + text[i];
       return { text, spaced, rawText: raw, words: null, conf: mean, minConf: min, charConfs: confs, classes: C, frame: [W, H] };
     },
     async dispose() {
@@ -411,7 +413,8 @@ export function postprocess(r, mode) {
   }
   if (mode === 'tr-grouped') {
     // Öneri: önce okunan grup boşluklarına göre (il / harf / rakam) dene, olmazsa mobil kural
-    const m = extractPlateGrouped(r.spaced ?? r.text) ?? extractPlateWithFixes(r.text);
+    const raw = (r.rawText || '').replace(/[^A-Za-z0-9 ]/g, ' ');
+    const m = (/\S \S/.test(raw.trim()) ? extractPlateGrouped(raw) : null) ?? extractPlateGrouped(r.spaced ?? r.text) ?? extractPlateWithFixes(r.text);
     return m ? { plate: m.plate, fixes: m.fixes } : { plate: null, fixes: null };
   }
   if (r.words && r.words.length) {

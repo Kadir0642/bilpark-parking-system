@@ -1,13 +1,14 @@
-{
+﻿{
   "name": "bilpark-web-ocr-deneme",
   "private": true,
   "version": "0.0.0",
   "description": "Ölçüm denemesi: tarayıcıda plaka okuma (tesseract.js ve PaddleOCR ONNX)",
   "type": "module",
   "scripts": {
-    "generate": "python gen_plates.py --out testset --n 200",
+    "generate": "python gen_plates.py --out testset --n 240 --seed 2026",
     "measure": "node run_measure.mjs",
-    "serve": "node serve.mjs"
+    "serve": "node serve.mjs",
+    "test": "node --test test_plate.mjs"
   },
   "devDependencies": {
     "@gutenye/ocr-models": "1.4.2",
