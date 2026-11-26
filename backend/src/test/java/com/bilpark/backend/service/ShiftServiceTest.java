@@ -10,6 +10,8 @@ import com.bilpark.backend.model.Zone;
 import com.bilpark.backend.repository.ShiftRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -163,6 +165,139 @@ class ShiftServiceTest {
         assertTrue(old.isAutoClosed());
         assertTrue(fresh.isOpen());
         assertFalse(fresh.isAutoClosed());
+    }
+
+    @Test
+    void shiftLeftFromYesterdayClosesAtYesterdaysTenPmOnOtherDeviceLogin() {
+        Shift old = serviceAt(LocalDateTime.of(2026, 11, 24, 18, 54)).openShift(officer, "devA");
+        Shift fresh = serviceAt(LocalDateTime.of(2026, 11, 25, 8, 0)).openShift(officer, "devB");
+        assertEquals(LocalDateTime.of(2026, 11, 24, 22, 0), old.getEndTime());
+        assertTrue(old.isAutoClosed());
+        assertTrue(fresh.isOpen());
+    }
+
+    @Test
+    void shiftLeftFromYesterdayClosesAtYesterdaysTenPmOnSameDeviceLogin() {
+        Shift old = serviceAt(LocalDateTime.of(2026, 11, 24, 18, 54)).openShift(officer, "devA");
+        Shift fresh = serviceAt(LocalDateTime.of(2026, 11, 25, 8, 0)).openShift(officer, "devA");
+        assertNotSame(old, fresh);
+        assertEquals(LocalDateTime.of(2026, 11, 24, 22, 0), old.getEndTime());
+        assertTrue(fresh.isOpen());
+    }
+
+    @Test
+    void sameDayBeforeTenPmOtherDeviceLoginClosesAtNow() {
+        Shift a = serviceAt(LocalDateTime.of(2026, 11, 25, 9, 0)).openShift(officer, "devA");
+        serviceAt(LocalDateTime.of(2026, 11, 25, 15, 30)).openShift(officer, "devB");
+        assertEquals(LocalDateTime.of(2026, 11, 25, 15, 30), a.getEndTime());
+    }
+
+    @Test
+    void shiftStartedAfterTenPmClosesAtEndOfThatDayByNextNightsJob() {
+        Shift late = serviceAt(LocalDateTime.of(2026, 11, 25, 22, 40)).openShift(officer, "devA");
+        // that night's 22:30 run happened before it started; the next night closes it at 23:59:59 of its own day
+        serviceAt(LocalDateTime.of(2026, 11, 26, 22, 30)).closeForgottenShifts();
+        assertEquals(LocalDateTime.of(2026, 11, 25, 23, 59, 59), late.getEndTime());
+        assertTrue(late.isAutoClosed());
+    }
+
+    @Test
+    void closingTimeIsNeverBeforeStartTime() {
+        LocalDateTime[] starts = {
+                LocalDateTime.of(2026, 11, 25, 9, 0), LocalDateTime.of(2026, 11, 25, 22, 0),
+                LocalDateTime.of(2026, 11, 25, 22, 40), LocalDateTime.of(2026, 11, 25, 23, 59, 59)};
+        LocalDateTime[] nows = {
+                LocalDateTime.of(2026, 11, 25, 8, 0), LocalDateTime.of(2026, 11, 25, 22, 30),
+                LocalDateTime.of(2026, 11, 26, 22, 30), LocalDateTime.of(2026, 11, 25, 9, 0)};
+        for (LocalDateTime st : starts) {
+            Shift s = new Shift(officer, officer.getAssignedZone(), "devA", st);
+            for (LocalDateTime now : nows) {
+                LocalDateTime end = ShiftService.closingTimeFor(s, now);
+                assertFalse(end.isBefore(st), "start " + st + " now " + now + " end " + end);
+            }
+        }
+    }
+
+    // closingTimeFor = max(start, min(now, sınır)); sınır = başlangıç gününün 22:00'si (22:00 ve sonrası başlayanlarda 23:59:59)
+    @ParameterizedTest(name = "başlangıç {0}, şimdi {1} -> {2}")
+    @CsvSource({
+            // başlangıç 21:59: sınır 22:00
+            "2026-11-25T21:59:00, 2026-11-25T21:59:30, 2026-11-25T21:59:30",
+            "2026-11-25T21:59:00, 2026-11-25T22:30:00, 2026-11-25T22:00:00",
+            "2026-11-25T21:59:00, 2026-11-27T09:00:00, 2026-11-25T22:00:00",
+            // başlangıç 22:00 ve 22:01: sınır 23:59:59
+            "2026-11-25T22:00:00, 2026-11-25T22:30:00, 2026-11-25T22:30:00",
+            "2026-11-25T22:00:00, 2026-11-26T08:00:00, 2026-11-25T23:59:59",
+            "2026-11-25T22:01:00, 2026-11-25T22:05:00, 2026-11-25T22:05:00",
+            "2026-11-25T22:01:00, 2026-11-26T08:00:00, 2026-11-25T23:59:59",
+            // başlangıç 23:59:59: sınır kendisi
+            "2026-11-25T23:59:59, 2026-11-26T08:00:00, 2026-11-25T23:59:59",
+            // günler önce açılmış vardiya sınırda kapanır
+            "2026-11-20T09:00:00, 2026-11-25T08:00:00, 2026-11-20T22:00:00",
+            "2026-11-20T22:30:00, 2026-11-25T08:00:00, 2026-11-20T23:59:59",
+            // şimdi sınırdan önce: şimdi
+            "2026-11-25T09:00:00, 2026-11-25T15:30:00, 2026-11-25T15:30:00",
+            // saat kayması (şimdi < başlangıç): başlangıç
+            "2026-11-25T09:00:00, 2026-11-25T08:00:00, 2026-11-25T09:00:00",
+            "2026-11-25T22:40:00, 2026-11-25T22:10:00, 2026-11-25T22:40:00"})
+    void closingTimeFormula(LocalDateTime start, LocalDateTime now, LocalDateTime expected) {
+        Shift s = new Shift(officer, officer.getAssignedZone(), "devA", start);
+        assertEquals(expected, ShiftService.closingTimeFor(s, now));
+    }
+
+    @Test
+    void logoutNextDayCapsAtTenPmOfStartDay() {
+        Shift s = serviceAt(LocalDateTime.of(2026, 11, 25, 9, 0)).openShift(officer, "devA");
+        serviceAt(LocalDateTime.of(2026, 11, 26, 8, 15)).closeShift(officer, "devA");
+        assertEquals(LocalDateTime.of(2026, 11, 25, 22, 0), s.getEndTime());
+        assertFalse(s.isAutoClosed(), "çıkış kullanıcı eylemidir, otomatik kapanış değil");
+    }
+
+    @Test
+    void logoutNextDayOfLateShiftCapsAtEndOfStartDay() {
+        Shift s = serviceAt(LocalDateTime.of(2026, 11, 25, 22, 40)).openShift(officer, "devA");
+        serviceAt(LocalDateTime.of(2026, 11, 26, 8, 15)).closeShift(officer, "devA");
+        assertEquals(LocalDateTime.of(2026, 11, 25, 23, 59, 59), s.getEndTime());
+    }
+
+    @Test
+    void sameDayLogoutClosesAtNow() {
+        Shift s = serviceAt(LocalDateTime.of(2026, 11, 25, 9, 0)).openShift(officer, "devA");
+        serviceAt(LocalDateTime.of(2026, 11, 25, 17, 45)).closeShift(officer, "devA");
+        assertEquals(LocalDateTime.of(2026, 11, 25, 17, 45), s.getEndTime());
+        assertFalse(s.isAutoClosed());
+    }
+
+    @Test
+    void sameDayLogoutAfterTenPmOfNormalShiftCapsAtTenPm() {
+        Shift s = serviceAt(LocalDateTime.of(2026, 11, 25, 9, 0)).openShift(officer, "devA");
+        serviceAt(LocalDateTime.of(2026, 11, 25, 22, 20)).closeShift(officer, "devA");
+        assertEquals(LocalDateTime.of(2026, 11, 25, 22, 0), s.getEndTime());
+    }
+
+    @Test
+    void logoutWithClockBehindStartClosesAtStart() {
+        Shift s = serviceAt(LocalDateTime.of(2026, 11, 25, 9, 0)).openShift(officer, "devA");
+        serviceAt(LocalDateTime.of(2026, 11, 25, 8, 0)).closeShift(officer, "devA");
+        assertEquals(LocalDateTime.of(2026, 11, 25, 9, 0), s.getEndTime());
+    }
+
+    @Test
+    void closeAllOpenShiftsCapsEachShiftAtItsOwnBoundary() {
+        Shift a = serviceAt(LocalDateTime.of(2026, 11, 24, 9, 0)).openShift(officer, "devA");
+        Shift b = new Shift(officer, officer.getAssignedZone(), "devB", LocalDateTime.of(2026, 11, 25, 22, 40));
+        b.setId(99L);
+        store.add(b);
+        Shift c = new Shift(officer, officer.getAssignedZone(), "devC", LocalDateTime.of(2026, 11, 26, 9, 0));
+        c.setId(100L);
+        store.add(c);
+
+        serviceAt(LocalDateTime.of(2026, 11, 26, 10, 0)).closeAllOpenShifts(officer);
+
+        assertEquals(LocalDateTime.of(2026, 11, 24, 22, 0), a.getEndTime());
+        assertEquals(LocalDateTime.of(2026, 11, 25, 23, 59, 59), b.getEndTime());
+        assertEquals(LocalDateTime.of(2026, 11, 26, 10, 0), c.getEndTime());
+        assertTrue(service.listOpenShifts().isEmpty());
     }
 
     @Test
