@@ -1,5 +1,6 @@
 // Yabancı / özel plaka kamera OCR'ı: ML Kit benzeri kelime kutularıyla (metin + konum) plaka seçimi.
 // Kutular dik tutulan telefonun 1080x1920 karesinde, plaka ekranın ortasında, ana yazı ~80 px boyunda.
+import 'dart:math' as math;
 import 'dart:math' show Point;
 
 import 'package:bilpark/core/foreign_ocr.dart';
@@ -16,6 +17,23 @@ OcrBox b(String text, double left, double top, double w, double h) =>
 
 String? read(List<OcrBox> boxes) => extractForeignPlate(boxes, frameWidth: fw, frameHeight: fh);
 String? cc(List<OcrBox> boxes) => readForeignPlate(boxes, frameWidth: fw, frameHeight: fh)?.countryCode;
+
+/// Eğik plaka: kelimeler (metin, gerçek en, gerçek boy, yazı çizgisinden aşağı kayma) [deg] derece
+/// döndürülmüş bir çizgi üzerinde 40 px arayla dizilir; ML Kit gibi eksene hizalı kutu döner.
+List<OcrBox> tiltedPlate(List<(String, double, double, double)> words, {required double deg}) {
+  final t = deg * math.pi / 180, cos = math.cos(t), sin = math.sin(t).abs();
+  final out = <OcrBox>[];
+  var along = 150.0; // çizgi boyunca sol kenar
+  for (final w in words) {
+    final (text, ww, hh, drop) = w;
+    final c = along + ww / 2;
+    final cx = c * math.cos(t), cy = 960 + c * math.sin(t) + drop;
+    final bw = ww * cos + hh * sin, bh = ww * sin + hh * cos;
+    out.add(OcrBox(text, left: cx - bw / 2, top: cy - bh / 2, right: cx + bw / 2, bottom: cy + bh / 2));
+    along += ww + 40;
+  }
+  return out;
+}
 
 /// Almanya: mavi bantta küçük "D", OHA ile AMK arasında iki mühür (ML Kit bunları "8", "O", "©" okur).
 final germanOha = [
@@ -147,6 +165,63 @@ void main() {
 
     test('çerçeve boyutu verilmezse kutuları saran alanın ortası kullanılır', () {
       expect(extractForeignPlate(germanOha), 'OHAAMK07');
+    });
+  });
+
+  group('eğik plaka: tam boy ilk harf ülke kodu sanılmaz', () {
+    test('5 derece eğik "M AB 1234" (München): M kalır', () {
+      final boxes = tiltedPlate([('M', 45, 80, 0), ('AB', 105, 80, 0), ('1234', 200, 80, 0)], deg: 5);
+      // Ham kutu yükseklik oranı inceleme bulgusundaki gibi 0.9'un altında (eski kod M'yi soyuyordu)
+      expect(boxes[0].height / boxes[2].height, lessThan(0.9));
+      expect(read(boxes), 'MAB1234');
+      expect(cc(boxes), isNull);
+      expect(read(tiltedPlate([('M', 45, 80, 0), ('AB', 105, 80, 0), ('1234', 200, 80, 0)], deg: -8)), 'MAB1234');
+    });
+
+    test('-6 derece eğik "B MW 123": B kalır', () {
+      final boxes = tiltedPlate([('B', 45, 80, 0), ('MW', 110, 80, 0), ('123', 150, 80, 0)], deg: -6);
+      expect(read(boxes), 'BMW123');
+      expect(cc(boxes), isNull);
+    });
+
+    test('eğik plakada gerçek AB bandı D yine soyulur; NL de soyulur', () {
+      // Bant kodu küçük (0.65) ve yazı çizgisinin altında
+      final de = tiltedPlate([('D', 26, 52, 14.0), ('OHA', 160, 80, 0.0), ('AMK', 160, 80, 0.0), ('07', 100, 80, 0.0)], deg: 5);
+      expect(read(de), 'OHAAMK07');
+      expect(cc(de), 'D');
+      // Orta boy (0.75) ama alçakta duran tek harf: bant kodu
+      final de2 = tiltedPlate([('D', 30, 60, 14.0), ('MH', 110, 80, 0.0), ('MT', 110, 80, 0.0), ('042', 150, 80, 0.0)], deg: 4);
+      expect(read(de2), 'MHMT042');
+      expect(cc(de2), 'D');
+      final nl = tiltedPlate([('NL', 45, 55, 10.0), ('MH-MT-42', 420, 80, 0.0)], deg: 5);
+      expect(read(nl), 'MHMT42');
+      expect(cc(nl), 'NL');
+    });
+
+    test('köşe noktası yüksekliği verilirse eksene hizalı kutu yerine o kullanılır', () {
+      final boxes = tiltedPlate([('M', 45, 80, 0), ('AB', 105, 80, 0), ('1234', 200, 80, 0)], deg: 5);
+      final withCorners = [
+        for (final x in boxes) OcrBox(x.text, left: x.left, top: x.top, right: x.right, bottom: x.bottom, charHeight: 80),
+      ];
+      expect(read(withCorners), 'MAB1234');
+      expect(cornerHeight(const [Point(0, 0), Point(100, 10), Point(92, 90), Point(-8, 80)]), closeTo(80.4, 0.1));
+      expect(cornerHeight(const []), isNull);
+    });
+  });
+
+  group('iki satırlı (kare) plaka', () {
+    test('"MH / AB 1234" tek plaka olur, yarım plaka "AB1234" seçilmez', () {
+      final boxes = [b('MH', 200, 820, 130, 80), b('AB', 150, 920, 110, 80), b('1234', 280, 920, 200, 80)];
+      expect(read(boxes), 'MHAB1234');
+    });
+
+    test('"MH / 1234" tek plaka olur', () {
+      expect(read([b('MH', 160, 820, 130, 80), b('1234', 140, 915, 180, 82)]), 'MH1234');
+    });
+
+    test('alttaki küçük bayi yazısı ya da uzak satır plakaya katılmaz', () {
+      expect(read([b('AB', 150, 920, 110, 80), b('1234', 280, 920, 200, 80), b('AUTOHAUS', 180, 1010, 200, 24)]), 'AB1234');
+      expect(read([b('MH', 200, 500, 130, 80), b('AB', 150, 920, 110, 80), b('1234', 280, 920, 200, 80)]), 'AB1234');
     });
   });
 
