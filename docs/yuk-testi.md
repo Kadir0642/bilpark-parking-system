@@ -14,7 +14,22 @@ sonuçlarını ise sağlam kabul edin.
 
 ## Kısa sonuç
 
-> **2. tur (28 Kasım, iyileştirmeler sonrası) sonuçları §8'de.** Aşağıdaki özet 1. turundur (26 Kasım, eski kod).
+> **2. tur (28 Kasım, `main` @ `4a3ec19`, iyileştirmeler sonrası): ayrıntı §8'de.**
+>
+> - **Gerçekçi yük (10 görevli) rahat dayanıyor.** p95 0,8 sn, hata %0 (1. turda soğuk JVM'de 15 sn ve %2,9).
+> - **30 görevli:** p95 1,3 sn, hata %0 (1. turda 5,7 sn).
+> - **Kırılma noktası 30-40'tan 40-50 görevliye çıktı.** Ayrıca havuz `DB_POOL_SIZE=5` ve
+>   `DB_CONNECTION_TIMEOUT_MS=20000` yapılınca 50 görevlide de hata %0 oldu (tek koşu, §8.6).
+> - **Oturumdan atılan görevli:** bütün koşularda 0.
+> - **400 vatandaş / 60 sn:** p95 0,2 sn, hata %0.
+> - **Kesinti kuyruğu:** 10 görevliyle düzeldi (hata %0,06, 113 sn'de boşaldı). 30 görevliyle hâlâ çöküyor
+>   (hata %64).
+> - **Soğuk açılış:** 261 sn'den ~75 sn'ye indi.
+> - **Ücretli katman:** 1 CPU / 2 GB'ta tavan ~150 görevli, açılış 7 sn.
+> - **Düzeltme:** iki turda da koşular arasında aktif araç ve açık vardiya birikmişti. 1. turun geç koşuları
+>   kötümser (§8.0).
+>
+> Aşağıdaki özet 1. turundur (26 Kasım, eski kod).
 
 **Gerçekçi yük (10 görevli + 2 yönetici + vatandaşlar): dayanıyor ama riskli.** Sıcak JVM'de hata %0, p95 2,5 sn.
 Risk üç durumda ortaya çıkıyor:
@@ -456,8 +471,8 @@ kapattığı için orada görevli uçlarına dönen 401 sayısı verildi.
 |---|---|---|---|---|---|
 | 10 görevli, 15 dk, yeniden başlatmadan hemen sonra | 15,0 sn / %2,9 | 1 | **0,8 sn / %0** | 0 | 3,3 → 2,0 |
 | 10 görevli, sıcak JVM (1. tur `a2`) | 2,5 sn / %0 | 0 | (yukarıdaki satır soğuk JVM'i de içeriyor) | | |
-| 30 görevli, 10 dk | 5,7 sn / %0 | 0 | <!--B30--> | | 15,3 → <!--B30RPS--> |
-| 50 görevli | 48 sn / %85¹ | – | <!--C50--> | | |
+| 30 görevli, 10 dk | 5,7 sn / %0 | 0 | **1,3 sn / %0**⁴ | 0 | 15,3 → 6,4 |
+| 50 görevli, 10 dk | 48 sn / %85¹ | – | 19,8 sn / %43⁵ | 0 | 11,4 → 12,6 |
 | basamak 10→20→30→40→50 | 40'ta çöktü | 1 | **50'de çöktü** (40'ta p95 1,2 sn, %0) | 0 | |
 | vatandaş dalgası 400 kişi / 60 sn (+10 görevli + 2 panel) | 1,0 sn / %0 | 0 | **0,2 sn / %0**² | 0 | |
 | kesinti kuyruğu 10 görevli × ~22 giriş | 25,4 sn / %26,8, 218 sn'de bitmedi³ | 3 | **4,5 sn / %0,06, 113 sn'de bitti**² | 0 | 4,9 → 3,3 |
@@ -469,11 +484,39 @@ kapattığı için orada görevli uçlarına dönen 401 sayısı verildi.
 - ² Bu koşu birikim düzeltmesinden önce yapıldı. Başlangıçta 400-800 aktif araç vardı, yani sonuç kötümser ve
   gerçek durum daha iyi.
 - ³ 1. tur geç koşusu; o da birikimle koşuldu (yukarıya bakın).
+- ⁴ Temiz tekrar (`r2-b-30-tekrar`): 10 dk boyunca 10 sn'lik p95 0,9-2,1 sn. İlk koşu (`r2-b-30`, 54 araçla) p95 8,4 sn ve %5,0 hatayla bitti. O koşuda hataların hepsi tek bir 60 sn'lik pencerede (250-310. sn)
+  oldu. Bu pencere dışında 10 sn'lik p95 ~1,5 sn ve hata %0. O pencerede app CPU'su düşüktü, DB CPU'su %20-23'e
+  çıktı (sınır %25). DB'nin yavaş sorgu günlüğünde `parking_records` taramaları vardı (son 100 kayıt ve geçmiş,
+  0,4-2,8 sn). Aynı dakikada 3 panelin tam yenilemesi ve vatandaş tepesi üst üste geldi.
+- ⁵ `r2-c-50-tekrar`, temiz durumda. İlk 5 dakika dayandı (10 sn'lik p95 1-9 sn, hata ≤%7), 300. saniyeden
+  sonra çöktü. Ana makine CPU'su bu koşuda anlık %100'e çıktı ⚠. Birikim düzeltmesinden önceki ilk koşu
+  (`r2-c-50`, 194 araçla) %74 hatayla bitti. O koşuda 503'ten sonraki yeniden denemeler yükü çoğalttı:
+  `/parking/filter` 5.976 kez çağrıldı ve bunların 4.505'i 503'tü.
 
 Ham tablo: `python -I loadtest/ozet.py loadtest/results --tablo <koşu adları>`. Koşu başına bütün sütunlar
 aşağıdaki ayrıntı tablosunda.
 
-<!--TABLO2-->
+Ayrıntı (app 0.1 CPU; `p05` 0.5 CPU, `p1` 1 CPU / 2 GB):
+
+| koşu | başlangıçta aktif araç | istek/sn | hata % | p50 | p95 | p99 | giriş (check-in) p95 | SSE p95 | app CPU ort/max (%, sınır 10) | RSS max MB | full GC | havuz bekleyen max | havuz zaman aşımı | 503 | oturumdan atılan görevli | ana makine CPU ort/max |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| r2-a-temel-10 | 0 | 2.04 | 0 | 0.3 sn | 0.8 sn | 1.5 sn | 0.9 sn | 0.2 sn | 2.1 / 10.8 | 337 | 3 | 0 | 0 | 0 | 0 | 35 / 94 |
+| r2-b-30 | 54 | 6.46 | 5.01 | 0.4 sn | 8.4 sn | 17.2 sn | 10.1 sn | 0.4 sn | 4.9 / 10.2 | 378 | 1 | 104 | 196 | 183 | 0 | 29 / 83 |
+| r2-b-30-tekrar | 0 | 6.44 | 0 | 0.3 sn | 1.3 sn | 1.9 sn | 1.1 sn | 0.2 sn | 5.0 / 10.3 | 445 | 0 | 6 | 0 | 0 | 0 | 18 / 96 |
+| r2-c-50 | 194 | 18.88 | 74.41 | 6.6 sn | 15.0 sn | 19.4 sn | 13.6 sn | 1.0 sn | 9.9 / 13.7 | 466 | 4 | 137 | 980 | 8030 | 0 | 19 / 92 |
+| r2-c-50-tekrar | 0 | 12.61 | 43.39 | 5.6 sn | 19.8 sn | 34.9 sn | 24.3 sn | 1.1 sn | 8.9 / 15.7 | 468 | 2 | 123 | 973 | 2642 | 0 | 35 / 100 |
+| r2-k-kirilma | 0 | 6.58 | 24.76 | 0.6 sn | 10.3 sn | 15.0 sn | 8.3 sn | 0.9 sn | 5.6 / 11.8 | 456 | 0 | 112 | 974 | 1187 | 0 | 11 / 41 |
+| r2-v-dalga | 419 | 4.18 | 0 | 0.1 sn | 1.4 sn | 1.7 sn | 0.5 sn | 0.1 sn | 2.9 / 9.6 | 467 | 0 | 0 | 0 | 0 | 0 | 34 / 90 |
+| r2-d-kuyruk-10 | 471 | 3.25 | 0.06 | 0.8 sn | 4.5 sn | 14.7 sn | 3.9 sn | 0.9 sn | 3.1 / 10.6 | 453 | 1 | 26 | 2 | 1 | 0 | 23 / 73 |
+| r2-d-kuyruk-30 | 0 | 12.86 | 63.94 | 6.3 sn | 15.0 sn | 18.0 sn | 12.7 sn | 6.7 sn | 6.3 / 11.7 | 467 | 2 | 169 | 966 | 4200 | 0 | 16 / 80 |
+| r2-e-dayaniklilik | 808 | 2.16 | 0 | 0.4 sn | 2.0 sn | 2.9 sn | 0.8 sn | 0.2 sn | 3.3 / 11.2 | 470 | 2 | 0 | 0 | 0 | 0 | 33 / 90 |
+| r2-old-30 | 678 | 13.05 | 23.09 | 4.1 sn | 12.7 sn | 23.8 sn | 9.2 sn | 0.8 sn | 10.1 / 11.6 | 470 | 2 | 118 | 1004 | 1766 | 0 | 41 / 82 |
+| r2-p05-temel-10 | 875 | 2.12 | 0 | 0.2 sn | 1.4 sn | 1.7 sn | 0.5 sn | 0.1 sn | 3.4 / 24.8 | 300 | 2 | 0 | 0 | 0 | 0 | 17 / 90 |
+| r2-p1-temel-10 | 933 | 2.25 | 0 | 0.2 sn | 1.4 sn | 1.6 sn | 0.5 sn | 0.1 sn | 3.0 / 13.2 | 299 | 2 | 0 | 0 | 0 | 0 | 22 / 85 |
+| r2-p1-kirilma | 981 | 31.86 | 24.4 | 3.4 sn | 15.0 sn | 37.0 sn | 30.0 sn | 0.2 sn | 35.6 / 79.9 | 719 | 34 | 191 | 0 | 0 | 0 | 20 / 76 |
+| r2-old-30-tekrar | 0 | 15.63 | 1.89 | 1.4 sn | 6.9 sn | 15.0 sn | 5.4 sn | 0.5 sn | 8.5 / 11.2 | 456 | 0 | 92 | 191 | 177 | 0 | 13 / 66 |
+| r2-b-30-dizinli | 0 | 6.28 | 0 | 0.2 sn | 1.3 sn | 1.9 sn | 0.9 sn | 0.2 sn | 4.6 / 10.6 | 445 | 0 | 0 | 0 | 0 | 0 | 28 / 94 |
+| r2-k-kirilma-havuz5-20sn | 0 | 5.91 | 0 | 0.5 sn | 3.3 sn | 7.7 sn | 2.5 sn | 0.3 sn | 5.5 / 11.1 | 343 | 2 | 31 | 0 | 0 | 0 | 11 / 85 |
 
 **Veri doğruluğu her koşuda tam.**
 - Çift aktif plaka, aynı `checkInRequestId` ile iki kayıt, ücretsiz PAID ve girişten önce çıkış: bütün koşularda 0.
@@ -498,18 +541,50 @@ kuyrukta 13). Yeni istemci bunların hepsini `/me` ile teyit etti ve hiçbirinde
 | 40 | 16,5 / **24 sn / %59** | 7,9 / 1,2 sn / %0 |
 | 50 | 11,4 / 48 sn / %85 | 14,7 / **13,4 sn / %73** |
 
-- İstek sayısı görevli başına yaklaşık yarıya indi, kırılma noktası 30-40'tan 40-50'ye çıktı.
+- 1. turun kırılma koşusu ~240-420 aktif araçla, 2. turunki sıfırdan başladı; 1. tur değerleri biraz kötümser.
+- İstek sayısı görevli başına yaklaşık yarıya indi, kırılma noktası 30-40'tan 40-50'ye çıktı. Havuz ayarıyla
+  (§8.6) 50 görevlide de hata çıkmadı.
 - 50 görevlide ilk bozulan yine 0.1 CPU. App CPU'su sürekli kotasının sınırındaydı.
 - 503'ten sonra yapılan yeniden denemeler yükü çoğalttı: 50. basamakta istek/sn 7,9'dan 14,7'ye fırladı.
   `r2-c-50`'de `/parking/filter` 5.976 kez çağrıldı ve bunların 4.505'i 503'tü.
 
 ### 8.3 Eski istemciler yeni sunucuda (geçiş dönemi riski)
 
-<!--OLD30-->
+30 görevli eski uygulamayla (`CLIENT=old`) yeni sunucuya karşı koşuldu. Bu, telefonlar yeni APK'ya geçene
+kadarki durumu temsil ediyor. Koşu temiz durumda yapıldı (`r2-old-30-tekrar`).
+
+| 30 görevli, 3 panel, 10 dk | istek/sn | p95 | hata | 503 | havuz zaman aşımı | atılan görevli | ana makine CPU ort/max |
+|---|---|---|---|---|---|---|---|
+| eski sunucu + eski istemci (1. tur `b`) | 15,3 | 5,7 sn | %0 | 0 | 0 | 0 (görevliye 401: 0) | 19 / 82 |
+| yeni sunucu + **eski** istemci (`r2-old-30-tekrar`) | 15,6 | 6,9 sn | **%1,9** | 177 | 191 | 0 | 13 / 66 |
+| yeni sunucu + yeni istemci (`r2-b-30-tekrar`) | 6,4 | **1,3 sn** | **%0** | 0 | 0 | 0 | 18 / 96 |
+
+- İyileştirmenin büyük kısmı istemcide. Yeni istemci aynı işi 2,4 kat daha az istekle yapıyor ve p95 5 kat
+  düşüyor.
+- Eski istemciler yeni sunucuda eskisi kadar hızlı, ama hata görüyor. Yeni sunucu havuzda 5 sn bekleyip 503
+  dönüyor; eski sunucu 20 sn bekliyordu. Bu yüzden yoğunlukta gecikmenin bir kısmı "işlem başarısız"a dönüşüyor
+  (%1,9). Oturum düşmesi yok, çünkü 503 401 değil.
+- (Birikim düzeltmesinden önceki ilk deneme `r2-old-30` ~680 aktif araçla başladı ve %23 hata verdi. Kıyasta
+  kullanılmadı.)
+- **Öneri:** APK güncellemesini hızlandır. Geçiş süresince istenirse `DB_CONNECTION_TIMEOUT_MS` yükseltilebilir;
+  ortam değişkeni, kod gerekmiyor. Etkisi §8.6'da.
 
 ### 8.4 Dizin denemesi (yalnız yerel DB'de, kod değişikliği yok)
 
-<!--DIZIN-->
+§5'teki öneri 7'nin üç dizini yalnız yerel test DB'sine elle eklendi ve 30 görevli koşusu (temiz durumda)
+tekrarlandı. Eklenen dizinler: `parking_records (street, entry_time DESC)`, `(entry_time DESC)` ve
+`(status, exit_time) INCLUDE (fee, vehicle_type)`. Kod değişmedi. Dizinler koşudan sonra silindi.
+
+| 30 görevli, 3 panel, 10 dk | p95 | hata | DB CPU ort/max (sınır %25) | havuz bekleyen max | en pahalı sorgu (toplam DB süresi) |
+|---|---|---|---|---|---|
+| dizinsiz (`r2-b-30-tekrar`) | 1,3 sn | %0 | 7,4 / 25,5 | 6 | son 100 kayıt: 374 çağrı × 520 ms = **194 sn** |
+| dizinli (`r2-b-30-dizinli`) | 1,3 sn | %0 | **3,3 / 14,9** | **0** | tipe göre ciro: 135 × 21 ms = **2,9 sn** |
+
+- Bugünkü yükte istemci gecikmesi değişmedi. Darboğaz hâlâ app'in 0.1 CPU'su.
+- Ama DB yükü yarıya indi ve DB tepeleri sınırın altına çekildi. 1. denemedeki tek hata penceresi (§8.1 dipnot 4)
+  tam da bu sorgulardan geliyordu.
+- Ücretli CPU'ya geçince (§8.5) sıra DB'ye geçtiği için asıl kazanç orada görülür.
+- **Öneri:** dizinleri V12 migration'ıyla ekle. Ücretsiz ve düşük riskli.
 
 ### 8.5 Ücretli sunucuya geçince (bilgi amaçlı, satın alma yok)
 
@@ -518,7 +593,7 @@ görevli koşuları ~900, kırılma koşusu ~1.000-1.600 aktif araçla başladı
 
 | app | soğuk açılış (`/api/health`) | 10 görevli p95 | 10 görevli check-in p95 | kırılma |
 |---|---|---|---|---|
-| 0.1 CPU / 512 MB (Render Free) | 73-83 sn | 0,8 sn | 0,9 sn | 40-50 görevli (temiz koşu) |
+| 0.1 CPU / 512 MB (Render Free) | 73-83 sn | 0,8 sn | 0,9 sn | 40-50 görevli; havuz 5 / 20 sn ile 50'de hâlâ %0 (§8.6) |
 | 0.5 CPU / 512 MB | 12 sn | 1,4 sn⁴ | 0,5 sn | ölçülmedi |
 | 1 CPU / 2 GB | 7 sn | 1,4 sn⁴ | 0,5 sn | 100 görevli: p95 ~1,0 sn, %0; 150: p95 5,8 sn, %1,6; **200: %94** |
 
@@ -527,7 +602,7 @@ görevli koşuları ~900, kırılma koşusu ~1.000-1.600 aktif araçla başladı
 `sync?since` 0,81 sn'den 0,18 sn'ye indi.
 
 - **10 görevlide ücretli CPU'ya gerek yok.** Free katmanda p95 0,8 sn, hata %0. Ücretli katmanın asıl kazancı
-  açılış süresi (75 sn → 7-12 sn) ve tavanın yükselmesi.
+  açılış süresi (~75 sn → 7-12 sn) ve tavanın yükselmesi.
 - **1 CPU / 2 GB'ta tavan ~150 görevli.** 200 görevlide DB CPU'su %28'e çıktı (0.25 CU sınırı). Bu noktada sıra
   DB'ye geçiyor: Neon'un 2 CU'ya otomatik ölçeklenmesi (burada simüle edilmedi) ya da dizinler (§8.4) gerekir.
 - **RSS:** 0.1 CPU / 512 MB'ta dayanıklılık koşusunda RSS 458-470 MB'ta sabit kaldı. Sızıntı yok, ama 512 MB'a
@@ -535,10 +610,30 @@ görevli koşuları ~900, kırılma koşusu ~1.000-1.600 aktif araçla başladı
 
 ### 8.6 Havuz ayarı denemesi
 
-<!--HAVUZ-->
+Aynı temiz basamak koşusu (10→20→30→40→50) iki havuz ayarıyla koşuldu. Yalnızca ortam değişkenleri
+değişti, kod aynı.
+
+| ayar | 10 | 20 | 30 | 40 | 50 görevli |
+|---|---|---|---|---|---|
+| `DB_POOL_SIZE=10`, `DB_CONNECTION_TIMEOUT_MS=5000` (bugünkü varsayılan) | 0,5 sn / %0 | 0,8 sn / %0 | 1,1 sn / %0 | 1,2 sn / %0 | **13,4 sn / %73** |
+| `DB_POOL_SIZE=5`, `DB_CONNECTION_TIMEOUT_MS=20000` | 0,9 sn / %0 | 0,9 sn / %0 | 1,1 sn / %0 | 2,5 sn / %0 | **2,8 sn / %0** |
+
+Değerler basamak başına 10 sn'lik p95 medyanı ve ortalama hata. Toplamda havuz 5 / 20 sn ile p95 3,3 sn, hata
+%0, 503 sayısı 0, RSS en çok 343 MB. Varsayılanda p95 10,3 sn, hata %25 ve 1.187 adet 503 vardı.
+
+- 0.1 CPU'da 10 bağlantı, aynı anda daha çok isteğin CPU'yu paylaşması demek.
+- 5 sn'lik bekleme sınırı, kuyruktaki isteği 503'e çeviriyor. İstemci 503'te yeniden deniyor ve yük artıyor.
+- 5 bağlantı ve 20 sn sınırla istekler sırada bekliyor, gecikme biraz uzuyor (40 görevlide 1,2 → 2,5 sn), ama
+  503 kaskadı oluşmuyor.
+- **Bu tek bir koşudur.** Ayar kalıcı yapılmadan önce bir kez daha ölçülmeli. Kırılma noktası bu ayarla 50'nin
+  üstünde, nerede olduğu ölçülmedi.
+- **Öneri (ücretsiz, kod yok):** Render Free'de `DB_POOL_SIZE=5` ve `DB_CONNECTION_TIMEOUT_MS=20000`
+  ortam değişkenleri. Ücretli ve çok çekirdekli katmanda bugünkü varsayılanlar (10 / 5 sn) daha uygun olabilir;
+  orada yeniden ölçülmeli.
 
 ### 8.7 Kalan riskler (önem sırasıyla)
 
+0. **Havuz ayarları 0.1 CPU için fazla agresif.** 50 görevlide çöküşün başlıca nedeni bu (§8.6). Ücretsiz düzeltme: iki ortam değişkeni.
 1. **Kesinti sonrası kuyruk 30 görevliyle hâlâ çöküyor.** 10 görevli artık sorunsuz. 30 görevlide ~650 giriş
    288 sn'de boşalmadı ve hata %64 oldu. Nedenler:
    - kayıtlar arası 0,4-1,2 sn bekleme, 30 telefonda saniyede ~2 giriş demek;
@@ -547,10 +642,10 @@ görevli koşuları ~900, kırılma koşusu ~1.000-1.600 aktif araçla başladı
 
    **Öneriler:** bekleme aralığını 2-3 sn'ye çıkar; kuyruk boşalırken olay kaynaklı yenilemeyi beklet; sunucuda
    toplu giriş ucu ekle (`mobile/lib/core/entry_queue.dart`, `ParkingController`).
-2. **503 yeniden deneme çoğaltması.** GET'te 3 yeniden deneme aşırı yükte isteği ~4 katına çıkarıyor.
+2. **503 yeniden deneme çoğaltması.** GET'te 3 yeniden deneme, aşırı yükte bir isteği en çok 4 isteğe çıkarıyor. 50 görevlide istek/sn 7,9'dan 14,7'ye fırladı (§8.2).
    **Öneri:** `ApiClient.serverBusy` sürerken yeniden denemeyi tek isteğe indir
    (`mobile/lib/core/api_client.dart`).
-3. **Geçiş dönemi.** Eski APK'lar yeni sunucuyla yoğunlukta daha çok hata görüyor (§8.3).
+3. **Geçiş dönemi.** Eski APK'lar yeni sunucuda yoğunlukta 30 görevlide %1,9 hata görüyor (§8.3).
 4. **DB'nin tarama yapan sorguları ve `bi/shifts` N+1** hâlâ var (§5 öneri 7, §8.4). Tablo ve açık vardiya
    sayısıyla doğrusal büyüyorlar.
 5. **Bellek payı.** 512 MB'ta RSS ~470 MB.

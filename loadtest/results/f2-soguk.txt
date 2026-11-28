@@ -4,3 +4,4 @@
 2tur-soguk-0.5cpu: health=11.7s ilk_giris=+0.9s ilk_db_okuma=+0.8s (spots 200) | Started BackendApplication in 10.905 seconds
 2tur-soguk-1cpu-2gb: health=6.8s ilk_giris=+0.6s ilk_db_okuma=+0.6s (spots 200) | Started BackendApplication in 5.988 seconds
 2tur-soguk-0.1cpu-gocmus-db-2: health=75.0s ilk_giris=+7.5s ilk_db_okuma=+3.7s (spots 200) | Started BackendApplication in 67.594 seconds
+2tur-soguk-havuz5-20sn: health=71.1s ilk_giris=+4.9s ilk_db_okuma=+2.3s (spots 200) | Started BackendApplication in 64.073 seconds
