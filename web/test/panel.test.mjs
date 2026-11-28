@@ -20,7 +20,7 @@ let srv, base, browser;
 const hits = {};            // yol -> istek sayısı
 let streams = [];           // açık SSE bağlantıları
 let version = 1;
-const mode = { spots503: 0 }; // /spots için kalan 503 sayısı
+const mode = { spots503: 0, login: null }; // /spots için kalan 503 sayısı; login: sahte giriş yanıtı { status, body, headers }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const count = (re) => Object.entries(hits).filter(([k]) => re.test(k)).reduce((a, [, v]) => a + v, 0);
 const reset = () => { for (const k of Object.keys(hits)) delete hits[k]; };
@@ -59,6 +59,10 @@ before(async () => {
       streams.push(res);
       req.on('close', () => { streams = streams.filter((x) => x !== res); });
       return;
+    }
+    if (u.pathname === '/api/auth/login' && req.method === 'POST') {
+      const l = mode.login || { status: 401, body: { error: 'Kullanıcı adı veya şifre hatalı.' } };
+      return json(res, l.body, l.status, l.headers || {});
     }
     if (u.pathname === '/api/events/ticket') return json(res, { ticket: 't' });
     if (u.pathname === '/api/sync') return json(res, { version, events: [], hasMore: false });
@@ -135,5 +139,141 @@ test('503 geçicidir: yeniden denenir, oturum kapanmaz', async () => {
   const state = await page.evaluate(() => ({ token: localStorage.getItem('token'), loginVisible: getComputedStyle(document.getElementById('loginScreen')).display !== 'none' }));
   assert.equal(state.token, 'test-secret-token');
   assert.equal(state.loginVisible, false, 'giriş ekranına dönülmemeli');
+  await page.close();
+});
+
+// ---- Giriş ekranı: sakin hata ve bekleme mesajları (sahte API, canlıya gidilmez) ----
+async function openLogin() {
+  const page = await browser.newPage();
+  // Önceki testlerin bıraktığı oturum (aynı kaynak, ortak localStorage) giriş ekranını gizlemesin
+  await page.evaluateOnNewDocument(() => { localStorage.clear(); });
+  await page.goto(`${base}/admin-panel.html?api=${base}`);
+  await page.waitForSelector('#loginUsername', { visible: true });
+  return page;
+}
+async function tryLogin(page, user = 'yonetici1') {
+  await page.$eval('#loginUsername', (el) => { el.value = ''; });
+  await page.type('#loginUsername', user);
+  await page.type('#loginPassword', 'test-secret-yanlis');
+  await page.click('#btnLogin');
+}
+const loginState = (page) => page.evaluate(() => ({
+  box: !document.getElementById('loginError').hidden,
+  text: document.getElementById('loginErrorText').textContent,
+  hint: document.getElementById('loginHint').hidden ? '' : document.getElementById('loginHint').textContent,
+  countdown: document.getElementById('loginCountdown').hidden ? '' : document.getElementById('loginCountdown').textContent,
+  disabled: document.getElementById('btnLogin').disabled,
+  label: document.getElementById('btnLogin').textContent,
+  user: document.getElementById('loginUsername').value,
+  fontPx: parseFloat(getComputedStyle(document.getElementById('loginError')).fontSize),
+  cls: document.getElementById('loginError').className,
+}));
+const waitLoginText = async (page, re) => {
+  for (let i = 0; i < 40; i++) { if (re.test((await loginState(page)).text)) return; await sleep(100); }
+};
+
+test('giriş 401 (hak bilgisi yok): sunucu metni, ipucu yok, kullanıcı adı silinmez, kırmızı değil', async () => {
+  mode.login = { status: 401, body: { error: 'Kullanıcı adı veya şifre hatalı.', code: 'UNAUTHORIZED' } };
+  const page = await openLogin();
+  await tryLogin(page);
+  await waitLoginText(page, /hatalı/);
+  const st = await loginState(page);
+  assert.equal(st.text, 'Kullanıcı adı veya şifre hatalı.');
+  assert.equal(st.hint, '');
+  assert.equal(st.user, 'yonetici1');
+  assert.equal(st.disabled, false);
+  assert.ok(st.fontPx >= 17, 'yazı büyük olmalı');
+  assert.ok(!/alert-danger/.test(st.cls), 'kırmızı uyarı kullanılmamalı');
+  await page.close();
+});
+
+test('giriş 401 remainingAttempts: sunucu metni + nazik ipucu', async () => {
+  mode.login = { status: 401, body: { error: 'Kullanıcı adı veya şifre hatalı. 2 deneme hakkınız kaldı.', code: 'UNAUTHORIZED', remainingAttempts: 2 } };
+  const page = await openLogin();
+  await tryLogin(page);
+  await waitLoginText(page, /hakkınız kaldı/);
+  const st = await loginState(page);
+  assert.match(st.text, /2 deneme hakkınız kaldı/);
+  assert.equal(st.hint, 'Şifrenizi hatırlamıyorsanız yöneticinize başvurun.');
+  assert.equal(st.user, 'yonetici1');
+  await page.close();
+});
+
+test('giriş 401 gövdesiz: yerel sakin metin', async () => {
+  mode.login = { status: 401, body: {} };
+  const page = await openLogin();
+  await tryLogin(page);
+  await waitLoginText(page, /hatalı/);
+  assert.equal((await loginState(page)).text, 'Kullanıcı adı veya şifre hatalı.');
+  await page.close();
+});
+
+test('giriş 429 LOGIN_LOCKED: düğme kapanır, geri sayım akar, süre dolunca açılır, otomatik yeniden deneme yok', async () => {
+  mode.login = { status: 429, headers: { 'Retry-After': '3' }, body: { error: 'Çok fazla başarısız giriş denemesi yapıldı. Lütfen 1 dakika sonra tekrar deneyin.', code: 'LOGIN_LOCKED', retryAfterSeconds: 3 } };
+  reset();
+  const page = await openLogin();
+  await tryLogin(page);
+  await waitLoginText(page, /1 dakika/);
+  let st = await loginState(page);
+  assert.match(st.text, /Lütfen 1 dakika sonra tekrar deneyin\./);
+  assert.match(st.countdown, /^Kalan süre: 0:0[1-3]$/);
+  assert.equal(st.disabled, true);
+  assert.match(st.label, /^Lütfen bekleyin · 0:0\d$/);
+  assert.equal(st.user, 'yonetici1');
+  // Kilitliyken Enter ile gönderme de istek atmaz
+  await page.focus('#loginPassword');
+  await page.keyboard.press('Enter');
+  await sleep(300);
+  assert.equal(count(/^\/api\/auth\/login$/), 1, 'kilitliyken yeni istek atılmamalı');
+  for (let i = 0; i < 50 && (await loginState(page)).disabled; i++) await sleep(100);
+  st = await loginState(page);
+  assert.equal(st.disabled, false, 'süre dolunca düğme açılmalı');
+  assert.equal(st.label, 'Giriş yap');
+  assert.equal(st.countdown, '');
+  assert.match(st.text, /Bekleme süresi doldu/);
+  await sleep(1500);
+  assert.equal(count(/^\/api\/auth\/login$/), 1, 'kendiliğinden yeniden denenmemeli');
+  await page.close();
+});
+
+test('giriş 429 RATE_LIMITED: sunucu metni gösterilir, "sunucu yoğun" denmez', async () => {
+  mode.login = { status: 429, headers: { 'Retry-After': '2' }, body: { error: 'Bu bağlantıdan kısa sürede çok sayıda giriş denemesi yapıldı. Lütfen 1 dakika sonra tekrar deneyin.', code: 'RATE_LIMITED', retryAfterSeconds: 2 } };
+  const page = await openLogin();
+  await tryLogin(page);
+  await waitLoginText(page, /Bu bağlantıdan/);
+  const st = await loginState(page);
+  assert.match(st.text, /^Bu bağlantıdan kısa sürede/);
+  assert.ok(!/yoğun/.test(st.text));
+  assert.equal(st.disabled, true, 'Retry-After varsa kısa süre beklenir');
+  await page.close();
+});
+
+test('giriş 429 süre bildirmeden: varsayılan 60 sn geri sayım başlar; geri sayım canlı bölge dışındadır', async () => {
+  mode.login = { status: 429, body: { error: 'Bir süre bekleyin.', code: 'LOGIN_LOCKED' } };
+  const page = await openLogin();
+  await tryLogin(page);
+  await waitLoginText(page, /bekleyin/);
+  const st = await loginState(page);
+  assert.match(st.countdown, /^Kalan süre: (1:00|0:59)$/);
+  assert.equal(st.disabled, true);
+  const live = await page.evaluate(() => ({
+    inLive: !!document.getElementById('loginCountdown').closest('[aria-live="polite"], [role="status"], [role="alert"]'),
+    textInLive: !!document.getElementById('loginErrorText').closest('[aria-live="polite"]'),
+  }));
+  assert.equal(live.inLive, false, 'saniyelik geri sayım ekran okuyucuya okunmamalı');
+  assert.equal(live.textInLive, true, 'mesaj canlı bölgede olmalı');
+  await page.close();
+});
+
+test('giriş 503: sakin "sunucu yoğun" mesajı, düğme açık, oturum yok', async () => {
+  mode.login = { status: 503, headers: { 'Retry-After': '5' }, body: { error: 'x', code: 'SERVICE_UNAVAILABLE' } };
+  const page = await openLogin();
+  await tryLogin(page);
+  await waitLoginText(page, /yoğun/);
+  const st = await loginState(page);
+  assert.match(st.text, /Sunucu şu an yoğun/);
+  assert.equal(st.disabled, false);
+  assert.equal(await page.evaluate(() => localStorage.getItem('token')), null);
+  mode.login = null;
   await page.close();
 });
