@@ -40,6 +40,8 @@ public class AuditQueryService {
     static {
         LABELS.put(AuditAction.LOGIN, "Giriş");
         LABELS.put(AuditAction.LOGIN_FAILED, "Başarısız giriş");
+        LABELS.put(AuditAction.LOGIN_LOCKED, "Giriş geçici olarak kilitlendi");
+        LABELS.put(AuditAction.LOGIN_FAILURES_HIGH, "Bir kullanıcı adına çok sayıda hatalı giriş");
         LABELS.put(AuditAction.LOGOUT, "Çıkış");
         LABELS.put(AuditAction.SHIFT_AUTO_CLOSED, "Vardiya otomatik kapandı");
         LABELS.put(AuditAction.PASSWORD_CHANGED, "Şifre değiştirildi");

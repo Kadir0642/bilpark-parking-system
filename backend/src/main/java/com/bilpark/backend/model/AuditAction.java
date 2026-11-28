@@ -5,6 +5,8 @@ public enum AuditAction {
     // Session
     LOGIN,
     LOGIN_FAILED,
+    LOGIN_LOCKED,        // too many failed logins: username locked for a while at one address, or client IP over its login cap
+    LOGIN_FAILURES_HIGH, // many failed logins for one username from all addresses together (reported, nothing locked)
     LOGOUT,
     SHIFT_AUTO_CLOSED,   // system: shift closed by login on another device, by the nightly job, or a logout capped at the day boundary
     PASSWORD_CHANGED,
