@@ -26,13 +26,20 @@ class ApiException implements Exception {
   /// 503/429'daki Retry-After (varsa). Yeniden deneyenler en az bu kadar bekler.
   final Duration? retryAfter;
 
-  const ApiException(this.statusCode, this.code, this.message, {this.retryAfter});
+  /// Giriş 401'inde, hak azaldığında sunucunun bildirdiği kalan deneme sayısı (yoksa null).
+  final int? remainingAttempts;
+
+  const ApiException(this.statusCode, this.code, this.message, {this.retryAfter, this.remainingAttempts});
 
   bool get isUnauthorized => statusCode == 401;
   bool get isReadOnly => statusCode == 423;
 
   /// 503/429: sunucu geçici olarak yoğun. Oturum ya da istek hatası DEĞİLDİR; kimse çıkış yaptırılmaz.
   bool get isBusy => statusCode == 503 || statusCode == 429;
+
+  /// Giriş denemesi sınırı: kullanıcı adı geçici kilitli (LOGIN_LOCKED) ya da IP sınırı (RATE_LIMITED).
+  /// Sunucu yoğun DEĞİLDİR; ekran sakin bir geri sayım gösterir, kendiliğinden yeniden denemez.
+  bool get isLoginLimited => statusCode == 429 && (code == 'LOGIN_LOCKED' || code == 'RATE_LIMITED');
 
   @override
   String toString() => message;
@@ -54,6 +61,9 @@ class ApiClient {
 
   /// Sunucu ne kadar büyük Retry-After verirse versin, tek bir istek en çok bu kadar bekler.
   static const Duration maxRetryAfter = Duration(seconds: 20);
+
+  /// Giriş kilidi bekleme süresi için üst sınır (sunucu en çok 15 dk verir; saçma değerler kırpılır).
+  static const Duration maxLoginLockWait = Duration(minutes: 30);
 
   /// Gerçek 401'i teyit etmeden önce beklenen süre (jitterli: bu değerin 0,5-1 katı).
   static const Duration unauthorizedConfirmDelay = Duration(seconds: 2);
@@ -154,6 +164,8 @@ class ApiClient {
   static ApiException parseError(int status, String body) {
     String? message;
     String? code;
+    int? remaining;
+    Duration? retryAfter;
     try {
       final decoded = jsonDecode(body);
       if (decoded is Map) {
@@ -161,9 +173,13 @@ class ApiClient {
         if (err is String && err.isNotEmpty) message = err;
         final c = decoded['code'];
         if (c is String) code = c;
+        final r = decoded['remainingAttempts'];
+        if (r is int && r >= 0) remaining = r;
+        final ra = decoded['retryAfterSeconds'];
+        if (ra is int && ra > 0) retryAfter = Duration(seconds: ra);
       }
     } catch (_) {}
-    return ApiException(status, code, message ?? defaultMessage(status));
+    return ApiException(status, code, message ?? defaultMessage(status), retryAfter: retryAfter, remainingAttempts: remaining);
   }
 
   // --- İstekler ---
@@ -255,6 +271,17 @@ class ApiClient {
         final err = parseError(status, text);
         await handleUnauthorized();
         throw ApiException(401, err.code ?? 'UNAUTHORIZED', sessionExpiredMessage);
+      }
+
+      // Giriş sınırı (429 LOGIN_LOCKED / RATE_LIMITED): sunucu yoğun değil. Sunucunun mesajı ve bekleme süresi
+      // olduğu gibi taşınır; "yoğun" bandı açılmaz, yeniden denenmez (kararı kullanıcı verir).
+      if (status == 429 && path == '/auth/login') {
+        final err = parseError(status, text);
+        if (err.code == 'LOGIN_LOCKED' || err.code == 'RATE_LIMITED') {
+          var wait = err.retryAfter ?? parseRetryAfter(response.headers['retry-after'], cap: maxLoginLockWait);
+          if (wait != null && wait > maxLoginLockWait) wait = maxLoginLockWait;
+          throw ApiException(429, err.code, err.message, retryAfter: wait);
+        }
       }
 
       if (status == 503 || status == 429) {

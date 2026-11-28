@@ -34,9 +34,11 @@ public class PasswordService {
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
     private final Clock clock;
+    private final LoginRateLimiter loginRateLimiter;
 
     public PasswordService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                           AuditService auditService, Clock clock) {
+                           AuditService auditService, Clock clock, LoginRateLimiter loginRateLimiter) {
+        this.loginRateLimiter = loginRateLimiter;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.auditService = auditService;
@@ -82,12 +84,14 @@ public class PasswordService {
 
     /**
      * Someone else sets the user's password (admin resets an officer, developer resets an admin).
-     * The caller passes the audit action; the password itself is never logged.
+     * The caller passes the audit action; the password itself is never logged. A login lock on the user
+     * (too many failed attempts) is lifted, so the new password works at once.
      */
     @Transactional
     public User resetPassword(User target, String newPassword, AuditAction action, String summary) {
         validate(target.getUsername(), newPassword);
         apply(target, newPassword);
+        loginRateLimiter.clear(target.getUsername());
         auditService.log(action, "User", target.getId(), summary, null, Map.of("username", target.getUsername()));
         return target;
     }
