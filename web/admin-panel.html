@@ -16,6 +16,9 @@
     <style>
         /* Sayfaya özel düzen; renkler theme.css değişkenlerinden gelir */
         #loginScreen { display: none; min-height: 100vh; align-items: center; justify-content: center; padding: 16px; }
+        #loginError { font-size: 17px; line-height: 1.45; padding: var(--s-4); }
+        #loginError .login-hint { margin-top: 8px; font-size: 16px; }
+        #loginError .login-countdown { margin-top: 8px; font-size: 20px; font-weight: 700; }
         #loginScreen .login-card { width: 100%; max-width: 400px; padding: var(--s-8) var(--s-6); display: flex; flex-direction: column; gap: var(--s-4); }
         .brand { display: flex; align-items: center; gap: 10px; }
         .brand-mark { width: 40px; height: 40px; border-radius: 10px; background: var(--primary); color: var(--on-primary); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; flex: none; }
@@ -149,7 +152,11 @@
             <label class="field">Şifre
                 <input type="password" id="loginPassword" class="input" autocomplete="current-password" required>
             </label>
-            <div id="loginError" class="alert alert-danger" role="alert" hidden></div>
+            <div id="loginError" class="alert alert-warning" role="status" aria-live="polite" hidden>
+                <div id="loginErrorText"></div>
+                <div id="loginHint" class="login-hint" hidden></div>
+                <div id="loginCountdown" class="login-countdown" hidden></div>
+            </div>
             <button type="submit" id="btnLogin" class="btn btn-primary btn-lg btn-block">Giriş yap</button>
         </form>
     </div>
@@ -691,12 +698,49 @@
     function currentRole() { return localStorage.getItem('role') || 'ADMIN'; }
     const ROLE_LABELS = { ADMIN: 'Yönetici', OFFICER: 'Memur', DEVELOPER: 'Geliştirici' };
 
-    function showLoginMessage(msg, kind) {
+    // Giriş mesajı sakin tonda gösterilir (kırmızı yok). kind: 'warning' (varsayılan, yumuşak sarı) | 'info'.
+    // hint: küçük yardımcı satır. Bekleme geri sayımı (loginLockTimer) varsa ayrıca görünür.
+    function showLoginMessage(msg, kind, hint) {
         const box = $('loginError');
-        if (!msg) { box.hidden = true; return; }
-        box.className = 'alert ' + (kind === 'warning' ? 'alert-warning' : 'alert-danger');
-        box.textContent = msg;
-        box.hidden = false;
+        $('loginErrorText').textContent = msg || '';
+        const h = $('loginHint');
+        h.textContent = hint || '';
+        h.hidden = !hint;
+        box.className = 'alert ' + (kind === 'info' ? 'alert-info' : 'alert-warning');
+        $('loginCountdown').hidden = !loginLockTimer;
+        box.hidden = !msg && !loginLockTimer;
+    }
+
+    // Geçici kilit (429): düğme kapanır, geri sayım akar, süre dolunca düğme kendiliğinden açılır.
+    // Giriş KENDİLİĞİNDEN yeniden denenmez.
+    let loginLockTimer = null;
+    function fmtCountdown(sec) { return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }
+    function stopLoginLock() {
+        if (loginLockTimer) { clearInterval(loginLockTimer); loginLockTimer = null; }
+        $('loginCountdown').hidden = true;
+        const btn = $('btnLogin');
+        btn.disabled = false;
+        btn.textContent = 'Giriş yap';
+    }
+    function startLoginLock(sec) {
+        if (loginLockTimer) { clearInterval(loginLockTimer); loginLockTimer = null; }
+        let left = Math.max(1, Math.ceil(sec));
+        const btn = $('btnLogin');
+        const render = () => {
+            $('loginCountdown').textContent = 'Kalan süre: ' + fmtCountdown(left);
+            btn.textContent = 'Lütfen bekleyin · ' + fmtCountdown(left);
+        };
+        btn.disabled = true;
+        loginLockTimer = setInterval(() => {
+            left--;
+            if (left <= 0) {
+                stopLoginLock();
+                showLoginMessage('Bekleme süresi doldu. Şimdi tekrar deneyebilirsiniz.', 'info');
+            } else render();
+        }, 1000);
+        $('loginCountdown').hidden = false;
+        $('loginError').hidden = false;
+        render();
     }
 
     function showLogin(sessionMsg) {
@@ -727,6 +771,7 @@
         const username = $('loginUsername').value.trim();
         const password = $('loginPassword').value;
         const btn = $('btnLogin');
+        if (loginLockTimer) return; // kilit süresince Enter ile de gönderilemez
         showLoginMessage('');
         btn.disabled = true;
         try {
@@ -735,7 +780,25 @@
                 headers: { 'Content-Type': 'application/json', 'X-Device-Id': deviceId() },
                 body: JSON.stringify({ username, password })
             });
-            if (res.status === 401) { showLoginMessage('Kullanıcı adı veya şifre hatalı.'); return; }
+            if (res.status === 401) {
+                let b = {};
+                try { b = await res.json(); } catch (e) { /* gövde yok */ }
+                const hint = b && Number.isInteger(b.remainingAttempts) ? 'Şifrenizi hatırlamıyorsanız yöneticinize başvurun.' : '';
+                showLoginMessage((b && b.error) || 'Kullanıcı adı veya şifre hatalı.', 'warning', hint);
+                return;
+            }
+            if (res.status === 429) {
+                // Giriş sınırı (LOGIN_LOCKED / RATE_LIMITED): sunucu yoğun değil; sunucunun metni ve bekleme süresi gösterilir.
+                let b = {};
+                try { b = await res.json(); } catch (e) { /* gövde yok */ }
+                if (b && (b.code === 'LOGIN_LOCKED' || b.code === 'RATE_LIMITED')) {
+                    const body = Number.isFinite(b.retryAfterSeconds) && b.retryAfterSeconds > 0 ? Math.ceil(b.retryAfterSeconds) : 0;
+                    const sec = Math.min(body || retryAfterSec(res), 1800);
+                    showLoginMessage(b.error || 'Çok fazla deneme yapıldı. Lütfen biraz bekleyip tekrar deneyin.');
+                    if (sec > 0) startLoginLock(sec);
+                    return;
+                }
+            }
             if (res.status === 503 || res.status === 429) {
                 const ra = retryAfterSec(res);
                 showLoginMessage('Sunucu şu an yoğun, geçici olarak yanıt veremiyor.' + (ra ? ` ${ra} sn sonra tekrar deneyin.` : ' Biraz sonra tekrar deneyin.'));
@@ -756,7 +819,7 @@
         } catch (e) {
             showLoginMessage('Sunucuya bağlanılamadı. Lütfen bağlantınızı kontrol edin.');
         } finally {
-            btn.disabled = false;
+            if (!loginLockTimer) btn.disabled = false;
         }
     }
 
