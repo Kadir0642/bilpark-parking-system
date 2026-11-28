@@ -145,6 +145,8 @@ test('503 geçicidir: yeniden denenir, oturum kapanmaz', async () => {
 // ---- Giriş ekranı: sakin hata ve bekleme mesajları (sahte API, canlıya gidilmez) ----
 async function openLogin() {
   const page = await browser.newPage();
+  // Önceki testlerin bıraktığı oturum (aynı kaynak, ortak localStorage) giriş ekranını gizlemesin
+  await page.evaluateOnNewDocument(() => { localStorage.clear(); });
   await page.goto(`${base}/admin-panel.html?api=${base}`);
   await page.waitForSelector('#loginUsername', { visible: true });
   return page;
