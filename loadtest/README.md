@@ -98,7 +98,12 @@ docker image rm bilpark-yuk-backend:latest    # isteğe bağlı
 - 1 CPU / 2 GB için `APP_CPUS=1 APP_MEM=2g`. Havuz denemesi için `DB_POOL_SIZE=5 DB_CONNECTION_TIMEOUT_MS=20000`
   (ikisi de app yeniden oluşturulunca etkili olur, ör. `coldstart.sh` ile).
 - **Koşu hijyeni:** `run.sh` her koşudan önce açık vardiyaları kapatır; aktif araçları ve istek kimliklerini
-  siler (`KEEP_SPOTS=1` ile atlanır). Bu yapılmazsa yük koşudan koşuya yapay olarak büyür.
+  siler (`KEEP_SPOTS=1` ile atlanır). Bu yapılmazsa yük koşudan koşuya yapay olarak büyür. Sıfırlama başarısız
+  olursa `run.sh` uyarı yazar.
+- `parking_records`'a dokunulmaz. Her koşunun ödenmiş, kaçak ve iptal kayıtları tohum verisinin üstüne birikir,
+  yani ciro ve geçmiş tabloları koşudan koşuya büyür. Silinen aktif araçlar kayda dönüşmez, yetim `ACTIVE` kayıt
+  oluşmaz. Ama koşular arasında BI sorgularının taradığı satır sayısı artar. Tam temiz başlangıç için yığını
+  `down -v` ile kaldırıp `seed.sql`'den yeniden kurun.
 - `seri.sh` her koşudan önce emülatör açıksa bekler. Ağır koşuların arasına ~90 sn soğuma konuldu.
 
 Belgedeki 2. tur sonuçlarını üreten koşular (ilk açılış ve `seed.sql`'den sonra). İlk satırdaki dört koşu birikim düzeltmesinden önce yapıldı; başlangıçtaki aktif araç sayıları belgede yazılı:

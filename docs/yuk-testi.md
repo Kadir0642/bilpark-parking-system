@@ -10,21 +10,23 @@ kopyaya karşı koşuldu. **Canlı sisteme hiçbir istek gönderilmedi.** Komutl
 kısa koşudan ve ana makine yükünden geliyor. Gecikme sayılarını ±%50 bandında, hata ve kırılma noktası
 sonuçlarını ise sağlam kabul edin.
 
-Ölçüm tarihi: 26 Kasım 2026. Ölçülen kod: `main` @ `4842938` (plaka sorgusu hız sınırı dahil).
+Ölçüm tarihleri: 1. tur 26 Kasım 2026, `main` @ `4842938` (plaka sorgusu hız sınırı dahil). 2. tur 28 Kasım 2026, `main` @ `4a3ec19` (iyileştirmeler sonrası, §8).
 
 ## Kısa sonuç
 
 > **2. tur (28 Kasım, `main` @ `4a3ec19`, iyileştirmeler sonrası): ayrıntı §8'de.**
 >
-> - **Gerçekçi yük (10 görevli) rahat dayanıyor.** p95 0,8 sn, hata %0 (1. turda soğuk JVM'de 15 sn ve %2,9).
+> - **Gerçekçi yük (10 görevli) rahat dayanıyor.** p95 0,8 sn, hata %0. 1. turda aynı soğuk JVM koşulunda 15 sn ve
+>   %2,9 idi. Farkın bir kısmı istemcinin artık ~%40 daha az istek atmasından geliyor (3,3 → 2,0 istek/sn).
 > - **30 görevli:** p95 1,3 sn, hata %0 (1. turda 5,7 sn).
 > - **Kırılma noktası 30-40'tan 40-50 görevliye çıktı.** Ayrıca havuz `DB_POOL_SIZE=5` ve
->   `DB_CONNECTION_TIMEOUT_MS=20000` yapılınca 50 görevlide de hata %0 oldu (tek koşu, §8.6).
+>   `DB_CONNECTION_TIMEOUT_MS=20000` yapılınca 50 görevlide de hata %0 oldu. Bu tek koşuda görüldü ve olası bir
+>   neden; Render'a kalıcı uygulanmadan önce en az 2 kez tekrar ölçülmeli (§8.6).
 > - **Oturumdan atılan görevli:** bütün koşularda 0.
 > - **400 vatandaş / 60 sn:** p95 0,2 sn, hata %0.
 > - **Kesinti kuyruğu:** 10 görevliyle düzeldi (hata %0,06, 113 sn'de boşaldı). 30 görevliyle hâlâ çöküyor
 >   (hata %64).
-> - **Soğuk açılış:** 261 sn'den ~75 sn'ye indi.
+> - **Soğuk açılış:** 261 sn'den 69,8-83,1 sn'ye indi.
 > - **Ücretli katman:** 1 CPU / 2 GB'ta tavan ~150 görevli, açılış 7 sn.
 > - **Düzeltme:** iki turda da koşular arasında aktif araç ve açık vardiya birikmişti. 1. turun geç koşuları
 >   kötümser (§8.0).
@@ -376,7 +378,7 @@ için ölçmek gerekir.
 
 | Konu | Bulgu | Kanıt |
 |---|---|---|
-| Hikari havuzu | `maximum-pool-size=5`, `minimum-idle=0`, `idle-timeout=30s`, `connection-timeout=20s` (`application.properties`). Neon 0.25 CU sınırı ~104 bağlantı; sınırlayan Neon değil, 5'lik havuz. 30 sn boşta kalan bağlantı kapanır, yeniden açmak Neon'da TLS + kimlik doğrulama (+ uyanma) ister. | `application.properties` |
+| Hikari havuzu | (1. tur; 2. turda 10 / 5 sn) `maximum-pool-size=5`, `minimum-idle=0`, `idle-timeout=30s`, `connection-timeout=20s` (`application.properties`). Neon 0.25 CU sınırı ~104 bağlantı; sınırlayan Neon değil, 5'lik havuz. 30 sn boşta kalan bağlantı kapanır, yeniden açmak Neon'da TLS + kimlik doğrulama (+ uyanma) ister. | `application.properties` |
 | Bağlantı istek boyunca tutuluyor | `OpenEntityManagerInViewInterceptor` (SSE hariç her istek) + Spring'in `HibernateJpaVendorAdapter` varsayılanı `hibernate.connection.handling_mode=DELAYED_ACQUISITION_AND_HOLD`: istek DB'ye ilk dokunduğu andan **yanıt bitene kadar** (JSON serileştirme, xlsx üretimi dahil) havuz bağlantısını tutar. 0.1 CPU'da istekler yavaş olduğu için 5 bağlantı çabuk doluyor. | `OpenEntityManagerInViewConfig.java`, spring-orm 7.0.5 sınıf sabitleri, Hikari günlüğü `active=5, waiting>0` |
 | İstek başına kullanıcı sorgusu | Her kimlikli istekte `JwtAuthFilter` `loadUserByUsername`; işlem uçlarında controller `currentUser` aynı kullanıcıyı bir kez daha okur (30 görevlide 10 dk'da 8.852 `users` sorgusu). | `JwtAuthFilter.java`, `ParkingController.currentUser` |
 | Görevli olay çoğaltması | Bölgedeki HER araç olayında bölgedeki HER görevli: harita `/parking/filter` (300 ms debounce) + gösterge `/parking/filter` + `/parking/history` + `/vehicle-types` (500 ms debounce). `/parking/filter` caddenin tamamını döner, istemci bölgeye süzer. | `parking_map_screen.dart`, `main.dart`, `dashboard_screen.dart` |
@@ -478,12 +480,13 @@ kapattığı için orada görevli uçlarına dönen 401 sayısı verildi.
 | kesinti kuyruğu 10 görevli × ~22 giriş | 25,4 sn / %26,8, 218 sn'de bitmedi³ | 3 | **4,5 sn / %0,06, 113 sn'de bitti**² | 0 | 4,9 → 3,3 |
 | kesinti kuyruğu 30 görevli × ~22 giriş | 31,0 sn / %38,6, bitmedi³ | 31 | 15,0 sn / %64, 288 sn'de bitmedi | 0 | 7,7 → 12,9 |
 | dayanıklılık 30-35 dk, 10 görevli | 5,0 sn / %0,17, 2 kez ~20 sn duruş³ | 0 | **2,0 sn / %0**, duruş yok² | 0 | 3,4 → 2,2 |
-| soğuk açılış, göçü yapılmış DB, 0.1 CPU | 261 sn | – | **73-83 sn** | – | – |
+| soğuk açılış, 0.1 CPU | 261 sn (göçü yapılmış DB) | – | **69,8-83,1 sn**⁶ | – | – |
 
 - ¹ 1. turdaki basamak koşusunun 50 görevli basamağı.
 - ² Bu koşu birikim düzeltmesinden önce yapıldı. Başlangıçta 400-800 aktif araç vardı, yani sonuç kötümser ve
   gerçek durum daha iyi.
 - ³ 1. tur geç koşusu; o da birikimle koşuldu (yukarıya bakın).
+- ⁶ `results/f2-soguk.txt`'teki 6 ölçüm: boş DB 78,9 ve 69,8 sn; göçü yapılmış DB 83,1, 75,0 ve 72,7 sn; havuz denemesi 71,1 sn.
 - ⁴ Temiz tekrar (`r2-b-30-tekrar`): 10 dk boyunca 10 sn'lik p95 0,9-2,1 sn. İlk koşu (`r2-b-30`, 54 araçla) p95 8,4 sn ve %5,0 hatayla bitti. O koşuda hataların hepsi tek bir 60 sn'lik pencerede (250-310. sn)
   oldu. Bu pencere dışında 10 sn'lik p95 ~1,5 sn ve hata %0. O pencerede app CPU'su düşüktü, DB CPU'su %20-23'e
   çıktı (sınır %25). DB'nin yavaş sorgu günlüğünde `parking_records` taramaları vardı (son 100 kayıt ve geçmiş,
@@ -559,7 +562,7 @@ kadarki durumu temsil ediyor. Koşu temiz durumda yapıldı (`r2-old-30-tekrar`)
 | yeni sunucu + **eski** istemci (`r2-old-30-tekrar`) | 15,6 | 6,9 sn | **%1,9** | 177 | 191 | 0 | 13 / 66 |
 | yeni sunucu + yeni istemci (`r2-b-30-tekrar`) | 6,4 | **1,3 sn** | **%0** | 0 | 0 | 0 | 18 / 96 |
 
-- İyileştirmenin büyük kısmı istemcide. Yeni istemci aynı işi 2,4 kat daha az istekle yapıyor ve p95 5 kat
+- İyileştirmenin büyük kısmı istemcide. Yeni istemci aynı işi yaklaşık 2,4 kat daha az istekle yapıyor ve p95 yaklaşık 5 kat
   düşüyor.
 - Eski istemciler yeni sunucuda eskisi kadar hızlı, ama hata görüyor. Yeni sunucu havuzda 5 sn bekleyip 503
   dönüyor; eski sunucu 20 sn bekliyordu. Bu yüzden yoğunlukta gecikmenin bir kısmı "işlem başarısız"a dönüşüyor
@@ -593,7 +596,7 @@ görevli koşuları ~900, kırılma koşusu ~1.000-1.600 aktif araçla başladı
 
 | app | soğuk açılış (`/api/health`) | 10 görevli p95 | 10 görevli check-in p95 | kırılma |
 |---|---|---|---|---|
-| 0.1 CPU / 512 MB (Render Free) | 73-83 sn | 0,8 sn | 0,9 sn | 40-50 görevli; havuz 5 / 20 sn ile 50'de hâlâ %0 (§8.6) |
+| 0.1 CPU / 512 MB (Render Free) | 69,8-83,1 sn | 0,8 sn | 0,9 sn | 40-50 görevli; havuz 5 / 20 sn ile 50'de hâlâ %0 (§8.6) |
 | 0.5 CPU / 512 MB | 12 sn | 1,4 sn⁴ | 0,5 sn | ölçülmedi |
 | 1 CPU / 2 GB | 7 sn | 1,4 sn⁴ | 0,5 sn | 100 görevli: p95 ~1,0 sn, %0; 150: p95 5,8 sn, %1,6; **200: %94** |
 
@@ -602,7 +605,7 @@ görevli koşuları ~900, kırılma koşusu ~1.000-1.600 aktif araçla başladı
 `sync?since` 0,81 sn'den 0,18 sn'ye indi.
 
 - **10 görevlide ücretli CPU'ya gerek yok.** Free katmanda p95 0,8 sn, hata %0. Ücretli katmanın asıl kazancı
-  açılış süresi (~75 sn → 7-12 sn) ve tavanın yükselmesi.
+  açılış süresi (70-83 sn → 7-12 sn) ve tavanın yükselmesi.
 - **1 CPU / 2 GB'ta tavan ~150 görevli.** 200 görevlide DB CPU'su %28'e çıktı (0.25 CU sınırı). Bu noktada sıra
   DB'ye geçiyor: Neon'un 2 CU'ya otomatik ölçeklenmesi (burada simüle edilmedi) ya da dizinler (§8.4) gerekir.
 - **RSS:** 0.1 CPU / 512 MB'ta dayanıklılık koşusunda RSS 458-470 MB'ta sabit kaldı. Sızıntı yok, ama 512 MB'a
@@ -625,15 +628,15 @@ Değerler basamak başına 10 sn'lik p95 medyanı ve ortalama hata. Toplamda hav
 - 5 sn'lik bekleme sınırı, kuyruktaki isteği 503'e çeviriyor. İstemci 503'te yeniden deniyor ve yük artıyor.
 - 5 bağlantı ve 20 sn sınırla istekler sırada bekliyor, gecikme biraz uzuyor (40 görevlide 1,2 → 2,5 sn), ama
   503 kaskadı oluşmuyor.
-- **Bu tek bir koşudur.** Ayar kalıcı yapılmadan önce bir kez daha ölçülmeli. Kırılma noktası bu ayarla 50'nin
-  üstünde, nerede olduğu ölçülmedi.
-- **Öneri (ücretsiz, kod yok):** Render Free'de `DB_POOL_SIZE=5` ve `DB_CONNECTION_TIMEOUT_MS=20000`
+- **Bu tek bir koşudur; yukarıdaki açıklama olası bir nedendir.** Render'a kalıcı uygulanmadan önce en az 2 kez
+  tekrar ölçülmeli. Kırılma noktası bu ayarla 50'nin üstünde, nerede olduğu ölçülmedi.
+- **Denenecek (ücretsiz, kod yok):** Render Free'de `DB_POOL_SIZE=5` ve `DB_CONNECTION_TIMEOUT_MS=20000`
   ortam değişkenleri. Ücretli ve çok çekirdekli katmanda bugünkü varsayılanlar (10 / 5 sn) daha uygun olabilir;
   orada yeniden ölçülmeli.
 
 ### 8.7 Kalan riskler (önem sırasıyla)
 
-0. **Havuz ayarları 0.1 CPU için fazla agresif.** 50 görevlide çöküşün başlıca nedeni bu (§8.6). Ücretsiz düzeltme: iki ortam değişkeni.
+0. **Havuz ayarları 0.1 CPU için fazla agresif olabilir.** Tek koşuda 50 görevli çöküşü havuz 5 / 20 sn ile ortadan kalktı (§8.6). Olası neden; en az 2 tekrarla doğrulanmalı. Denenecek: iki ortam değişkeni, kod gerekmiyor.
 1. **Kesinti sonrası kuyruk 30 görevliyle hâlâ çöküyor.** 10 görevli artık sorunsuz. 30 görevlide ~650 giriş
    288 sn'de boşalmadı ve hata %64 oldu. Nedenler:
    - kayıtlar arası 0,4-1,2 sn bekleme, 30 telefonda saniyede ~2 giriş demek;
