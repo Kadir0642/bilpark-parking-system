@@ -107,6 +107,8 @@ flowchart LR
     MON["Çalışırlık izleyicisi"] -- "GET /api/health<br/>(veritabanına dokunmaz)" --> API
 ```
 
+Ölçekleme yol haritası (dikey adımlar, çoklu örnek kontrol listesi, uyarı eşikleri): [`docs/olcekleme-plani.md`](docs/olcekleme-plani.md).
+
 ## Teknolojiler
 
 | Katman | Teknoloji |
