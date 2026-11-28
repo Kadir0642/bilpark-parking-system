@@ -19,6 +19,14 @@ envs=(-e "LABEL=$LABEL" -e "OUT=/results/$LABEL.json")
 for kv in "$@"; do envs+=(-e "$kv"); done
 
 docker exec bilpark-yuk-db-1 psql -U bilpark -d bilpark_yuk -qc "CREATE EXTENSION IF NOT EXISTS pg_stat_statements; SELECT pg_stat_statements_reset();" >/dev/null
+# Önceki koşulardan kalan açık vardiyaları kapat (canlıda gece işi ve yeni giriş kapatır). Kapatılmazsa her koşu
+# yüzlerce açık vardiya biriktirir ve panelin bi/shifts ucu (açık vardiya başına bir sorgu) yükü yapay olarak şişirir.
+docker exec bilpark-yuk-db-1 psql -U bilpark -d bilpark_yuk -qc "UPDATE shifts SET end_time = now(), auto_closed = true WHERE end_time IS NULL;" >/dev/null
+# Önceki koşuların sahada bıraktığı araçları da temizle (KEEP_SPOTS=1 ile atlanır). Temizlenmezse aktif araç sayısı
+# koşudan koşuya binleri bulur; /parking/filter ve /parking/spots bütün caddeyi döndüğü için yük yapay olarak büyür.
+if [ "${KEEP_SPOTS:-0}" != "1" ]; then
+  docker exec bilpark-yuk-db-1 psql -U bilpark -d bilpark_yuk -qc "DELETE FROM active_park_spots;" >/dev/null
+fi
 since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
 bash loadtest/sampler.sh "$R/$LABEL-kaynak.csv" &
