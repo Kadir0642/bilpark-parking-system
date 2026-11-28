@@ -107,6 +107,8 @@ flowchart LR
     MON["Uptime monitor"] -- "GET /api/health<br/>(no DB access)" --> API
 ```
 
+Scaling roadmap (vertical steps, multi-instance checklist, alert thresholds): [`docs/olcekleme-plani.md`](docs/olcekleme-plani.md) (Turkish).
+
 ## Tech stack
 
 | Layer | Technology |
