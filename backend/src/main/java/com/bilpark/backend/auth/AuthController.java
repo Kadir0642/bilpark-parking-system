@@ -73,7 +73,7 @@ public class AuthController {
                     "Başarısız giriş denemesi", null, null);
             if (failure.alert()) {
                 audit(request.username(), AuditAction.LOGIN_FAILURES_HIGH,
-                        "Bu kullanıcı adına son 15 dakikada " + failure.usernameFailures() + " hatalı giriş denemesi",
+                        "Bu kullanıcı adına kısa sürede " + failure.usernameFailures() + " hatalı giriş denemesi (kilit yok)",
                         Map.of("failures", failure.usernameFailures()));
             }
             if (failure.lock() != null) return refused(failure.lock(), request.username());

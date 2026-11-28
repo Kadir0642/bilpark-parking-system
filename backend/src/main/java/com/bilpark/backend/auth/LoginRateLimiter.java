@@ -349,8 +349,8 @@ public class LoginRateLimiter {
         if (ip == null || ip.isBlank()) return "unknown";
         if (ip.indexOf(':') < 0) return ip;
         try {
-            // a literal with ':' is parsed, never looked up in DNS; ClientIp already allows only [0-9A-Fa-f:.]
-            InetAddress addr = InetAddress.getByName(ip);
+            // brackets: an IPv6 literal is required, so a malformed value fails instead of going to DNS
+            InetAddress addr = InetAddress.getByName("[" + ip + "]");
             if (!(addr instanceof Inet6Address)) return addr.getHostAddress(); // IPv4-mapped
             byte[] b = addr.getAddress();
             StringBuilder sb = new StringBuilder();

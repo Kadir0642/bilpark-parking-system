@@ -28,7 +28,8 @@ Yeni hata kodları:
 | `PROTECTED_ACCOUNT` | 400/403 | Bu hesap bu uç noktayla değiştirilemez (ör. geliştirici hesabı) |
 | `ALREADY_CANCELLED` | 409 | Kayıt zaten iptal edilmiş |
 | `INVALID_SETTINGS` | 400 | Ayar değeri geçersiz (ör. ağırlık toplamı 100 değil) |
-| `RATE_LIMITED` | 429 | `POST /api/auth/login`: çok fazla başarısız deneme (kullanıcı adı geçici kilitli) ya da bu IP'den çok fazla deneme. `Retry-After` (saniye) gelir. Ayrıntı: "Giriş denemesi sınırı" |
+| `LOGIN_LOCKED` | 429 | `POST /api/auth/login`: bu kullanıcı adı bu adresten çok sayıda hatalı denemeyle geçici kilitli. `Retry-After` ve `retryAfterSeconds` gelir. Ayrıntı: "Giriş denemesi sınırı" |
+| `RATE_LIMITED` | 429 | `POST /api/auth/login`: bu bağlantıdan kısa sürede çok sayıda giriş denemesi. `Retry-After` ve `retryAfterSeconds` gelir |
 | `SERVICE_UNAVAILABLE` | 503 | Sunucu yoğun: veritabanı bağlantısı 5 sn içinde alınamadı. `Retry-After` başlığı (saniye) gelir. Oturum geçerlidir; istemci oturumu kapatmaz, verilen süre sonra tekrar dener. Her uçta, giriş doğrulaması dahil, dönebilir |
 | `REPORT_BUSY` | 503 | Başka bir rapor hazırlanıyor (raporlar tek tek üretilir). `Retry-After` gelir; "Rapor hazırlanıyor, birkaç saniye sonra tekrar deneyin" gösterilir |
 
@@ -49,23 +50,54 @@ Geliştirici rolünün varlığı ve yetkileri `docs/sozlesme-eki-gelistirici-ve
 
 ### Giriş denemesi sınırı (`POST /api/auth/login`)
 
-Kaba kuvvet denemelerine karşı iki sınır vardır. Sayaçlar sunucu belleğinde tutulur, yeniden başlatma sıfırlar.
+Kaba kuvvet denemelerine karşı sınırlar. Sayaçlar sunucu belleğinde tutulur, yeniden başlatma sıfırlar. Panel ve saha uygulaması aşağıdaki yanıtları **olduğu gibi** kullanır: `error` metni ekranda gösterilir, 429 "sunucu yoğun" diye yorumlanmaz.
 
-- **Kullanıcı adı başına:** art arda 5 başarısız denemeden sonra (aralarında 15 dakikadan uzun boşluk yoksa) kullanıcı adı geçici olarak kilitlenir: önce 1 dakika, sonra 5 dakika, sonra her seferinde 15 dakika. Kilitliyken doğru şifre de `429` alır; şifre denetlenmez. Başarılı giriş sayacı sıfırlar. Var olmayan kullanıcı adları da aynı biçimde sayılır; yanıt, kullanıcının var olup olmadığını belli etmez.
-- **İstemci IP'si başına:** 60 saniyede en çok 30 deneme. IP, plaka sorgu sınırındaki gibi `X-Forwarded-For`'un sağından alınır (istemcinin eklediği soldaki değerler sayılmaz). Aynı operatör IP'sini paylaşan memurlar engellenmesin diye başarılı giriş payını geri verir; pencereyi dolduran, başarısız (ve o an süren) denemelerdir.
-- Veritabanına ulaşılamadığında giriş `503 SERVICE_UNAVAILABLE` döner ve başarısız deneme sayılmaz.
+**Kurallar**
 
-Sınır aşılınca `429` ve saniye cinsinden `Retry-After` başlığı döner. Kilidi başlatan deneme de `429` alır:
+- **Kilit, kullanıcı adı ve istemci adresi çiftine bağlıdır.** Aynı adresten aynı kullanıcı adıyla art arda **6** hatalı denemede o adı o adreste geçici olarak kilitler. Denemeler arasında 15 dakikadan uzun boşluk varsa sayım baştan başlar. Kilit süresi önce 1 dakika, sonra 5 dakika, sonra her seferinde 15 dakikadır. Başka adresteki kullanıcı etkilenmez: adı bilen biri memuru ya da yöneticiyi dışarıda bırakamaz.
+- Kilitliyken şifre denetlenmez, doğru şifre de `429` alır. Başarılı giriş o çiftin sayacını sıfırlar.
+- Var olmayan kullanıcı adları da aynı biçimde sayılır. Yanıtlar (durum kodu, gövde, başlık) kullanıcının var olup olmadığını belli etmez.
+- **Bağlantı başına:** 60 saniyede en çok 30 deneme. Adres, plaka sorgu sınırındaki gibi `X-Forwarded-For`'un sağından alınır. IPv6 adresleri /64 ağına göre sayılır. Aynı operatör IP'sini paylaşan memurlar engellenmesin diye başarılı giriş payını geri verir.
+- Bir kullanıcı adına bütün adreslerden 15 dakikada 100 hatalı deneme yapılırsa denetim kaydına bir satır yazılır. Hiçbir şey kilitlenmez.
+- Veritabanına ulaşılamadığında giriş `503 SERVICE_UNAVAILABLE` döner ve deneme sayılmaz.
+
+**Yanlış şifre: `401`.** İlk denemelerde gövde değişmez:
 
 ```json
-{ "error": "Çok fazla başarısız giriş denemesi yapıldı. Lütfen 1 dakika sonra tekrar deneyin.", "code": "RATE_LIMITED" }
+{ "error": "Kullanıcı adı veya şifre hatalı.", "code": "UNAUTHORIZED" }
 ```
 
-IP sınırında mesaj "Çok fazla giriş denemesi yapıldı. Lütfen biraz bekleyip tekrar deneyin." olur. İstemci `error` alanını olduğu gibi göstermeli, 429'u "sunucu yoğun" diye yorumlamamalıdır.
+Kilide 2 ya da daha az hak kaldığında (6 hakta 4. ve 5. hatalı deneme) gövdeye `remainingAttempts` (tam sayı) eklenir ve mesaj uzar:
 
-Her kilit (ve her IP penceresinde ilk aşım) denetim kaydına bir kez `LOGIN_LOCKED` olarak yazılır; `after` alanında `{reason: "username", failures, lockSeconds}` ya da `{reason: "ip"}` bulunur, şifre yazılmaz. Kilidi kaldırmak için ayrı bir uç nokta yoktur: kilit süresi dolunca kalkar. Yönetici memurun, geliştirici yöneticinin şifresini sıfırlarsa o kullanıcının kilidi de hemen kalkar.
+```json
+{ "error": "Kullanıcı adı veya şifre hatalı. 2 deneme hakkınız kaldı.", "code": "UNAUTHORIZED", "remainingAttempts": 2 }
+```
 
-Ayarlar `bilpark.rate-limit.login.*` (`enabled`, `max-failures`, `failure-window-seconds`, `lock-seconds`, `per-ip`, `ip-window-seconds`, `max-tracked-usernames`, `max-tracked-ips`); ortam değişkeniyle de verilebilir (ör. `BILPARK_RATE_LIMIT_LOGIN_PER_IP`). Bellekte en çok 10 000 kullanıcı adı ve 10 000 IP izlenir; dolunca önce süresi geçenler atılır, mevcut kilitler atılmaz. Tek IP'den çok sayıda girişle yapılan yük testlerinde `per-ip` yükseltilmelidir.
+```json
+{ "error": "Kullanıcı adı veya şifre hatalı. 1 deneme hakkınız kaldı.", "code": "UNAUTHORIZED", "remainingAttempts": 1 }
+```
+
+**Kilit: `429` + `Retry-After: <saniye>` başlığı.** 6. hatalı deneme ve kilit süresince yapılan her deneme bu yanıtı alır. Dakika yukarı yuvarlanır, en az 1'dir:
+
+```json
+{ "error": "Çok sayıda hatalı deneme yapıldı. Güvenliğiniz için 1 dakika sonra tekrar deneyebilirsiniz.", "code": "LOGIN_LOCKED", "retryAfterSeconds": 60 }
+```
+
+**Bağlantı sınırı: `429` + `Retry-After`:**
+
+```json
+{ "error": "Bu bağlantıdan kısa sürede çok sayıda giriş denemesi yapıldı. Lütfen 1 dakika sonra tekrar deneyin.", "code": "RATE_LIMITED", "retryAfterSeconds": 42 }
+```
+
+Aynı ad ve adresle aynı anda birden çok istek gelirse (çift dokunma) fazlası `429 RATE_LIMITED` alır. Bu yanıtta `retryAfterSeconds` 1'dir, mesaj "Önceki giriş denemeniz sürüyor. Lütfen birkaç saniye sonra tekrar deneyin." olur.
+
+`retryAfterSeconds` her zaman `Retry-After` başlığıyla aynıdır (CORS ile tarayıcıya açıktır). İstemci bu süre boyunca giriş düğmesini kapalı tutabilir ve geri sayım gösterebilir. 429'da otomatik yeniden deneme yapılmaz.
+
+**Denetim kaydı.** Her kilit ve her bağlantı penceresindeki ilk aşım bir kez `LOGIN_LOCKED` olarak yazılır. `after` alanında `{reason: "username", failures, lockSeconds}` ya da `{reason: "ip"}` bulunur. Kullanıcı adı eşiği `LOGIN_FAILURES_HIGH` olarak yazılır, `after` alanında `{failures}` bulunur. Hiçbirinde şifre yazılmaz.
+
+**Kilidin kaldırılması.** Ayrı bir uç nokta yoktur, kilit süresi dolunca kalkar. Yönetici memurun ya da geliştirici yöneticinin şifresini sıfırlarsa o kullanıcının bütün adreslerdeki kilidi de hemen kalkar.
+
+**Ayarlar.** `bilpark.rate-limit.login.*` altında: `enabled`, `max-failures` (6), `failure-window-seconds` (900), `lock-seconds` (60,300,900), `username-alert-failures` (100), `per-ip` (30), `ip-window-seconds` (60), `max-tracked-keys` (10000). Ortam değişkeniyle de verilebilir (ör. `BILPARK_RATE_LIMIT_LOGIN_PER_IP`). Her tabloda en çok `max-tracked-keys` kayıt tutulur. Tablo dolunca önce süresi geçenler, sonra en uzun süredir kullanılmayanlar atılır. Tek IP'den çok sayıda girişle yapılan yük testlerinde `per-ip` yükseltilmelidir.
 
 ---
 
@@ -237,13 +269,13 @@ Tüm filtreler isteğe bağlıdır. `from` ve `to` varsayılan olarak son 30 gü
 - `GET /api/admin/audit/actions`: filtre listesi için `[{ "action": "VEHICLE_CHECK_OUT", "label": "Araç çıkışı" }, ...]`.
 - `GET /api/admin/audit/export?<aynı filtreler>&format=csv|xlsx`: en fazla 50 000 satır. Dosya adı `denetim-kaydi.csv` veya `denetim-kaydi.xlsx`.
 - Bilinmeyen `action` adı veya hatalı tarih `400 VALIDATION_ERROR` döner. `actor` kullanıcı adında, `q` özette içerir araması yapar.
-- Başarısız girişte (`LOGIN_FAILED`) ve giriş kilidinde (`LOGIN_LOCKED`) `actorUsername` denenen kullanıcı adıdır, `actorRole` boştur. Giriş kaydının `after` alanında `{deviceId, shiftId}` bulunur.
+- Başarısız girişte (`LOGIN_FAILED`), giriş kilidinde (`LOGIN_LOCKED`) ve kullanıcı adı eşiğinde (`LOGIN_FAILURES_HIGH`) `actorUsername` denenen kullanıcı adıdır, `actorRole` boştur. Giriş kaydının `after` alanında `{deviceId, shiftId}` bulunur.
 
 Kayda alınan işlemler (`action`):
 
 | Grup | Değerler |
 |---|---|
-| Oturum | `LOGIN`, `LOGIN_FAILED`, `LOGIN_LOCKED`, `LOGOUT`, `PASSWORD_CHANGED` |
+| Oturum | `LOGIN`, `LOGIN_FAILED`, `LOGIN_LOCKED`, `LOGIN_FAILURES_HIGH`, `LOGOUT`, `PASSWORD_CHANGED` |
 | Araç ve kayıt | `VEHICLE_CHECK_IN`, `VEHICLE_CHECK_OUT`, `VEHICLE_RUNAWAY`, `SPOT_CANCELLED`, `RECORD_CANCELLED` |
 | Tarife | `TARIFF_DRAFT_CREATED`, `TARIFF_DRAFT_UPDATED`, `TARIFF_SCHEDULED`, `TARIFF_CANCELLED`, `TARIFF_ACTIVATED` (sistem) |
 | Abonelik | `SUBSCRIPTION_CREATED`, `SUBSCRIPTION_CANCELLED` |
@@ -411,7 +443,7 @@ Yönetim paneli:
 - [ ] Raporlar sayfası: personel, kaçak, dönem, kayıt dökümü; Excel/CSV düğmeleri
 - [ ] Ayarlar: performans ağırlıkları, yıllık kira
 - [ ] SSE'de `LICENSE_UPDATED` ve `RECORD_CANCELLED` olaylarında ilgili verilerin yenilenmesi
-- [ ] Girişte `429 RATE_LIMITED`: sunucunun `error` mesajını göstermek (şu an genel "sunucu yoğun" yazısı çıkıyor)
+- [ ] Giriş: 401'de `error` (ve varsa `remainingAttempts`), 429 `LOGIN_LOCKED`/`RATE_LIMITED`'de `error` ve `retryAfterSeconds` geri sayımı (şu an genel "sunucu yoğun" yazısı çıkıyor)
 
 Saha uygulaması:
 
@@ -420,4 +452,4 @@ Saha uygulaması:
 - [ ] `VEHICLE_CANCELLED` ve `USER_UPDATED` olaylarının işlenmesi
 - [ ] Şifre değiştirme ekranı
 - [ ] Lisans uyarısı: yalnızca 7 ve 1 gün kala, isteğe bağlı
-- [ ] Girişte `429 RATE_LIMITED`: sunucunun `error` mesajını göstermek (şu an genel "sunucu yoğun" yazısı çıkıyor)
+- [ ] Giriş: 401'de `error` (ve varsa `remainingAttempts`), 429 `LOGIN_LOCKED`/`RATE_LIMITED`'de `error` ve `retryAfterSeconds` geri sayımı (şu an genel "sunucu yoğun" yazısı çıkıyor)
