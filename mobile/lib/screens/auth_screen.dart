@@ -125,43 +125,51 @@ class _AuthScreenState extends State<AuthScreen> {
 
   /// Sakin bilgi kutusu: kırmızı uyarı yerine yumuşak sarı zemin, büyük ve okunaklı yazı.
   Widget _feedbackBox(BilParkColors c, LoginFeedback fb) {
-    return Semantics(
-      liveRegion: true,
-      child: Container(
-        key: const ValueKey('loginFeedback'),
-        padding: const EdgeInsets.all(BpSize.s4),
-        decoration: BoxDecoration(
-          color: c.warningSoft,
-          border: Border.all(color: c.warning),
-          borderRadius: BorderRadius.circular(BpSize.rSm),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(Icons.info_outline, size: 24, color: c.onWarningSoft),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(fb.message, style: TextStyle(fontSize: 18, height: 1.3, color: c.onWarningSoft)),
-                  if (fb.hint != null) ...[
-                    const SizedBox(height: 8),
-                    Text(fb.hint!, style: TextStyle(fontSize: 16, height: 1.3, color: c.onWarningSoft)),
-                  ],
-                  if (_locked) ...[
-                    const SizedBox(height: 8),
-                    Text(
+    return Container(
+      key: const ValueKey('loginFeedback'),
+      padding: const EdgeInsets.all(BpSize.s4),
+      decoration: BoxDecoration(
+        color: c.warningSoft,
+        border: Border.all(color: c.warning),
+        borderRadius: BorderRadius.circular(BpSize.rSm),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, size: 24, color: c.onWarningSoft),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Yalnızca mesaj ve ipucu canlı bölgedir (kilit başlangıcı/bitişi okunur); saniyelik geri sayım okunmaz.
+                Semantics(
+                  liveRegion: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(fb.message, style: TextStyle(fontSize: 18, height: 1.3, color: c.onWarningSoft)),
+                      if (fb.hint != null) ...[
+                        const SizedBox(height: 8),
+                        Text(fb.hint!, style: TextStyle(fontSize: 16, height: 1.3, color: c.onWarningSoft)),
+                      ],
+                    ],
+                  ),
+                ),
+                if (_locked) ...[
+                  const SizedBox(height: 8),
+                  ExcludeSemantics(
+                    child: Text(
                       'Kalan süre: ${formatCountdown(Duration(seconds: _lockLeft))}',
                       key: const ValueKey('loginCountdown'),
                       style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: c.onWarningSoft),
                     ),
-                  ],
+                  ),
                 ],
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

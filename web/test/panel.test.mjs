@@ -248,6 +248,23 @@ test('giriş 429 RATE_LIMITED: sunucu metni gösterilir, "sunucu yoğun" denmez'
   await page.close();
 });
 
+test('giriş 429 süre bildirmeden: varsayılan 60 sn geri sayım başlar; geri sayım canlı bölge dışındadır', async () => {
+  mode.login = { status: 429, body: { error: 'Bir süre bekleyin.', code: 'LOGIN_LOCKED' } };
+  const page = await openLogin();
+  await tryLogin(page);
+  await waitLoginText(page, /bekleyin/);
+  const st = await loginState(page);
+  assert.match(st.countdown, /^Kalan süre: (1:00|0:59)$/);
+  assert.equal(st.disabled, true);
+  const live = await page.evaluate(() => ({
+    inLive: !!document.getElementById('loginCountdown').closest('[aria-live="polite"], [role="status"], [role="alert"]'),
+    textInLive: !!document.getElementById('loginErrorText').closest('[aria-live="polite"]'),
+  }));
+  assert.equal(live.inLive, false, 'saniyelik geri sayım ekran okuyucuya okunmamalı');
+  assert.equal(live.textInLive, true, 'mesaj canlı bölgede olmalı');
+  await page.close();
+});
+
 test('giriş 503: sakin "sunucu yoğun" mesajı, düğme açık, oturum yok', async () => {
   mode.login = { status: 503, headers: { 'Retry-After': '5' }, body: { error: 'x', code: 'SERVICE_UNAVAILABLE' } };
   const page = await openLogin();

@@ -152,10 +152,13 @@
             <label class="field">Şifre
                 <input type="password" id="loginPassword" class="input" autocomplete="current-password" required>
             </label>
-            <div id="loginError" class="alert alert-warning" role="status" aria-live="polite" hidden>
-                <div id="loginErrorText"></div>
-                <div id="loginHint" class="login-hint" hidden></div>
-                <div id="loginCountdown" class="login-countdown" hidden></div>
+            <div id="loginError" class="alert alert-warning" hidden>
+                <!-- Yalnızca mesaj ve ipucu canlı bölgedir; saniyelik geri sayım okunmaz (aria-live kapalı) -->
+                <div role="status" aria-live="polite">
+                    <div id="loginErrorText"></div>
+                    <div id="loginHint" class="login-hint" hidden></div>
+                </div>
+                <div id="loginCountdown" class="login-countdown" aria-live="off" hidden></div>
             </div>
             <button type="submit" id="btnLogin" class="btn btn-primary btn-lg btn-block">Giriş yap</button>
         </form>
@@ -793,9 +796,9 @@
                 try { b = await res.json(); } catch (e) { /* gövde yok */ }
                 if (b && (b.code === 'LOGIN_LOCKED' || b.code === 'RATE_LIMITED')) {
                     const body = Number.isFinite(b.retryAfterSeconds) && b.retryAfterSeconds > 0 ? Math.ceil(b.retryAfterSeconds) : 0;
-                    const sec = Math.min(body || retryAfterSec(res), 1800);
+                    const sec = Math.min(body || retryAfterSec(res) || 60, 1800); // süre bildirilmediyse 60 sn
                     showLoginMessage(b.error || 'Çok fazla deneme yapıldı. Lütfen biraz bekleyip tekrar deneyin.');
-                    if (sec > 0) startLoginLock(sec);
+                    startLoginLock(sec);
                     return;
                 }
             }

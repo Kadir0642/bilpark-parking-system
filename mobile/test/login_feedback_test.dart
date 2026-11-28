@@ -98,6 +98,15 @@ void main() {
       expect(ApiClient.serverBusy.value, isFalse);
     });
 
+    test('giriş dışı yolda RATE_LIMITED: eskisi gibi yoğun sayılır, yoğun bandı açılır', () async {
+      await expectLater(
+        login(() => _json(429, '{"error":"x","code":"RATE_LIMITED"}', headers: {'retry-after': '1'}),
+            () => ApiClient.post('/parking/check-in', body: {}, auth: false)),
+        throwsA(isA<ApiException>().having((e) => e.message, 'm', ApiClient.busyMessage).having((e) => e.isLoginLimited, 'l', isTrue)),
+      );
+      expect(ApiClient.serverBusy.value, isTrue);
+    });
+
     test('503: eskisi gibi yoğun sayılır (oturum/yoğun bandı), giriş POST\'u yeniden denenmez', () async {
       await expectLater(
         login(() => _json(503, '{"error":"x","code":"SERVICE_UNAVAILABLE"}', headers: {'retry-after': '3'}), doLogin),
@@ -135,9 +144,9 @@ void main() {
       expect(fb.message, contains('1 dakika'));
     });
 
-    test('RATE_LIMITED süresiz: yalnızca mesaj, geri sayım yok', () {
+    test('429 süresiz: varsayılan 60 sn kilit başlar', () {
       final fb = loginFeedbackFor(const ApiException(429, 'RATE_LIMITED', 'Biraz bekleyin.'));
-      expect(fb.wait, isNull);
+      expect(fb.wait, defaultLoginWait);
       expect(fb.message, 'Biraz bekleyin.');
     });
 
@@ -226,13 +235,27 @@ void main() {
       expect(calls, 1, reason: 'süre dolunca kendiliğinden yeniden denenmemeli');
     });
 
-    testWidgets('429 RATE_LIMITED süresiz: sunucu metni gösterilir, düğme kapanmaz', (tester) async {
+    testWidgets('429 RATE_LIMITED süresiz: sunucu metni gösterilir, varsayılan 60 sn geri sayım başlar', (tester) async {
       await pump(tester, (u, p) async => throw const ApiException(
           429, 'RATE_LIMITED', 'Çok fazla giriş denemesi yapıldı. Lütfen biraz bekleyip tekrar deneyin.'));
       await submit(tester);
       expect(find.textContaining('Çok fazla giriş denemesi'), findsOneWidget);
-      expect(find.textContaining('Kalan süre'), findsNothing);
-      expect(button(tester).onPressed, isNotNull);
+      expect(find.text('Kalan süre: 1:00'), findsOneWidget);
+      expect(button(tester).onPressed, isNull);
+      await tester.pump(const Duration(seconds: 61)); // zamanlayıcıyı bitir
+    });
+
+    testWidgets('geri sayım ekran okuyucuya saniyede bir okunmaz (canlı bölge dışında)', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pump(tester, (u, p) async => throw const ApiException(
+          429, 'LOGIN_LOCKED', 'Lütfen 1 dakika sonra tekrar deneyin.', retryAfter: Duration(seconds: 5)));
+      await submit(tester);
+      expect(find.text('Kalan süre: 0:05'), findsOneWidget);
+      final countdownSem = tester.getSemantics(find.byKey(const ValueKey('loginCountdown')));
+      expect(countdownSem.label.contains('Kalan süre'), isFalse);
+      expect(tester.getSemantics(find.text('Lütfen 1 dakika sonra tekrar deneyin.')).label, contains('1 dakika'));
+      await tester.pump(const Duration(seconds: 6));
+      handle.dispose();
     });
 
     testWidgets('503: sakin "sunucu yoğun" metni, geri sayım yok', (tester) async {

@@ -275,7 +275,7 @@ class ApiClient {
 
       // Giriş sınırı (429 LOGIN_LOCKED / RATE_LIMITED): sunucu yoğun değil. Sunucunun mesajı ve bekleme süresi
       // olduğu gibi taşınır; "yoğun" bandı açılmaz, yeniden denenmez (kararı kullanıcı verir).
-      if (status == 429 && !auth) {
+      if (status == 429 && path == '/auth/login') {
         final err = parseError(status, text);
         if (err.code == 'LOGIN_LOCKED' || err.code == 'RATE_LIMITED') {
           var wait = err.retryAfter ?? parseRetryAfter(response.headers['retry-after'], cap: maxLoginLockWait);

@@ -14,6 +14,9 @@ class LoginFeedback {
   const LoginFeedback(this.message, {this.hint, this.wait});
 }
 
+/// 429'da sunucu bekleme süresi vermezse kullanılan varsayılan.
+const Duration defaultLoginWait = Duration(seconds: 60);
+
 const String loginWrongMessage = 'Kullanıcı adı veya şifre hatalı.';
 const String loginForgotHint = 'Şifrenizi hatırlamıyorsanız yöneticinize başvurun.';
 const String loginLimitedMessage = 'Çok fazla deneme yapıldı. Lütfen biraz bekleyip tekrar deneyin.';
@@ -23,10 +26,11 @@ const String loginUnexpectedMessage = 'Giriş yapılamadı. Lütfen birazdan tek
 /// [ApiException]'ı giriş ekranı mesajına çevirir.
 LoginFeedback loginFeedbackFor(ApiException e) {
   if (e.isLoginLimited) {
+    // Süre bildirilmediyse de kilit arayüzü başlar (varsayılan 60 sn).
     final wait = e.retryAfter;
     return LoginFeedback(
       e.message.isEmpty ? loginLimitedMessage : e.message,
-      wait: wait != null && wait > Duration.zero ? wait : null,
+      wait: wait != null && wait > Duration.zero ? wait : defaultLoginWait,
     );
   }
   if (e.isUnauthorized) {
