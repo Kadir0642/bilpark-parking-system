@@ -43,6 +43,7 @@ public final class ErrorCodes {
 
     // Plaka sorgu hız sınırı (429)
     public static final String RATE_LIMITED = "RATE_LIMITED";
+    public static final String LOGIN_LOCKED = "LOGIN_LOCKED";   // girişte çok sayıda hatalı deneme: bu adreste geçici kilit (429)
 
     // Aşırı yük (503 + Retry-After): istemci oturumu korur, verilen saniye sonra tekrar dener
     public static final String SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE"; // veritabanına zamanında ulaşılamadı
