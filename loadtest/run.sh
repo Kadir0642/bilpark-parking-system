@@ -25,7 +25,7 @@ docker exec bilpark-yuk-db-1 psql -U bilpark -d bilpark_yuk -qc "UPDATE shifts S
 # Önceki koşuların sahada bıraktığı araçları da temizle (KEEP_SPOTS=1 ile atlanır). Temizlenmezse aktif araç sayısı
 # koşudan koşuya binleri bulur; /parking/filter ve /parking/spots bütün caddeyi döndüğü için yük yapay olarak büyür.
 if [ "${KEEP_SPOTS:-0}" != "1" ]; then
-  docker exec bilpark-yuk-db-1 psql -U bilpark -d bilpark_yuk -qc "DELETE FROM active_park_spots;" >/dev/null
+  docker exec bilpark-yuk-db-1 psql -U bilpark -d bilpark_yuk -qc "DELETE FROM active_park_spots; DELETE FROM check_in_requests;" >/dev/null
 fi
 since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 

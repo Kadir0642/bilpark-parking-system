@@ -1,0 +1,4 @@
+Doğruluk notu (2. tur, aktif araç sıfırlaması):
+r2-k-kirilma: 'istek kimligi var ama spot/kayit yok' satırındaki 2183, koşu başında silinen 2183 eski aktif araca ait istek kimlikleridir (koşu başında DELETE 2183). Koşunun kendi yetim kaydı 0.
+r2-d-kuyruk-30: aynı satırdaki 2374 de önceki koşulardan; bu koşuda oluşan istek kimlikleri için ayrı sorgu: 0 yetim.
+Bu koşulardan sonra run.sh check_in_requests tablosunu da sıfırlar.
