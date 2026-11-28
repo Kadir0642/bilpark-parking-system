@@ -61,12 +61,15 @@ services:
     image: bilpark-yuk-backend:latest
     build: ../backend
     cpus: ${APP_CPUS:-0.1}
-    mem_limit: 512m
-    memswap_limit: 512m
+    mem_limit: ${APP_MEM:-512m}
+    memswap_limit: ${APP_MEM:-512m}
     environment:
       DB_URL: jdbc:postgresql://dbproxy:5432/bilpark_yuk
       DB_USERNAME: bilpark
       DB_PASSWORD: test-secret-db
+      # Havuz ayarları (application.properties varsayılanları: 10 bağlantı, 5000 ms); deneme için değiştirilebilir
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+      DB_CONNECTION_TIMEOUT_MS: ${DB_CONNECTION_TIMEOUT_MS:-5000}
       JWT_SECRET: test-secret-jwt-yuk-testi-0123456789abcdef0123456789abcdef
       ADMIN_PASSWORD: test-secret-admin
       OFFICER_PASSWORD: test-secret-officer

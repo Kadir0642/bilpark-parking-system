@@ -22,6 +22,9 @@ const CFG = {
   base: env('BASE', 'http://app:8080'),
   label: env('LABEL', 'temel'),
   scenario: env('SCENARIO', 'normal'),
+  // CLIENT=new: main @ 4a3ec19 sonrası istemciler (#27/#28); CLIENT=old: 1. turdaki eski istemci davranışı
+  client: env('CLIENT', 'new'),
+  homeTab: num('HOME_TAB', 0.3), // yeni istemci: görevlilerin bu oranı gösterge sekmesinde, kalanı cadde sekmesinde
   officers: num('OFFICERS', 10),
   steps: env('OFFICER_STEPS', '') ? env('OFFICER_STEPS', '').split(',').map(Number) : null,
   stepSec: num('STEP_SEC', 180),
@@ -47,6 +50,7 @@ const CFG = {
   devPassword: env('DEVELOPER_PASSWORD', 'test-secret-developer'),
 };
 if (CFG.steps) CFG.officers = Math.max(...CFG.steps);
+const NEW = CFG.client !== 'old';
 
 const T0 = Date.now();
 const END = T0 + CFG.duration * 1000;
@@ -62,11 +66,13 @@ let STOP = false;
 const M = new Map(); // endpoint -> { lat: [], codes: {}, bad: 0 }
 const BUCKET_MS = 10_000;
 const buckets = []; // { n, bad, lat: [], officers, sse }
-const corr = { dupSame: 0, dupConflict: 0, dupWrong: 0, raceSame: 0, raceWrong: 0, queued: 0, flushed: 0, flushFail: 0 };
+const corr = { dupSame: 0, dupConflict: 0, dupWrong: 0, raceSame: 0, raceWrong: 0, queued: 0, flushed: 0, flushFail: 0,
+  logouts: 0, got401: 0 };
+const loggedOut = new Set(); // oturumdan atılan görevliler (eski istemci: her 401; yeni istemci: /me ile teyit edilen 401)
 let activeOfficers = 0;
 
 function bucket() {
-  const i = Math.floor((now() - T0) / BUCKET_MS);
+  const i = Math.max(0, Math.floor((now() - T0) / BUCKET_MS)); // saat geri kayarsa (VM saat eşitlemesi) eksi olmasın
   while (buckets.length <= i) buckets.push({ n: 0, bad: 0, lat: [], officers: activeOfficers, sse: 0 });
   return buckets[i];
 }
@@ -116,7 +122,8 @@ async function req(name, method, path, o = {}) {
     if (!o.binary) {
       try { json = JSON.parse(Buffer.from(buf).toString('utf8')); } catch { /* boş / metin */ }
     }
-    return { status: res.status, json, ms, bytes: buf.byteLength };
+    const ra = Number(res.headers.get('retry-after'));
+    return { status: res.status, json, ms, bytes: buf.byteLength, retryAfter: Number.isFinite(ra) && ra > 0 ? ra : null };
   } catch (e) {
     const ms = performance.now() - t0;
     const code = e?.name === 'TimeoutError' ? 'timeout' : (e?.cause?.code || e?.name || 'error');
@@ -153,6 +160,26 @@ function noteDelivery(ev, kind) {
 
 // ---------------------------------------------------------------- SSE client (live_sync.dart / admin-panel.html)
 const backoff = (attempt) => [1, 2, 4, 8, 16, 30][Math.min(Math.max(attempt - 1, 0), 5)] * 1000;
+// backoff.dart backoffDelay: min(base*2^(n-1), cap), "eşit jitter" (%50-100)
+const jbackoff = (attempt, base, cap) => {
+  const n = Math.max(1, attempt);
+  const raw = Math.min(base * 2 ** Math.min(n - 1, 20), cap);
+  return raw * (0.5 + 0.5 * Math.random());
+};
+
+// refresh_coalescer.dart: boştayken ilk istek [lead] sonra, sonra [window] boyunca biriktir, en çok bir kez daha
+class Coalescer {
+  constructor(action, lead, window) { this.action = action; this.lead = lead; this.window = window; this.dirty = false; this.t = null; this.cd = null; }
+  request() { this.dirty = true; if (this.t || this.cd) return; this.t = setTimeout(() => this.fire(), this.lead); }
+  fire() {
+    this.t = null;
+    if (!this.dirty || !running()) return;
+    this.dirty = false;
+    this.cd = setTimeout(() => { this.cd = null; if (this.dirty) this.fire(); }, this.window);
+    try { Promise.resolve(this.action()).catch(() => {}); } catch { /* yok say */ }
+  }
+  stop() { clearTimeout(this.t); clearTimeout(this.cd); }
+}
 
 async function readSse(res, onFrame, abort, watchdogMs) {
   let timer;
@@ -214,6 +241,56 @@ class Officer {
     this.dashTimer = null;
     this.flushing = null;
     this.catching = false;
+    // yeni istemci
+    this.tab = Math.random() < CFG.homeTab ? 'home' : 'street';
+    this.dirtyT = new Set();
+    this.gate = new Coalescer(() => this.flushTab(), 400, 2500);
+    this.refresher = new Coalescer(() => this.fetchMap(), 300, 1500);
+    this.lastFilter = 0;
+    this.lastHb = 0;
+    this.retryAfterNext = 0;
+    this.startedAt = now();
+    this.qStart = null; this.qRetry = null; this.qFail = 0;
+  }
+
+  // ApiClient._send: yeni istemcide GET 503/429 en çok 3 kez (Retry-After <= 20 sn ya da 1-8 sn jitterli bekleme),
+  // 401'de 1-2 sn bekleyip GET'i yineler, yazmada /me ile teyit eder; oturum yalnızca teyitli 401'de kapanır.
+  async call(name, method, path, extra = {}) {
+    if (!NEW) {
+      const r = await req(name, method, path, this.o(extra));
+      if (r.status === 401) this.noteLogout(true); // eski ApiClient: her 401'de oturumu kapatıp girişe atar
+      return r;
+    }
+    let busy = 0, confirmed = false;
+    for (;;) {
+      const r = await req(name, method, path, this.o(extra));
+      if (r.status === 401) {
+        corr.got401++;
+        if (!confirmed) {
+          confirmed = true;
+          await sleep(rand(1000, 2000));
+          if (method === 'GET') continue;
+          const me = await req('GET /api/me (401 teyidi)', 'GET', '/api/me', this.o());
+          if (me.status === 401) await this.logoutAndLogin();
+          return r;
+        }
+        await this.logoutAndLogin();
+        return r;
+      }
+      if ((r.status === 503 || r.status === 429) && method === 'GET' && busy < 3) {
+        busy++;
+        const wait = jbackoff(busy, 1000, 8000);
+        await sleep(Math.max(wait, Math.min(r.retryAfter || 0, 20) * 1000));
+        continue;
+      }
+      return r;
+    }
+  }
+  noteLogout(countOnly) { corr.logouts++; loggedOut.add(this.username); if (!countOnly) this.token = null; }
+  async logoutAndLogin() {
+    this.noteLogout(false);
+    await sleep(rand(10000, 20000)); // görevli giriş ekranında yeniden girer
+    await this.login();
   }
 
   plate() {
@@ -248,15 +325,42 @@ class Officer {
     clearTimeout(this.dashTimer);
     this.dashTimer = setTimeout(() => { if (running() && !this.netDown) this.dashRefresh(); }, 500);
   }
-  fetchMap() { return req('GET /api/parking/filter', 'GET', '/api/parking/filter', this.o({ query: { street: this.street } })); }
-  dashRefresh() {
+  fetchMap() {
+    this.lastFilter = now();
+    return this.call('GET /api/parking/filter', 'GET', '/api/parking/filter', { query: { street: this.street } });
+  }
+  dashRefresh(spots = true, summary = true, types = true) {
     return Promise.all([
-      req('GET /api/parking/filter', 'GET', '/api/parking/filter', this.o({ query: { street: this.street } })),
-      req('GET /api/parking/history', 'GET', '/api/parking/history', this.o({ query: { street: this.street } })),
-      req('GET /api/vehicle-types', 'GET', '/api/vehicle-types', { app: true, device: this.device }),
+      spots ? this.call('GET /api/parking/filter', 'GET', '/api/parking/filter', { query: { street: this.street } }) : null,
+      summary ? this.call('GET /api/parking/history', 'GET', '/api/parking/history', { query: { street: this.street } }) : null,
+      types ? req('GET /api/vehicle-types', 'GET', '/api/vehicle-types', { app: true, device: this.device }) : null,
     ]);
   }
+  // main.dart _flushTab: yalnızca GÖRÜNEN sekmenin kirli verisi çekilir
+  flushTab() {
+    if (this.netDown) return;
+    if (this.tab === 'street') {
+      if (!this.dirtyT.has('map')) return;
+      if (now() - this.lastFilter < 2000) { this.gate.request(); return; } // minAge 2 sn: kendi yenilememiz az önce çekti
+      this.dirtyT.delete('map');
+      return this.fetchMap();
+    }
+    const spots = this.dirtyT.delete('dashSpots');
+    const summary = this.dirtyT.delete('dashSummary');
+    if (spots || summary) return this.dashRefresh(spots, summary, false);
+  }
+  scheduleOwn() { if (NEW) this.refresher.request(); else this.scheduleMap(); }
   reloadAll() { // liveSync.reloads: main.dart + parking_map_screen.dart
+    if (NEW) {
+      if (now() - this.startedAt > 5000) {
+        req('GET /api/tariff/current', 'GET', '/api/tariff/current', { app: true, device: this.device });
+        req('GET /api/vehicle-types', 'GET', '/api/vehicle-types', { app: true, device: this.device });
+        this.call('GET /api/license/status', 'GET', '/api/license/status');
+      }
+      for (const t of ['dashSpots', 'dashSummary', 'map']) this.dirtyT.add(t);
+      this.gate.request();
+      return;
+    }
     req('GET /api/tariff/current', 'GET', '/api/tariff/current', { app: true, device: this.device });
     req('GET /api/vehicle-types', 'GET', '/api/vehicle-types', { app: true, device: this.device });
     req('GET /api/license/status', 'GET', '/api/license/status', this.o());
@@ -265,6 +369,15 @@ class Officer {
   }
 
   onEvent(e) {
+    if (NEW) { // olay yerelde uygulanır; kirlenen veriler birleştirilmiş tek yenilemeyle (spot_events.dart)
+      if (e.zoneId != null ? e.zoneId !== this.zoneId : e.street !== this.street) return;
+      const T = { VEHICLE_ENTERED: ['dashSpots', 'map'], VEHICLE_EXITED: ['dashSummary'], VEHICLE_RUNAWAY: ['dashSummary'],
+        VEHICLE_CANCELLED: ['dashSpots', 'map', 'dashSummary'], RECORD_CANCELLED: ['dashSummary'] }[e.type];
+      if (!T) return;
+      T.forEach((t) => this.dirtyT.add(t));
+      this.gate.request();
+      return;
+    }
     if (['VEHICLE_ENTERED', 'VEHICLE_EXITED', 'VEHICLE_RUNAWAY'].includes(e.type) && e.zoneId === this.zoneId) this.scheduleMap();
     if (['VEHICLE_ENTERED', 'VEHICLE_EXITED', 'VEHICLE_RUNAWAY', 'VEHICLE_CANCELLED', 'RECORD_CANCELLED'].includes(e.type)
       && (e.zoneId == null || e.zoneId === this.zoneId)) this.scheduleDash();
@@ -280,16 +393,17 @@ class Officer {
   // ---- LiveSync döngüsü
   async syncLoop() {
     while (running() && !this.netDown && this.version == null) {
-      const r = await req('GET /api/sync', 'GET', '/api/sync', this.o());
-      if (r.status === 401) { await this.login(); continue; }
+      const r = await this.call('GET /api/sync', 'GET', '/api/sync');
+      if (r.status === 401 && !NEW) { await this.login(); continue; }
       if (r.status === 200) { this.version = r.json?.version ?? 0; this.reloadAll(); break; }
       this.failures++;
-      await sleep(backoff(this.failures));
+      if (r.retryAfter) this.retryAfterNext = r.retryAfter * 1000;
+      await sleep(this.nextDelay());
     }
     let needCatchUp = false;
     while (running() && !this.netDown) {
       if (needCatchUp) {
-        await sleep(backoff(this.failures));
+        await sleep(this.nextDelay());
         if (!running() || this.netDown) break;
         try { await this.catchUp(); } catch { this.failures++; continue; }
       }
@@ -302,12 +416,21 @@ class Officer {
     }
   }
 
+  nextDelay() {
+    if (!NEW) return backoff(this.failures);
+    const b = jbackoff(this.failures, 1000, 45000);
+    const r = Math.min(this.retryAfterNext, 60000);
+    this.retryAfterNext = 0;
+    return Math.max(b, r);
+  }
+
   async catchUp() {
     if (this.catching) return;
     this.catching = true;
     try {
       while (running() && !this.netDown) {
-        const r = await req('GET /api/sync?since', 'GET', '/api/sync', this.o({ query: { since: this.version } }));
+        const r = await this.call('GET /api/sync?since', 'GET', '/api/sync', { query: { since: this.version } });
+        if (r.retryAfter) this.retryAfterNext = r.retryAfter * 1000;
         if (r.status !== 200) throw new Error('sync ' + r.status);
         const j = r.json || {};
         if (j.resetRequired) { this.version = j.version; this.reloadAll(); return; }
@@ -339,8 +462,20 @@ class Officer {
       throw e;
     }
     rec('GET /api/events (bağlantı)', performance.now() - t0, res.status, res.status === 200);
-    if (res.status === 401) { await this.login(); throw new Error('401'); }
-    if (res.status !== 200) { await res.body?.cancel(); throw new Error('events ' + res.status); }
+    if (res.status === 401) {
+      await res.body?.cancel();
+      if (!NEW) { this.noteLogout(true); await this.login(); throw new Error('401'); }
+      corr.got401++;
+      const me = await this.call('GET /api/me (401 teyidi)', 'GET', '/api/me');
+      if (me.status === 401) await this.logoutAndLogin();
+      throw new Error('401');
+    }
+    if (res.status !== 200) {
+      const ra = Number(res.headers.get('retry-after'));
+      if (Number.isFinite(ra) && ra > 0) this.retryAfterNext = ra * 1000;
+      await res.body?.cancel();
+      throw new Error('events ' + res.status);
+    }
     sse.connects++;
     await readSse(res, (name, data) => {
       let j = {};
@@ -349,9 +484,12 @@ class Officer {
         sse.helloMs.push(performance.now() - t0);
         this.failures = 0;
         if (!this.online) { this.online = true; zoneMembers.set(this.zoneId, (zoneMembers.get(this.zoneId) || 0) + 1); }
-        this.flush(); // main.dart: online olunca kuyruk boşaltılır
+        if (NEW) this.flushLater(20000); else this.flush(); // main.dart: online olunca kuyruk boşaltılır (yeni: 0-20 sn jitter)
       } else if (name === 'HEARTBEAT') {
-        if (j.version > (this.version ?? 0)) this.catchUp().catch(() => {});
+        if (j.version > (this.version ?? 0) && (!NEW || now() - this.lastHb >= 90_000)) {
+          this.lastHb = now();
+          this.catchUp().catch(() => {});
+        }
       } else if (name === 'RESET') {
         sse.resets++;
         this.version = j.version;
@@ -365,6 +503,22 @@ class Officer {
   }
 
   // ---- giriş kuyruğu (entry_queue.dart)
+  // yeni: bağlantı dönünce 0-[jitter] rastgele başlangıç, kayıtlar arası 0,4-1,2 sn, 30 sn zaman aşımı,
+  // hatada tur durur ve üstel bekleme (2-60 sn, jitter, Retry-After'dan kısa değil) sonra yeniden denenir
+  flushLater(maxJitter) {
+    if (!this.queue.length || this.qStart || this.qRetry || this.flushing) return;
+    this.qStart = setTimeout(() => { this.qStart = null; this.flush(); }, Math.random() * maxJitter);
+  }
+  retryLater(retryAfterSec) {
+    if (!this.queue.length || this.qStart || this.qRetry || this.flushing) return;
+    this.scheduleRetry(retryAfterSec);
+  }
+  scheduleRetry(retryAfterSec) {
+    this.qFail++;
+    clearTimeout(this.qRetry);
+    const wait = Math.max(jbackoff(this.qFail, 2000, 60000), (retryAfterSec || 0) * 1000);
+    this.qRetry = setTimeout(() => { this.qRetry = null; this.flush(); }, wait);
+  }
   flush() { return (this.flushing ??= this.doFlush().finally(() => { this.flushing = null; })); }
   async doFlush() {
     while (this.queue.length && running() && !this.netDown) {
@@ -382,9 +536,18 @@ class Officer {
       } else {
         r = await this.checkInReq(q);
       }
-      if (r.status === 0 || r.status >= 500 || r.status === 401) { corr.flushFail++; return; } // kayıt kalır
+      if (r.status === 0 || r.status >= 500 || r.status === 401 || r.status === 429) { // kayıt kalır
+        corr.flushFail++;
+        if (NEW) this.scheduleRetry(r.retryAfter);
+        return;
+      }
       this.queue.shift();
       corr.flushed++;
+      if (NEW) {
+        this.qFail = 0;
+        this.scheduleOwn(); // _onQueueResult -> scheduleRefresh (birleştirilmiş)
+        if (this.queue.length) await sleep(800 * (0.5 + Math.random()));
+      }
       if (r.status === 200) {
         this.plates.push(q.plate);
         activePlates.add(q.plate);
@@ -393,7 +556,8 @@ class Officer {
     }
   }
   checkInReq(q) {
-    return req('POST /api/parking/check-in', 'POST', '/api/parking/check-in', this.o({ query: q, ok: [200, 409] }));
+    return this.call('POST /api/parking/check-in', 'POST', '/api/parking/check-in',
+      { query: q, ok: [200, 409], timeout: NEW && q.clientEntryTime ? 30000 : 15000 });
   }
 
   // ---- saha işlemleri (parking_map_screen.dart / vehicle_detail_screen.dart)
@@ -408,32 +572,41 @@ class Officer {
     }
     const r = await this.checkInReq(query);
     if (r.status === 200) { this.plates.push(plate); activePlates.add(plate); }
-    else if (r.status === 0) { this.queue.push({ query, createdAt: new Date().toISOString() }); corr.queued++; this.flush(); }
-    this.scheduleMap();
+    else if (r.status === 0 || (NEW && (r.status === 503 || r.status === 429))) {
+      this.queue.push({ query, createdAt: new Date().toISOString() });
+      corr.queued++;
+      if (NEW) this.retryLater(r.retryAfter); else this.flush();
+    }
+    this.scheduleOwn();
   }
 
   async checkOutLike(kind) {
     if (!this.plates.length) return this.checkIn();
     const i = Math.floor(Math.random() * this.plates.length);
     const plate = this.plates[i];
-    await req('GET /api/parking/fee-preview', 'GET', '/api/parking/fee-preview', this.o({ query: { plate } }));
+    await this.call('GET /api/parking/fee-preview', 'GET', '/api/parking/fee-preview', { query: { plate } });
     await sleep(rand(3000, 8000) + 5000); // ekrana bakma + 5 sn geri alma penceresi
     if (!running() || this.netDown) return;
     let r;
-    if (kind === 'out') {
-      r = await req('POST /api/parking/check-out', 'POST', '/api/parking/check-out',
-        this.o({ query: { plate, paymentMethod: Math.random() < 0.6 ? 'CASH' : 'POS' } }));
-    } else if (kind === 'cancel') {
-      r = await req('POST /api/parking/spots/cancel', 'POST', '/api/parking/spots/cancel',
-        this.o({ query: { plate }, body: { reason: 'Yanlis giris (yuk testi)' } }));
-    } else {
-      r = await req('POST /api/parking/runaway', 'POST', '/api/parking/runaway', this.o({ query: { plate } }));
+    const method = Math.random() < 0.6 ? 'CASH' : 'POS';
+    for (let attempt = 0; ; attempt++) {
+      if (kind === 'out') {
+        r = await this.call('POST /api/parking/check-out', 'POST', '/api/parking/check-out', { query: { plate, paymentMethod: method } });
+      } else if (kind === 'cancel') {
+        r = await this.call('POST /api/parking/spots/cancel', 'POST', '/api/parking/spots/cancel',
+          { query: { plate }, body: { reason: 'Yanlis giris (yuk testi)' } });
+      } else {
+        r = await this.call('POST /api/parking/runaway', 'POST', '/api/parking/runaway', { query: { plate } });
+      }
+      // yeni uygulama: başarısız işlem "tekrar dene" düğmesiyle kalır; görevli 10-20 sn sonra en çok 2 kez dener
+      if (!NEW || attempt >= 2 || !(r.status === 0 || r.status >= 500 || r.status === 429) || !running()) break;
+      await sleep(Math.max(rand(10000, 20000), (r.retryAfter || 0) * 1000));
     }
     if (r.status === 200 || r.status === 404 || r.status === 409) {
       this.plates.splice(this.plates.indexOf(plate), 1);
       activePlates.delete(plate);
     }
-    this.scheduleMap();
+    this.scheduleOwn();
   }
 
   async act() {
@@ -451,10 +624,11 @@ class Officer {
     activeOfficers++;
     if (!(await this.login())) return;
     // initState'ler: TariffStore/VehicleTypeStore/LicenseStore.load, /me, gösterge ve harita yüklemesi
-    req('GET /api/me', 'GET', '/api/me', this.o());
+    this.startedAt = now();
+    this.call('GET /api/me', 'GET', '/api/me');
     req('GET /api/tariff/current', 'GET', '/api/tariff/current', { app: true, device: this.device });
     req('GET /api/vehicle-types', 'GET', '/api/vehicle-types', { app: true, device: this.device });
-    req('GET /api/license/status', 'GET', '/api/license/status', this.o());
+    this.call('GET /api/license/status', 'GET', '/api/license/status');
     this.dashRefresh();
     this.fetchMap();
     this.loop = this.syncLoop();
@@ -475,11 +649,14 @@ class Officer {
     // her kuyruk kaydından biri eşzamanlı ikili gönderilir (yanıt kaybı yarışı)
     if (this.queue.length) this.queue[Math.floor(this.queue.length / 2)].race = true;
     await this.loop?.catch(() => {});
+    // yeni istemci: kesinti boyunca biriken denemeler 45 sn tavanlı jitterli beklemede; ağ dönünce ilk deneme 0-45 sn içinde
+    if (NEW) await sleep(rand(0, 45000));
+    if (!this.token && !(await this.login())) return; // kesintiden önce hiç giriş yapamamış görevli önce girer
     this.failures = 0;
     this.loop = this.syncLoop(); // catch-up + akış; HELLO'da flush
     while (this.flushing || this.queue.length) {
       if (!running()) return;
-      if (!this.flushing && this.queue.length) this.flush();
+      if (!this.flushing && this.queue.length) { if (NEW) { if (this.online) this.flushLater(20000); } else this.flush(); }
       await sleep(500);
     }
     // yanıtı kaybolmuş sayılan 3 kaydı aynı requestId ile tekrar gönder
@@ -497,6 +674,14 @@ class Officer {
 class Admin {
   constructor(i) { this.i = i; this.token = null; this.version = 0; this.timer = null; this.retry = 0; }
   o(extra = {}) { return { token: this.token, timeout: 60000, ...extra }; }
+  async get(name, path, extra = {}) {
+    let r = await req(name, 'GET', path, this.o(extra));
+    for (let i = 0; NEW && i < 2 && r.status === 503; i++) {
+      await sleep(Math.min(r.retryAfter || 1.5 * 2 ** i, 30) * 1000);
+      r = await req(name, 'GET', path, this.o(extra));
+    }
+    return r;
+  }
   async login() {
     while (running()) {
       const r = await req('POST /api/auth/login (admin)', 'POST', '/api/auth/login',
@@ -510,14 +695,15 @@ class Admin {
     const r = await req('GET /api/sync', 'GET', '/api/sync', this.o());
     if (r.status === 200 && r.json?.version != null) this.version = r.json.version;
   }
-  vehicleRefresh() {
-    return Promise.all([
-      req('GET /api/parking/spots', 'GET', '/api/parking/spots', this.o()),
-      req('GET /api/parking/bi/income-by-type/details', 'GET', '/api/parking/bi/income-by-type/details', this.o()),
-      req('GET /api/parking/bi/income-summary', 'GET', '/api/parking/bi/income-summary', this.o()),
-      req('GET /api/parking/bi/last-records', 'GET', '/api/parking/bi/last-records', this.o()),
-      req('GET /api/parking/bi/shifts', 'GET', '/api/parking/bi/shifts', this.o()),
-    ]);
+  vehicleRefresh(widgets = ['spots', 'charts', 'kpi', 'history', 'shifts']) {
+    const W = {
+      spots: () => this.get('GET /api/parking/spots', '/api/parking/spots'),
+      charts: () => this.get('GET /api/parking/bi/income-by-type/details', '/api/parking/bi/income-by-type/details'),
+      kpi: () => this.get('GET /api/parking/bi/income-summary', '/api/parking/bi/income-summary'),
+      history: () => this.get('GET /api/parking/bi/last-records', '/api/parking/bi/last-records'),
+      shifts: () => this.get('GET /api/parking/bi/shifts', '/api/parking/bi/shifts'),
+    };
+    return Promise.all(widgets.map((w) => W[w]()));
   }
   updateDashboard() {
     return Promise.all([
@@ -535,9 +721,28 @@ class Admin {
     await req('GET /api/admin/vehicle-types', 'GET', '/api/admin/vehicle-types', this.o());
     await this.updateDashboard();
   }
-  scheduleVehicleRefresh() {
+  // eski panel: her araç olayında 800 ms kısma, 5 bileşen. Yeni panel (#27): yalnızca etkilenen bileşenler,
+  // bileşen başına en çok ~4 sn'de bir (REFRESH_WINDOW_MS); giriş olayı gelir bileşenlerini çekmez.
+  scheduleVehicleRefresh(type) {
+    if (!NEW) {
+      if (this.timer) return;
+      this.timer = setTimeout(async () => { this.timer = null; if (running()) await this.vehicleRefresh(); }, 800);
+      return;
+    }
+    const ws = type === 'VEHICLE_ENTERED' ? ['spots', 'history', 'shifts'] : ['spots', 'charts', 'kpi', 'history', 'shifts'];
+    this.dirtyW ??= new Set();
+    this.lastRefresh ??= 0;
+    ws.forEach((w) => this.dirtyW.add(w));
     if (this.timer) return;
-    this.timer = setTimeout(async () => { this.timer = null; if (running()) await this.vehicleRefresh(); }, 800);
+    const wait = Math.max(800, this.lastRefresh + 4000 - now());
+    this.timer = setTimeout(async () => {
+      this.timer = null;
+      if (!running() || !this.dirtyW.size) return;
+      const names = [...this.dirtyW];
+      this.dirtyW.clear();
+      this.lastRefresh = now();
+      await this.vehicleRefresh(names);
+    }, wait);
   }
   async live() {
     while (running()) {
@@ -563,7 +768,7 @@ class Admin {
               else if (name === 'RESET') this.fullReload();
               else {
                 if (d.version != null) { if (d.version <= this.version) return; this.version = d.version; }
-                if (d.type?.startsWith('VEHICLE_')) { noteDelivery(d, 'admin'); this.scheduleVehicleRefresh(); }
+                if (d.type?.startsWith('VEHICLE_')) { noteDelivery(d, 'admin'); this.scheduleVehicleRefresh(d.type); }
               }
             }, this.abort, 60_000);
           } else await res.body?.cancel();
@@ -578,7 +783,7 @@ class Admin {
   async catchUp() {
     const r = await req('GET /api/sync?since', 'GET', '/api/sync', this.o({ query: { since: this.version } }));
     for (const e of r.json?.events || []) {
-      if (e.version > this.version) { this.version = e.version; if (e.type?.startsWith('VEHICLE_')) this.scheduleVehicleRefresh(); }
+      if (e.version > this.version) { this.version = e.version; if (e.type?.startsWith('VEHICLE_')) this.scheduleVehicleRefresh(e.type); }
     }
     if (r.json?.version > this.version) this.version = r.json.version;
   }
@@ -592,9 +797,16 @@ class Admin {
       await sleep(rand(0.6, 1.4) * CFG.reportEvery * 1000);
       if (!running()) return;
       const which = k++ % 3;
-      if (which === 0) await req('GET /api/admin/reports/period (xlsx)', 'GET', '/api/admin/reports/period', this.o({ binary: true, query: { from: month + '-01', to: today } }));
-      else if (which === 1) await req('GET /api/admin/reports/records (xlsx)', 'GET', '/api/admin/reports/records', this.o({ binary: true, query: { from, to: today } }));
-      else await req('GET /api/admin/reports/personnel (xlsx)', 'GET', '/api/admin/reports/personnel', this.o({ binary: true, query: { month } }));
+      const spec = [
+        ['GET /api/admin/reports/period (xlsx)', '/api/admin/reports/period', { from: month + '-01', to: today }],
+        ['GET /api/admin/reports/records (xlsx)', '/api/admin/reports/records', { from, to: today }],
+        ['GET /api/admin/reports/personnel (xlsx)', '/api/admin/reports/personnel', { month }],
+      ][which];
+      let r = await req(spec[0], 'GET', spec[1], this.o({ binary: true, query: spec[2], ok: [200] }));
+      if (NEW && (r.status === 503 || r.status === 429)) {
+        await sleep(Math.max(r.retryAfter || 10, 1) * 1000);
+        r = await req(spec[0] + ' tekrar', 'GET', spec[1], this.o({ binary: true, query: spec[2] }));
+      }
     }
   }
   async run(delay) {
@@ -778,12 +990,12 @@ const result = {
     events: perEv.length, eventMaxP95: pct(evMax, 95), eventMaxMax: evMax[evMax.length - 1] ?? null,
     eventsReachedAllExpected: complete, connects: sse.connects, drops: sse.drops, resets: sse.resets,
     helloP95: pct(sse.helloMs.sort((a, b) => a - b), 95) },
-  correctness: corr, endpoints, series,
+  correctness: { ...corr, loggedOutOfficers: loggedOut.size }, client: CFG.client, endpoints, series,
 };
 writeFileSync(CFG.out, JSON.stringify(result, null, 1));
 console.log(`\n=== ${CFG.label}: ${all.n} istek, hata %${result.total.errPct}, ${result.total.rps} istek/sn, p95 ${result.total.p95?.toFixed(0)} ms ===`);
 console.log('| uç nokta | n | hata % | p50 | p95 | p99 | max |');
 for (const e of endpoints) console.log(`| ${e.name} | ${e.n} | ${e.errPct} | ${e.p50} | ${e.p95} | ${e.p99} | ${e.max} |`);
 console.log(`SSE: teslim=${d.length} p50=${result.sse.p50} p95=${result.sse.p95} max=${result.sse.max} ms; olay=${perEv.length}, tüm beklenenlere ulaşan=${complete}; kopma=${sse.drops} reset=${sse.resets}`);
-console.log('doğruluk:', JSON.stringify(corr));
+console.log('doğruluk:', JSON.stringify(corr), 'oturumdan atılan görevli:', loggedOut.size, 'istemci:', CFG.client);
 process.exit(0);

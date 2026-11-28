@@ -90,3 +90,39 @@ docker exec -i bilpark-yuk-db-1 psql -U bilpark -d bilpark_yuk < loadtest/explai
 docker compose -p bilpark-yuk -f loadtest/docker-compose.yml --profile gen down -v
 docker image rm bilpark-yuk-backend:latest    # isteğe bağlı
 ```
+
+## 2. tur (iyileştirmeler sonrası, main @ 4a3ec19)
+
+- `CLIENT=new` (varsayılan) yeni mobil ve panel davranışını, `CLIENT=old` 1. turdaki davranışı taklit eder.
+- `HOME_TAB=0.3`: görevlilerin gösterge sekmesinde olan oranı (kalanı cadde sekmesinde).
+- 1 CPU / 2 GB için `APP_CPUS=1 APP_MEM=2g`. Havuz denemesi için `DB_POOL_SIZE=5 DB_CONNECTION_TIMEOUT_MS=20000`
+  (ikisi de app yeniden oluşturulunca etkili olur, ör. `coldstart.sh` ile).
+- **Koşu hijyeni:** `run.sh` her koşudan önce açık vardiyaları kapatır; aktif araçları ve istek kimliklerini
+  siler (`KEEP_SPOTS=1` ile atlanır). Bu yapılmazsa yük koşudan koşuya yapay olarak büyür. Sıfırlama başarısız
+  olursa `run.sh` uyarı yazar.
+- `parking_records`'a dokunulmaz. Her koşunun ödenmiş, kaçak ve iptal kayıtları tohum verisinin üstüne birikir,
+  yani ciro ve geçmiş tabloları koşudan koşuya büyür. Silinen aktif araçlar kayda dönüşmez, yetim `ACTIVE` kayıt
+  oluşmaz. Ama koşular arasında BI sorgularının taradığı satır sayısı artar. Tam temiz başlangıç için yığını
+  `down -v` ile kaldırıp `seed.sql`'den yeniden kurun.
+- `seri.sh` her koşudan önce emülatör açıksa bekler. Ağır koşuların arasına ~90 sn soğuma konuldu.
+
+Belgedeki 2. tur sonuçlarını üreten koşular (ilk açılış ve `seed.sql`'den sonra). İlk satırdaki dört koşu birikim düzeltmesinden önce yapıldı; başlangıçtaki aktif araç sayıları belgede yazılı:
+
+```bash
+bash loadtest/seri.sh "r2-a-temel-10 OFFICERS=10 DURATION=900 ADMINS=2 RUN_ID=31" "r2-v-dalga OFFICERS=10 DURATION=660 ADMINS=2 WAVES=100,200,400 WAVE_START=90 WAVE_GAP=180 RUN_ID=34" "r2-d-kuyruk-10 SCENARIO=spike OFFICERS=10 DURATION=480 ADMINS=2 SPIKE_AT=90 OUTAGE=120 QUEUE=20 RUN_ID=35" "r2-e-dayaniklilik OFFICERS=10 DURATION=1800 ADMINS=2 RUN_ID=37"
+bash loadtest/seri.sh "r2-k-kirilma OFFICER_STEPS=10,20,30,40,50 STEP_SEC=150 DURATION=750 ADMINS=2 RUN_ID=56"
+bash loadtest/seri.sh "r2-d-kuyruk-30 SCENARIO=spike OFFICERS=30 DURATION=540 ADMINS=2 SPIKE_AT=120 OUTAGE=120 QUEUE=20 RUN_ID=57"
+bash loadtest/seri.sh "r2-c-50-tekrar OFFICERS=50 DURATION=600 ADMINS=3 RAMP=90 RUN_ID=58" "r2-b-30-tekrar OFFICERS=30 DURATION=600 ADMINS=3 RUN_ID=59"
+# dizin denemesi: explain.sql'deki sorgular için üç dizin elle eklenir, koşudan sonra silinir (bkz. docs §8.4)
+bash loadtest/seri.sh "r2-b-30-dizinli OFFICERS=30 DURATION=600 ADMINS=3 RUN_ID=60"
+bash loadtest/seri.sh "r2-old-30-tekrar CLIENT=old OFFICERS=30 DURATION=600 ADMINS=3 RUN_ID=61"
+DB_POOL_SIZE=5 DB_CONNECTION_TIMEOUT_MS=20000 bash loadtest/coldstart.sh 2tur-soguk-havuz5-20sn
+bash loadtest/seri.sh "r2-k-kirilma-havuz5-20sn OFFICER_STEPS=10,20,30,40,50 STEP_SEC=150 DURATION=750 ADMINS=2 RUN_ID=63"
+# 0.5 / 1 CPU (bilgi amaçlı)
+$P stop app && APP_CPUS=0.5 bash loadtest/coldstart.sh 2tur-soguk-0.5cpu
+bash loadtest/seri.sh "r2-p05-temel-10 OFFICERS=10 DURATION=600 ADMINS=2 RUN_ID=39"
+$P stop app && APP_CPUS=1 APP_MEM=2g bash loadtest/coldstart.sh 2tur-soguk-1cpu-2gb
+bash loadtest/seri.sh "r2-p1-temel-10 OFFICERS=10 DURATION=600 ADMINS=2 RUN_ID=40" "r2-p1-kirilma OFFICER_STEPS=50,100,150,200 STEP_SEC=150 DURATION=600 ADMINS=3 RUN_ID=41"
+```
+
+`results/r2-x-*` dosyaları birikim düzeltmesinden önce koşulmuş, kıyasta kullanılmayan koşulardır.
