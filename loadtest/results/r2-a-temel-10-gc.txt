@@ -1,0 +1,24 @@
+[118.984s] GC(52) Pause Young (Allocation Failure) 79M->51M(115M) 88.156ms
+[171.790s] GC(53) Pause Young (Allocation Failure) 83M->52M(115M) 6.229ms
+[182.487s] GC(54) Pause Full (CodeCache GC Threshold) 58M->48M(117M) 1217.955ms
+[253.325s] GC(55) Pause Young (Allocation Failure) 81M->49M(117M) 4.239ms
+[315.494s] GC(56) Pause Full (CodeCache GC Threshold) 76M->44M(117M) 937.670ms
+[388.884s] GC(57) Pause Young (Allocation Failure) 77M->45M(117M) 20.803ms
+[471.824s] GC(58) Pause Young (Allocation Failure) 77M->45M(117M) 3.349ms
+[522.285s] GC(59) Pause Young (Allocation Failure) 78M->46M(117M) 3.274ms
+[592.790s] GC(60) Pause Young (Allocation Failure) 78M->52M(117M) 62.265ms
+[594.592s] GC(61) Pause Young (Allocation Failure) 84M->66M(117M) 200.382ms
+[596.990s] GC(62) Pause Young (Allocation Failure) 99M->64M(117M) 3.938ms
+[597.492s] GC(63) Pause Young (Allocation Failure) 96M->65M(117M) 6.249ms
+[607.384s] GC(64) Pause Young (Allocation Failure) 97M->66M(117M) 92.734ms
+[675.588s] GC(65) Pause Young (Allocation Failure) 99M->67M(117M) 165.081ms
+[738.887s] GC(66) Pause Young (Allocation Failure) 99M->67M(117M) 78.252ms
+[796.028s] GC(67) Pause Young (Allocation Failure) 99M->67M(117M) 4.730ms
+[860.228s] GC(68) Pause Young (Allocation Failure) 100M->67M(117M) 3.064ms
+[882.287s] GC(69) Pause Young (Allocation Failure) 100M->81M(117M) 192.596ms
+[884.688s] GC(70) Pause Full (CodeCache GC Threshold) 103M->52M(128M) 1603.781ms
+[954.984s] GC(71) Pause Young (Allocation Failure) 88M->53M(128M) 16.456ms
+[1004.787s] GC(72) Pause Young (Allocation Failure) 88M->58M(128M) 54.308ms
+[1006.084s] GC(73) Pause Young (Allocation Failure) 93M->76M(128M) 297.334ms
+[1007.884s] GC(74) Pause Young (Allocation Failure) 112M->78M(128M) 92.508ms
+[1008.785s] GC(75) Pause Young (Allocation Failure) 113M->78M(128M) 97.643ms

@@ -14,6 +14,8 @@ sonuçlarını ise sağlam kabul edin.
 
 ## Kısa sonuç
 
+> **2. tur (28 Kasım, iyileştirmeler sonrası) sonuçları §8'de.** Aşağıdaki özet 1. turundur (26 Kasım, eski kod).
+
 **Gerçekçi yük (10 görevli + 2 yönetici + vatandaşlar): dayanıyor ama riskli.** Sıcak JVM'de hata %0, p95 2,5 sn.
 Risk üç durumda ortaya çıkıyor:
 - deploy ya da yeniden başlatmadan sonraki ilk 3-4 dakika: p95 15 sn'yi aşıyor, istek hatası ~%3;
@@ -393,24 +395,131 @@ için ölçmek gerekir.
   (§1). Android emülatörü hiçbir koşu sırasında açık değildi.
 - **Ölçüm için açılan günlükler.** Hikari DEBUG ve `-Xlog:gc` küçük bir ek yük getiriyor.
 
-## 2. tur (iyileştirmeler sonrası): ARA SONUÇ / yarım
+## 8. 2. tur (iyileştirmeler sonrası)
 
-Ölçülen kod: `main` @ `4a3ec19` (backend #29, mobil #28, panel #27). Çalışma kullanıcının isteğiyle durduruldu.
+**Ölçülen kod:** `main` @ `4a3ec19`, yani backend #29, mobil #28 ve panel #27. 28 Kasım'daki `c6a9064`'te
+backend, mobil ve web değişmedi.
 
-- **Bitti:**
-  - Yük üreteci yeni istemcilere göre güncellendi (`CLIENT=new`, varsayılan). Eski davranış `CLIENT=old` ile duruyor.
-  - Görevli olayları yerelde uygulanıyor; okumalar birleştiriliyor (en çok 2,5 sn'de bir) ve yalnızca görünen
-    sekme için yapılıyor.
+**Ortam:** 1. turla aynı. App 0.1 CPU / 512 MB, DB 0.25 CPU / 1 GB / 104 bağlantı, DB'ye ~20 ms gecikme.
+Aynı tohum verisi kullanıldı.
+
+**Yük üreteci** (`CLIENT=new`, varsayılan) yeni istemcileri taklit eder:
+- **Görevli:**
+  - SSE olayı yerelde uygulanır. Sunucudan okuma yalnızca görünen sekme için yapılır (%70 cadde, %30 gösterge)
+    ve en çok 2,5 sn'de bir birleştirilir. Kendi işleminden sonraki yenileme en çok 1,5 sn'de bir.
   - HEARTBEAT catch-up en çok 90 sn'de bir.
-  - Yeniden bağlanma 1-45 sn, jitterli. Retry-After'a uyuluyor.
-  - 401 alınınca `/me` ile teyit ediliyor. GET'te 503 olursa en çok 3 kez yeniden deneniyor.
-  - Kuyruk 0-20 sn rastgele gecikmeyle başlıyor, kayıtlar arasında 0,4-1,2 sn bekliyor, zaman aşımı 30 sn.
-  - Panel bileşen başına en çok ~4 sn'de bir yeniliyor. Raporda 503 alınca Retry-After kadar bekleyip yeniden
-    deniyor.
-  - "Oturumdan atılan görevli" sayacı eklendi.
-- **Tek ölçüm:** boş DB'de ilk açılış (Flyway + tohum öncesi), 0.1 CPU. `/api/health` **79 sn**'de cevap verdi
-  (1. turda 227 sn). İlk giriş +8,6 sn, ilk DB okuması +1,8 sn (`results/f2-soguk.txt`).
-- **Yapılmadı (yarım):** 10 görevli temel 15 dk (başladı, ilk dakikada durduruldu, sonuç yok); 30; 50; kırılma
-  basamakları; vatandaş 100/200/400; kesinti kuyruğu 10 ve 30; 30 dk dayanıklılık; göçü yapılmış DB'de soğuk
-  başlatma; 0.5 CPU ve 1 CPU/2 GB temel koşuları; eski-yeni karşılaştırma tablosu.
-- **Sürdürmek için** `loadtest/README.md` "2. tur" bölümündeki komutlar sırayla koşulur.
+  - Yeniden bağlanma 1-45 sn arası, jitterli; Retry-After'a uyulur.
+  - GET'te 503 gelirse en çok 3 kez yeniden denenir. 401 gelirse önce `/me` ile teyit edilir.
+  - Kuyruk 0-20 sn rastgele gecikmeyle başlar, kayıtlar arasında 0,4-1,2 sn bekler, zaman aşımı 30 sn'dir. Hata
+    olursa 2-60 sn üstel beklemeyle yeniden dener.
+  - Başarısız çıkış ya da kaçak işlemi 10-20 sn sonra en çok 2 kez yeniden denenir.
+- **Panel:** etkilenen bileşenler, bileşen başına en çok ~4 sn'de bir yenilenir. Giriş olayı gelir bileşenlerini
+  çekmez. GET'te 503 gelirse en çok 2 kez yeniden denenir. Rapor 503 dönerse Retry-After kadar beklenip bir kez
+  daha denenir.
+- **Eski profil:** `CLIENT=old` 1. turdaki davranıştır. Bir karşılaştırma koşusunda (`r2-old-30`) yeni sunucuya
+  karşı çalıştırıldı.
+
+**Ana makine:** Ölçüm sırasında başka bir agent'ın backend testleri çalıştı. Ana makine CPU'su koşu
+ortalamalarında %17-41 arasındaydı, anlık tepeler %94'e çıktı. Emülatör hiçbir koşuda açık değildi.
+Konteyner payları sabit olduğu için ortalamalar güvenilir; üst yüzdelikler biraz şişmiş olabilir.
+
+**Ölçüm notu:** Bir koşuda Docker VM'nin saati geri kaydı ve üreteç çöktü. Hata düzeltildi
+(`bucket` dizini eksiye düşmüyor), koşu baştan alındı.
+
+### 8.1 Eski ve yeni karşılaştırması (app 0.1 CPU)
+
+"Eski", 1. turdaki koşulardır: eski sunucu ve eski istemci. "Yeni", 2. turdaki koşulardır: yeni sunucu ve yeni
+istemci. "Oturumdan atılan görevli" yeni istemcide `/me` ile teyit edilmiş 401 sayısıdır. Eski istemci her 401'de
+oturumu kapattığı için orada görevli uçlarına dönen 401 sayısı verildi.
+
+| senaryo | eski p95 | eski hata | eski: görevliye 401 | yeni p95 | yeni hata | yeni: atılan görevli | yeni istek/sn (eski) |
+|---|---|---|---|---|---|---|---|
+| 10 görevli, 15 dk (yeniden başlatma sonrası, soğuk JVM) | 15,0 sn | %2,9 | 1 | **0,8 sn** | **%0** | 0 | 2,0 (3,3) |
+| 10 görevli, sıcak JVM | 2,5 sn | %0 | 0 | (yukarıdaki satır soğuk JVM'i de içeriyor) | | | |
+| 30 görevli, 10 dk | 5,7 sn | %0 | 0 | 8,4 sn¹ | %5,0¹ | 0 | 6,5 (15,3) |
+| 50 görevli | 48 sn² | %85² | – | 15,0 sn | %74 (8.030 adet 503) | 0 | 18,9 |
+| vatandaş dalgası 400 kişi / 60 sn (+10 görevli + 2 panel) | 1,0 sn | %0 | 0 | **0,2 sn** | %0 | 0 | – |
+| kesinti kuyruğu 10 görevli × ~22 giriş | 25,4 sn | %26,8, 218 sn'de bitmedi | 3 | **4,5 sn** | **%0,06, 113 sn'de bitti** | 0 | 3,3 (4,9) |
+| kesinti kuyruğu 30 görevli × ~22 giriş | 31,0 sn | %38,6, bitmedi | 31 | <!--D30--> | | | |
+| dayanıklılık 30-35 dk, 10 görevli | 5,0 sn | %0,17, 2 kez ~20 sn duruş | 0 | **2,0 sn** | **%0**, duruş yok | 0 | 2,2 (3,4) |
+| soğuk açılış, boş DB, 0.1 CPU | 227 sn | – | – | **70-79 sn** | – | – | – |
+| soğuk açılış, göçü yapılmış DB, 0.1 CPU | 261 sn | – | – | **83 sn** | – | – | – |
+
+¹ Hataların hepsi tek bir 60 sn'lik pencerede (250-310. sn) oldu. Bu pencere dışında 10 sn'lik p95 ~1,5 sn ve hata
+%0. O pencerede app CPU'su düşüktü, DB CPU'su %20-23'e çıktı (sınır %25). DB'nin yavaş sorgu günlüğünde
+`parking_records`'ın tam satır taramaları vardı (son 100 kayıt ve geçmiş, 0,4-2,8 sn). Aynı dakikada 3 panelin
+tam yenilemesi ve vatandaş tepesi üst üste geldi. Bu kez darboğaz DB oldu. Önerilen dizinler (§5 öneri 7) hâlâ
+yok; §8.4'te etkisi ölçüldü.
+² 1. turun basamak koşusundaki 50 görevli basamağı.
+
+Ham tablo: `python -I loadtest/ozet.py loadtest/results --tablo r2-a-temel-10 r2-b-30 r2-c-50 r2-v-dalga r2-d-kuyruk-10 r2-d-kuyruk-30 r2-e-dayaniklilik r2-old-30`.
+
+<!--TABLO2-->
+
+**Veri doğruluğu her koşuda tam.** `dogruluk.sql` bütün koşularda 0 sorun verdi. Kesinti koşusunda (`d-10`)
+yanıtı kaybolmuş sayılıp aynı `checkInRequestId` ile yeniden gönderilen 30 girişin 30'unda aynı kayıt döndü. Aynı
+kimlikle eşzamanlı gönderilen 10 ikiliden hiçbiri ikinci kayıt açmadı.
+
+**Oturumdan atılma sıfır.** 50 görevlide sunucu 13 kez 401 döndü. Yeni istemci bunların hepsini `/me` ile teyit
+etti, hiçbirinde oturum kapanmadı.
+
+### 8.2 Kırılma noktası
+
+<!--KIRILMA-->
+
+### 8.3 Eski istemciler yeni sunucuda (geçiş dönemi riski)
+
+`r2-old-30`: 30 görevli eski uygulamayla, yeni sunucuya karşı çalıştırıldı.
+
+| | p95 | hata | 503 | havuz zaman aşımı | app CPU ort/max | ana makine CPU ort/max |
+|---|---|---|---|---|---|---|
+| eski sunucu + eski istemci (1. tur `b`) | 5,7 sn | %0 | 0 | 0 | 7,8 / 11,2 | 19 / 82 |
+| yeni sunucu + **eski** istemci (`r2-old-30`) | 12,7 sn | **%23** | 1.766 | 1.004 | 10,1 / 11,6 | 41 / 82 |
+| yeni sunucu + yeni istemci (`r2-b-30`) | 8,4 sn | %5,0 | 183 | 196 | 4,9 / 10,2 | 29 / 83 |
+
+- Yeni sunucu havuzda 5 sn bekleyip 503 dönüyor; eski sunucu 20 sn bekliyordu. Bu yüzden eski istemcilerle aynı
+  yük, gecikme yerine hataya dönüşüyor.
+- Eski istemci isteği iki kat daha fazla atıyor (13 istek/sn, yenide 6,5) ve 503'te geri çekilmiyor.
+- Oturum düşmesi yok, çünkü 503 401 değil.
+- **Sonuç:** backend #29 canlıda, ama telefonlar yeni APK'ya geçene kadar yoğun anlarda eskisinden daha çok "işlem
+  başarısız" görülebilir. Bu koşuda ana makine yükü yüksekti (ort. %41), sayı biraz kötümser olabilir.
+- **Öneri:** APK güncellemesini hızlandır. Ya da geçiş süresince `DB_CONNECTION_TIMEOUT_MS`'i yükselt (ör. 15000).
+  Bu ortam değişkeni ücretsiz ve kod gerektirmiyor.
+
+### 8.4 Dizin denemesi (yalnız yerel DB'de)
+
+<!--DIZIN-->
+
+### 8.5 Ücretli sunucuya geçince (bilgi amaçlı, satın alma yok)
+
+Aynı DB (0.25 CPU), aynı ağ gecikmesi, yeni istemciler:
+
+| app | soğuk açılış (`/api/health`) | 10 görevli p95 | 10 görevli check-in p95 | kırılma |
+|---|---|---|---|---|
+| 0.1 CPU / 512 MB (Render Free) | 83 sn | 0,8 sn | 0,9 sn | <!--K01--> |
+| 0.5 CPU / 512 MB | 12 sn | 1,4 sn³ | 0,5 sn | ölçülmedi |
+| 1 CPU / 2 GB | 7 sn | 1,4 sn³ | 0,5 sn | 100 görevli: p95 ~1,0 sn, hata %0; 150: p95 5,8 sn, hata %1,6; **200: hata %94** |
+
+³ 10 görevlide toplam p95'i panelin `bi/shifts` ucu belirliyor. Açık vardiya başına bir sorgu (N+1) atıyor ve test
+DB'sinde önceki koşulardan 50 açık vardiya birikmişti. Bu bir test yan etkisi; canlıda ≤10 açık vardiya olur.
+Görevli uçları CPU arttıkça hızlandı: `filter` p95 0,37 sn'den 0,24 sn'ye, `sync?since` 0,81 sn'den 0,18 sn'ye indi.
+
+- **10 görevlide ücretli CPU'ya gerek yok.** Free katmanda p95 0,8 sn, hata %0. Ücretli katmanın asıl kazancı
+  açılış süresi (83 sn → 7-12 sn) ve yük tavanı.
+- **1 CPU / 2 GB'ta tavan ~150 görevli.** 200 görevlide DB CPU'su %28'e çıktı (0.25 CU sınırı). Bu noktada sıra
+  DB'ye geçiyor: Neon'un 2 CU'ya otomatik ölçeklenmesi (burada simüle edilmedi) ya da dizinler (§8.4) gerekir.
+- **RSS:** 0.1 CPU / 512 MB'ta dayanıklılık koşusunda RSS 458-470 MB'ta sabit kaldı. Sızıntı yok, ama 512 MB'a
+  ~40 MB pay var. Yığın artık %45 (~230 MB) olduğu için ücretli katmanda bellek 1 GB+ seçilirse rahatlar.
+
+### 8.6 Kalan riskler
+
+1. **Geçiş dönemi:** eski APK'lar yeni sunucuda yoğunlukta daha çok 503 görüyor (§8.3).
+2. **DB'nin tarama yapan sorguları:** dizinler hâlâ yok. 30 görevlide tek kalan hata penceresi DB kaynaklıydı.
+   Tablo büyüdükçe artar (§5 öneri 7, §8.4).
+3. **503 yeniden deneme çoğaltması:** 50 görevlide `/parking/filter` 5.976 kez çağrıldı (4.505'i 503).
+   İstemcilerin GET'te 3 kez yeniden denemesi aşırı yükte isteği ~4 katına çıkarıyor. Yeniden denemeyi
+   `serverBusy` sürerken tek isteğe indirmek ya da sunucuda 503'ü havuzda 5 sn beklemeden, kuyruk doluysa hemen
+   dönmek (yük atma) çözebilir.
+4. **`bi/shifts` N+1:** açık vardiya sayısıyla doğrusal büyüyor.
+5. **Bellek payı:** 512 MB'ta RSS ~470 MB.
+6. **Simüle edilmeyenler** 1. turla aynı (§7).

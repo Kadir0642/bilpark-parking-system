@@ -1,0 +1,2 @@
+ts,host_cpu,emulator,app_cpu,app_mem,db_cpu,db_mem,app_rss_kb,app_threads,db_conns,db_active
+1795872638,70,0,9.36,355.3MiB,3.61,135.6MiB,393524,171,11,0

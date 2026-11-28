@@ -72,7 +72,7 @@ const loggedOut = new Set(); // oturumdan atılan görevliler (eski istemci: her
 let activeOfficers = 0;
 
 function bucket() {
-  const i = Math.floor((now() - T0) / BUCKET_MS);
+  const i = Math.max(0, Math.floor((now() - T0) / BUCKET_MS)); // saat geri kayarsa (VM saat eşitlemesi) eksi olmasın
   while (buckets.length <= i) buckets.push({ n: 0, bad: 0, lat: [], officers: activeOfficers, sse: 0 });
   return buckets[i];
 }
@@ -651,6 +651,7 @@ class Officer {
     await this.loop?.catch(() => {});
     // yeni istemci: kesinti boyunca biriken denemeler 45 sn tavanlı jitterli beklemede; ağ dönünce ilk deneme 0-45 sn içinde
     if (NEW) await sleep(rand(0, 45000));
+    if (!this.token && !(await this.login())) return; // kesintiden önce hiç giriş yapamamış görevli önce girer
     this.failures = 0;
     this.loop = this.syncLoop(); // catch-up + akış; HELLO'da flush
     while (this.flushing || this.queue.length) {

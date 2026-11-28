@@ -1,0 +1,50 @@
+2026-11-28T14:53:49.802+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=10/10, idle=10/0, active=0, waiting=0)
+2026-11-28T14:53:49.802+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=10/10, idle=10/0, active=0, waiting=0)
+2026-11-28T14:54:17.501+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=9/10, idle=9/0, active=0, waiting=0)
+2026-11-28T14:54:17.502+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=9/10, idle=9/0, active=0, waiting=0)
+2026-11-28T14:54:45.186+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=9/10, idle=7/0, active=2, waiting=0)
+2026-11-28T14:54:45.186+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=9/10, idle=7/0, active=2, waiting=0)
+2026-11-28T14:55:12.892+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=9/10, idle=9/0, active=0, waiting=0)
+2026-11-28T14:55:12.893+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=9/10, idle=9/0, active=0, waiting=0)
+2026-11-28T14:55:40.588+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=6/10, idle=6/0, active=0, waiting=0)
+2026-11-28T14:55:40.589+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=1/10, idle=1/0, active=0, waiting=0)
+2026-11-28T14:56:08.250+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=1/10, idle=1/0, active=0, waiting=0)
+2026-11-28T14:56:08.250+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=1/10, idle=1/0, active=0, waiting=0)
+2026-11-28T14:56:35.991+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=4/10, idle=4/0, active=0, waiting=0)
+2026-11-28T14:56:35.992+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=4/10, idle=4/0, active=0, waiting=0)
+2026-11-28T14:56:51.841+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-83] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: 23505
+2026-11-28T14:56:51.841+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-83] org.hibernate.orm.jdbc.error             : ERROR: duplicate key value violates unique constraint "uk_active_park_spots_current_plate"
+2026-11-28T14:56:57.456+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-55] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: 23505
+2026-11-28T14:56:57.456+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-55] org.hibernate.orm.jdbc.error             : ERROR: duplicate key value violates unique constraint "uk_active_park_spots_current_plate"
+2026-11-28T14:57:03.668+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=10/10, idle=0/0, active=10, waiting=3)
+2026-11-28T14:57:03.668+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=10/10, idle=0/0, active=10, waiting=3)
+2026-11-28T14:57:06.562+03:00  WARN 1 --- [bilpark-backend] [0.0-8080-exec-9] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: 23505
+2026-11-28T14:57:06.562+03:00  WARN 1 --- [bilpark-backend] [0.0-8080-exec-9] org.hibernate.orm.jdbc.error             : ERROR: duplicate key value violates unique constraint "uk_active_park_spots_current_plate"
+2026-11-28T14:57:31.451+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=10/10, idle=0/0, active=10, waiting=13)
+2026-11-28T14:57:31.451+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=10/10, idle=0/0, active=10, waiting=13)
+2026-11-28T14:57:41.147+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-204] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: 23505
+2026-11-28T14:57:41.147+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-204] org.hibernate.orm.jdbc.error             : ERROR: duplicate key value violates unique constraint "uk_active_park_spots_current_plate"
+2026-11-28T14:57:41.851+03:00 DEBUG 1 --- [bilpark-backend] [0-8080-exec-158] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Timeout failure stats (total=10/10, idle=0/0, active=10, waiting=26)
+2026-11-28T14:57:41.852+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-158] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: null
+2026-11-28T14:57:41.852+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-158] org.hibernate.orm.jdbc.error             : HikariPool-1 - Connection is not available, request timed out after 5003ms (total=10, active=10, idle=0, waiting=26)
+2026-11-28T14:57:41.852+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-158] c.b.b.controller.GlobalExceptionHandler  : Veritabanına zamanında ulaşılamadı, 503: org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available, request timed out after 5003ms (total=10, active=10, idle=0, waiting=26)] [n/a]
+2026-11-28T14:57:42.354+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-83] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: 23505
+2026-11-28T14:57:42.355+03:00  WARN 1 --- [bilpark-backend] [.0-8080-exec-83] org.hibernate.orm.jdbc.error             : ERROR: duplicate key value violates unique constraint "uk_active_park_spots_current_plate"
+2026-11-28T14:57:59.235+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=10/10, idle=2/0, active=8, waiting=9)
+2026-11-28T14:57:59.236+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=10/10, idle=0/0, active=10, waiting=10)
+2026-11-28T14:58:00.435+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-150] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: 23505
+2026-11-28T14:58:00.435+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-150] org.hibernate.orm.jdbc.error             : ERROR: duplicate key value violates unique constraint "uk_active_park_spots_current_plate"
+2026-11-28T14:58:09.735+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-207] org.hibernate.orm.jdbc.error             : HHH000247: ErrorCode: 0, SQLState: 23505
+2026-11-28T14:58:09.735+03:00  WARN 1 --- [bilpark-backend] [0-8080-exec-207] org.hibernate.orm.jdbc.error             : ERROR: duplicate key value violates unique constraint "uk_active_park_spots_current_plate"
+2026-11-28T14:58:26.931+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=10/10, idle=0/0, active=10, waiting=0)
+2026-11-28T14:58:26.931+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=10/10, idle=0/0, active=10, waiting=0)
+2026-11-28T14:58:54.612+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=10/10, idle=10/0, active=0, waiting=0)
+2026-11-28T14:58:54.613+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=10/10, idle=10/0, active=0, waiting=0)
+2026-11-28T14:59:22.321+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=10/10, idle=8/0, active=2, waiting=0)
+2026-11-28T14:59:22.321+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=10/10, idle=8/0, active=2, waiting=0)
+2026-11-28T14:59:50.044+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=10/10, idle=10/0, active=0, waiting=0)
+2026-11-28T14:59:50.045+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=10/10, idle=10/0, active=0, waiting=0)
+2026-11-28T15:00:17.704+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=10/10, idle=8/0, active=2, waiting=0)
+2026-11-28T15:00:17.705+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=10/10, idle=8/0, active=2, waiting=0)
+2026-11-28T15:00:45.406+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before cleanup stats (total=10/10, idle=10/0, active=0, waiting=0)
+2026-11-28T15:00:45.406+03:00 DEBUG 1 --- [bilpark-backend] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After  cleanup stats (total=10/10, idle=10/0, active=0, waiting=0)
